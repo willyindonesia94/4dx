@@ -19,6 +19,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        \Carbon\Carbon::setLocale('id');
+        
+        try {
+            if (!\Illuminate\Support\Facades\Schema::hasTable('sesi_wig_presenters')) {
+                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            }
+        } catch (\Exception $e) {
+            // silent
+        }
     }
 }

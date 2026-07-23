@@ -8,10 +8,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+use Spatie\Permission\Traits\HasRoles;
+
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    /** @use HasFactory<\Database\Factories\UserFactory> */
+    use HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -22,7 +24,21 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'division_id',
+        'location_type',
+        'location_id',
+        'profile_photo'
     ];
+
+    public function location()
+    {
+        return $this->belongsTo(Location::class);
+    }
+
+    public function division()
+    {
+        return $this->belongsTo(Division::class);
+    }
 
     /**
      * The attributes that should be hidden for serialization.
@@ -45,5 +61,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(MasterUnit::class, 'unit_id');
     }
 }
