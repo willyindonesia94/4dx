@@ -259,7 +259,7 @@
                                             $lmCount = $wigLms->count();
                                         @endphp
                                         <span class="text-[11px] text-gray-500">
-                                            {{ $wig->deskripsi ?? '-' }}
+                                            Target Gabungan: {{ number_format($wig->total_target, 2) }} {{ $wig->satuan->name ?? '' }} • Berdasarkan {{ $lmCount }} Lead Measure
                                         </span>
                                     </div>
                                     <div class="text-right ml-4">
@@ -343,9 +343,7 @@
                                             <tr>
                                                 <th rowspan="2" class="px-4 py-3 border border-gray-300 text-left font-bold text-gray-800 sticky left-0 bg-gray-100 z-10">UNIT</th>
                                                 @foreach($sesi_wigs_matrix as $sw)
-                                                    <th colspan="6" class="px-4 py-2 border border-gray-300 text-center font-bold text-gray-800 bg-indigo-50">
-                                                        {{ strtolower(trim($sw->tipe_sesi)) === 'mingguan' ? 'MINGGU ' . $sw->minggu_ke : strtoupper($sw->tipe_sesi) }}
-                                                    </th>
+                                                    <th colspan="6" class="px-4 py-2 border border-gray-300 text-center font-bold text-gray-800 bg-indigo-50">WEEK {{ $sw->minggu_ke }}</th>
                                                 @endforeach
                                             </tr>
                                             <tr>
@@ -368,24 +366,30 @@
                                                 @foreach($sesi_wigs_matrix as $sw)
                                                     @php
                                                         $uidTarget = 0;
-                                                        foreach($up3s as $up3Unit) {
-                                                            $uidTarget += $matrixTargets[$lm->id][$up3Unit->id][$sw->id] ?? 0;
+                                                        if (isset($matrixTargets[$lm->id])) {
+                                                            foreach($matrixTargets[$lm->id] as $uid => $tgt) {
+                                                                $uidTarget += $tgt;
+                                                            }
                                                         }
                                                         
                                                         $uidRealisasi = 0;
-                                                        foreach($up3s as $up3Unit) {
-                                                            $uidRealisasi += $matrixRealisasi[$lm->id][$up3Unit->id][$sw->id] ?? 0;
+                                                        if (isset($matrixRealisasi[$lm->id])) {
+                                                            foreach($matrixRealisasi[$lm->id] as $uid => $realSessions) {
+                                                                $uidRealisasi += $realSessions[$sw->id] ?? 0;
+                                                            }
                                                         }
                                                         
-                                                        $uidPencapaian = $uidTarget > 0 ? round(($uidRealisasi / $uidTarget) * 100, 2) : 0;
+                                                        $uidPencapaian = $uidTarget > 0 ? min(100, round(($uidRealisasi / $uidTarget) * 100, 2)) : 0;
                                                         $uidBgColor = $uidPencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
                                                         
                                                         $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
                                                         $prevUidRealisasi = 0;
                                                         $uidTrendIcon = '<span class="text-gray-400">-</span>';
                                                         if ($prevSw) {
-                                                            foreach($up3s as $up3Unit) {
-                                                                $prevUidRealisasi += $matrixRealisasi[$lm->id][$up3Unit->id][$prevSw->id] ?? 0;
+                                                            if (isset($matrixRealisasi[$lm->id])) {
+                                                                foreach($matrixRealisasi[$lm->id] as $uid => $realSessions) {
+                                                                    $prevUidRealisasi += $realSessions[$prevSw->id] ?? 0;
+                                                                }
                                                             }
                                                             if ($uidRealisasi > $prevUidRealisasi) {
                                                                 $uidTrendIcon = '<svg class="w-5 h-5 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>';
@@ -423,9 +427,12 @@
                                                     @foreach($sesi_wigs_matrix as $sw)
                                                         @php
                                                             // Menampilkan rekap target dan realisasi UP3
-                                                            $up3Target = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
+                                                            $up3Target = $matrixTargets[$lm->id][$up3->id] ?? 0;
                                                             $up3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
-                                                            $up3Pencapaian = $up3Target > 0 ? round(($up3Realisasi / $up3Target) * 100, 2) : 0;
+                                                            foreach($ulps as $u) {
+                                                                $up3Realisasi += $matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0;
+                                                            }
+                                                            $up3Pencapaian = $up3Target > 0 ? min(100, round(($up3Realisasi / $up3Target) * 100, 2)) : 0;
                                                             $up3BgColor = $up3Pencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
                                                             
                                                             $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
@@ -433,6 +440,9 @@
                                                             $up3TrendIcon = '<span class="text-gray-400">-</span>';
                                                             if ($prevSw) {
                                                                 $prevUp3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$prevSw->id] ?? 0;
+                                                                foreach($ulps as $u) {
+                                                                    $prevUp3Realisasi += $matrixRealisasi[$lm->id][$u->id][$prevSw->id] ?? 0;
+                                                                }
                                                                 if ($up3Realisasi > $prevUp3Realisasi) {
                                                                     $up3TrendIcon = '<svg class="w-5 h-5 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>';
                                                                 } else if ($up3Realisasi < $prevUp3Realisasi) {
@@ -457,9 +467,9 @@
                                                         </td>
                                                         @foreach($sesi_wigs_matrix as $sw)
                                                             @php
-                                                                $target = $matrixTargets[$lm->id][$u->id][$sw->id] ?? 0;
+                                                                $target = $matrixTargets[$lm->id][$u->id] ?? 0;
                                                                 $realisasi = $matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0;
-                                                                $pencapaian = $target > 0 ? round(($realisasi / $target) * 100, 2) : 0;
+                                                                $pencapaian = $target > 0 ? min(100, round(($realisasi / $target) * 100, 2)) : 0;
                                                                 $komitmenData = $matrixKomitmen[$lm->id][$u->id][$sw->id] ?? ['komitmen' => '', 'carry_over' => ''];
                                                                 $komitmenVal = $komitmenData['komitmen'];
                                                                 $carryOverVal = $komitmenData['carry_over'];
@@ -697,7 +707,61 @@
         
         // Menghapus fungsi toggleWig karena sudah menggunakan Alpine.js x-data
         
-
+            return {
+                
+                },
+                
+                    
+                    fetch(`{{ route('sesi-wigs.draw-presenter', $sesi_wig->id) }}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ type: type })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.success) {
+                            this.errorMessage = data.message;
+                            return;
+                        }
+                        
+                        this.candidates = data.candidates;
+                        if(this.candidates.length === 0) this.candidates = [data.winner.name]; // Fallback
+                        
+                        this.isDrawing = true;
+                        
+                        // Start roulette animation
+                        let ticks = 0;
+                        const maxTicks = 35; // Number of times it switches
+                        let speed = 40; // Initial speed in ms
+                        
+                        const tick = () => {
+                            ticks++;
+                            // Show random candidate during animation
+                            this.currentTickName = this.candidates[Math.floor(Math.random() * this.candidates.length)];
+                            
+                            if (ticks < maxTicks) {
+                                // Gradually slow down
+                                if (ticks > 25) speed += 30;
+                                else if (ticks > 15) speed += 10;
+                                setTimeout(tick, speed);
+                            } else {
+                                // Final result
+                                this.winnerResult = data.winner.name;
+                            }
+                        };
+                        
+                        setTimeout(tick, speed);
+                    })
+                    .catch(err => {
+                        this.errorMessage = "Terjadi kesalahan sistem. Silakan coba lagi.";
+                        console.error(err);
+                    });
+                }
+            }
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
             tinymce.init({

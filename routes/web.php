@@ -3,6 +3,13 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/api/debug-sesi', function() {
+    $sws = \App\Models\SesiWig::where('tahun', 2026)->where('bulan', 1)
+        ->orderByRaw('CASE WHEN minggu_ke IS NULL THEN 1 ELSE 0 END, minggu_ke ASC')
+        ->get(['id', 'minggu_ke', 'tipe_sesi']);
+    return $sws;
+});
+
 Route::get('/', function () {
     return redirect()->route('login');
 });
@@ -21,6 +28,11 @@ Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'ind
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
+Route::get('/clear-all-data', function() {
+    \Illuminate\Support\Facades\DB::table('realisasis')->truncate();
+    return 'All realization data has been cleared. Ready for fresh upload.';
+});
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -37,6 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/cascading/wig/import', [\App\Http\Controllers\CascadingController::class, 'wigImport'])->name('cascading.wig.import');
     Route::get('/cascading/lm/template', [\App\Http\Controllers\CascadingController::class, 'lmTemplate'])->name('cascading.lm.template');
     Route::post('/cascading/lm/import', [\App\Http\Controllers\CascadingController::class, 'lmImport'])->name('cascading.lm.import');
+    Route::post('/cascading/lm/breakdown/import', [\App\Http\Controllers\CascadingController::class, 'importBreakdownLm'])->name('cascading.breakdown.import');
     Route::post('/cascading/breakdown', [\App\Http\Controllers\CascadingController::class, 'storeBreakdown'])->name('cascading.breakdown.store');
     Route::put('/cascading/breakdown/{id}', [\App\Http\Controllers\CascadingController::class, 'updateBreakdown'])->name('cascading.breakdown.update');
     Route::delete('/cascading/breakdown/{id}', [\App\Http\Controllers\CascadingController::class, 'destroyBreakdown'])->name('cascading.breakdown.destroy');
@@ -52,14 +65,13 @@ Route::middleware('auth')->group(function () {
     // Sesi WIG & Realizations
     Route::post('sesi-wigs/generate', [\App\Http\Controllers\SesiWigController::class, 'generate'])->name('sesi-wigs.generate');
     Route::put('sesi-wigs/{sesi_wig}/notes', [\App\Http\Controllers\SesiWigController::class, 'updateNotes'])->name('sesi-wigs.update-notes');
-    Route::post('sesi-wigs/{sesi_wig}/draw-presenter', [\App\Http\Controllers\SesiWigController::class, 'drawPresenter'])->name('sesi-wigs.draw-presenter');
+    Route::post('sesi-wigs/{sesi_wig}/set-presenter', [\App\Http\Controllers\SesiWigController::class, 'setPresenter'])->name('sesi-wigs.set-presenter');
+    Route::post('sesi-wigs/{sesi_wig}/komitmen', [\App\Http\Controllers\SesiWigController::class, 'saveKomitmen'])->name('sesi-wigs.save-komitmen');
     Route::resource('sesi-wigs', \App\Http\Controllers\SesiWigController::class);
     
-    // TEMPORARY MIGRATE ROUTE
-    Route::get('/run-migrate-temp', function() {
-        \Illuminate\Support\Facades\Artisan::call('migrate');
-        return 'Migration successful: ' . \Illuminate\Support\Facades\Artisan::output();
-    });
+
+    Route::get('/realisasis/template', [\App\Http\Controllers\RealizationController::class, 'downloadTemplate'])->name('realisasis.template')->middleware('role:Super Admin');
+    Route::post('/realisasis/import', [\App\Http\Controllers\RealizationController::class, 'import'])->name('realisasis.import')->middleware('role:Super Admin');
     Route::resource('realisasis', \App\Http\Controllers\RealizationController::class)->except(['show']);
     
     // Realisasi WIG
@@ -67,6 +79,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/realisasi-wig', [\App\Http\Controllers\RealisasiWigController::class, 'store'])->name('realisasi-wig.store');
     Route::put('/realisasi-wig/{realisasi_wig}', [\App\Http\Controllers\RealisasiWigController::class, 'update'])->name('realisasi-wig.update');
     Route::delete('/realisasi-wig/{realisasi_wig}', [\App\Http\Controllers\RealisasiWigController::class, 'destroy'])->name('realisasi-wig.destroy');
+    Route::get('/realisasi-wig/template', [\App\Http\Controllers\RealisasiWigController::class, 'downloadTemplate'])->name('realisasi-wig.template')->middleware('role:Super Admin');
+    Route::post('/realisasi-wig/import', [\App\Http\Controllers\RealisasiWigController::class, 'import'])->name('realisasi-wig.import')->middleware('role:Super Admin');
     Route::get('/realisasi-wig/target', [\App\Http\Controllers\RealisasiWigController::class, 'getTargetBulanan'])->name('realisasi-wig.target');
 
     // Laporan Bulanan & Import Historis
@@ -74,10 +88,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/laporan-bulanan/template', [\App\Http\Controllers\LaporanBulananController::class, 'downloadTemplate'])->name('laporan.template');
     Route::post('/laporan-bulanan/import', [\App\Http\Controllers\LaporanBulananController::class, 'importData'])->name('laporan.import');
     Route::get('/laporan-bulanan/export', [\App\Http\Controllers\LaporanBulananController::class, 'exportLaporan'])->name('laporan.export');
+    Route::get('/laporan-bulanan/export-wig', [\App\Http\Controllers\LaporanBulananController::class, 'exportWig'])->name('laporan.exportWig');
+    Route::get('/laporan-bulanan/export-lengkap', [\App\Http\Controllers\LaporanBulananController::class, 'exportLengkap'])->name('laporan.exportLengkap');
 
     // User Management (Superadmin Only)
     Route::resource('users', \App\Http\Controllers\UserController::class)
         ->middleware(['role:Super Admin']);
+});
+
+Route::get('/run-migrate-temp', function() {
+    return 'Done';
 });
 
 require __DIR__.'/auth.php';

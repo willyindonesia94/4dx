@@ -1,23 +1,21 @@
 {
-    "name": "Sesi WIG 4DX",
-    "short_name": "Sesi WIG",
+    "name": "4DX PLN UID JABAR",
+    "short_name": "4DX UID JABAR",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#f3f4f6",
-    "theme_color": "#0ea5e9",
-    "description": "Aplikasi Manajemen Sesi WIG 4DX PLN",
+    "background_color": "#ffffff",
+    "theme_color": "#4f46e5",
+    "description": "Web App Manajemen 4DX PLN UID Jabar",
     "icons": [
         {
-            "src": "/icon-192x192.png",
+            "src": "/pwa/icon.png",
             "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "any maskable"
+            "type": "image/png"
         },
         {
-            "src": "/icon-512x512.png",
+            "src": "/pwa/icon.png",
             "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any maskable"
+            "type": "image/png"
         }
     ]
 }

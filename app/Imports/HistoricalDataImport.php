@@ -15,11 +15,13 @@ class HistoricalDataImport implements ToCollection, WithHeadingRow
 {
     protected $tahun;
     protected $bulan;
+    protected $tanggalAwal;
 
-    public function __construct($tahun, $bulan)
+    public function __construct($tahun, $bulan, $tanggalAwal = null)
     {
         $this->tahun = $tahun;
         $this->bulan = $bulan;
+        $this->tanggalAwal = $tanggalAwal;
     }
 
     public function headingRow(): int
@@ -68,10 +70,23 @@ class HistoricalDataImport implements ToCollection, WithHeadingRow
                     continue;
                 }
 
+                $parseNum = function($val) {
+                    if (is_numeric($val)) return (float) $val;
+                    $val = str_replace('%', '', (string)$val);
+                    // check if it's indo format like 1.500,50 or 2,37
+                    if (preg_match('/^\d{1,3}(\.\d{3})*,\d+$/', $val) || preg_match('/^\d+,\d+$/', $val)) {
+                        $val = str_replace('.', '', $val);
+                        $val = str_replace(',', '.', $val);
+                    } else {
+                        // english format like 1,500.50
+                        $val = str_replace(',', '', $val);
+                    }
+                    return (float) $val;
+                };
+
                 // 1. Create or Update Target in breakdown_lms
                 if ($target !== null && $target !== '') {
-                    // Clean target (remove %, dots for thousands, change comma to dot)
-                    $cleanTarget = str_replace(',', '.', str_replace('.', '', str_replace('%', '', $target)));
+                    $cleanTarget = $parseNum($target);
                     
                     BreakdownLm::updateOrCreate(
                         [
@@ -80,7 +95,7 @@ class HistoricalDataImport implements ToCollection, WithHeadingRow
                             'periode_start' => $periodeStart->format('Y-m-d'),
                         ],
                         [
-                            'angka_target' => (float) $cleanTarget,
+                            'angka_target' => $cleanTarget,
                             'periode_end' => $periodeEnd->format('Y-m-d'),
                             'satuan_id' => $lm->satuan_id,
                             'bidang' => null
@@ -88,20 +103,26 @@ class HistoricalDataImport implements ToCollection, WithHeadingRow
                     );
                 }
 
-                // 2. Insert Realisasi per week
                 $weeks = [
-                    'realisasi_minggu_1' => 7,
-                    'realisasi_minggu_2' => 14,
-                    'realisasi_minggu_3' => 21,
-                    'realisasi_minggu_4' => 28,
-                    'realisasi_minggu_5' => $periodeEnd->day // Last day of month
+                    'realisasi_minggu_1' => 1,
+                    'realisasi_minggu_2' => 2,
+                    'realisasi_minggu_3' => 3,
+                    'realisasi_minggu_4' => 4,
+                    'realisasi_minggu_5' => 5
                 ];
 
-                foreach ($weeks as $col => $day) {
+                foreach ($weeks as $col => $mingguKe) {
                     $realisasiVal = $row[$col] ?? null;
                     if ($realisasiVal !== null && $realisasiVal !== '') {
-                        $cleanRealisasi = str_replace(',', '.', str_replace('.', '', str_replace('%', '', $realisasiVal)));
-                        $tanggalInput = Carbon::createFromDate($this->tahun, $this->bulan, min($day, $periodeEnd->day))->setHour(12);
+                        $cleanRealisasi = $parseNum($realisasiVal);
+                        
+                        if ($this->tanggalAwal) {
+                            $baseDate = Carbon::parse($this->tanggalAwal);
+                            $tanggalInput = $baseDate->addDays(($mingguKe - 1) * 7 + 6)->setHour(12);
+                        } else {
+                            $fallbackDays = [1 => 1, 2 => 8, 3 => 15, 4 => 22, 5 => 29];
+                            $tanggalInput = Carbon::createFromDate($this->tahun, $this->bulan, min($fallbackDays[$mingguKe], $periodeEnd->day))->setHour(12);
+                        }
 
                         Realisasi::updateOrCreate(
                             [

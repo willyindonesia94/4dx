@@ -45,6 +45,7 @@
             this.formUnitId = '';
             this.formTahun = new Date().getFullYear();
             this.formTargetTahunan = null;
+            
             this.formTargets = { jan:0, feb:0, mar:0, apr:0, mei:0, jun:0, jul:0, agu:0, sep:0, okt:0, nov:0, des:0 };
             
             this.openBreakdownWigModal = true;
@@ -134,7 +135,7 @@
                             </button>
                             
                             <div x-show="activeWig === {{ $wig->id }}" x-collapse class="border-t border-gray-200 bg-white">
-                                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                                <div class="px-6 py-4 bg-gray-50 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                     <h4 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Breakdown WIG ke Level UID</h4>
                                     <button @click='openCreateModal({ id: {{ $wig->id }}, judul: @json($wig->judul), deskripsi: @json($wig->deskripsi), satuan_id: "{{ $wig->satuan_id }}" }, "uid", [])' class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-semibold py-1.5 px-3 rounded-md transition-colors shadow-sm border border-indigo-200 flex items-center">
                                         <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
@@ -218,7 +219,7 @@
                                 @endif
 
                                 <!-- Breakdown UP3 Section -->
-                                <div class="px-6 py-4 bg-gray-50 flex items-center justify-between border-b border-gray-200">
+                                <div class="px-6 py-4 bg-gray-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-200">
                                     <h4 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Breakdown WIG ke Level UP3</h4>
                                     @if($canCreateUp3Breakdown)
                                     <button @click='openCreateModal({ id: {{ $wig->id }}, judul: @json($wig->judul), deskripsi: @json($wig->deskripsi), satuan_id: "{{ $wig->satuan_id }}" }, "up3", @json($uidBreakdowns->values()))' class="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-semibold py-1.5 px-3 rounded-md transition-colors shadow-sm border border-emerald-200 flex items-center">

@@ -18,4 +18,9 @@ class Realisasi extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function unit()
+    {
+        return $this->belongsTo(MasterUnit::class, 'unit_id');
+    }
 }

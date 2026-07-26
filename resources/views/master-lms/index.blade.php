@@ -38,64 +38,97 @@
                 </button>
             </div>
             
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl border border-slate-200 mt-2">
-                <div class="p-0 bg-white overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-slate-50/80 border-b border-slate-200">
-                            <tr>
-                                <th class="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-1/3">Judul LM</th>
-                                <th class="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Induk WIG</th>
-                                <th class="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Tujuan Unit</th>
-                                <th class="px-6 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            @forelse($lms ?? [] as $lm)
-                            <tr class="hover:bg-slate-50/80 transition-colors">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-800">{{ $lm->judul_lm }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{{ $lm->wig->judul ?? '-' }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                                        {{ $lm->tujuan_unit_role }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-center">
-                                    @if($lm->is_approved)
-                                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Aktif</span>
-                                    @else
-                                        <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Draft</span>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium flex justify-center items-center space-x-2">
-                                    @if(!$lm->is_approved && auth()->user()->hasRole('Super Admin'))
-                                        <form action="{{ route('master-lms.approve', $lm->id) }}" method="POST" class="inline m-0">
-                                            @csrf
-                                            <button type="submit" class="text-green-600 hover:text-green-900 hover:bg-green-100 font-bold bg-green-50 px-3 py-1.5 rounded-md border border-green-200 transition-colors text-xs">Setujui</button>
-                                        </form>
-                                    @endif
-                                    <button @click="openEdit({{ $lm->toJson() }})" class="text-indigo-600 hover:text-white hover:bg-indigo-600 font-bold px-3 py-1.5 rounded-md border border-indigo-200 hover:border-transparent transition-all duration-200 text-xs">Edit</button>
-                                    
-                                    <form action="{{ route('master-lms.destroy', $lm->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus Master LM ini?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:text-white hover:bg-red-600 font-bold px-3 py-1.5 rounded-md border border-red-200 hover:border-transparent transition-all duration-200 text-xs">Hapus</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="5" class="px-6 py-12 text-sm text-slate-500 text-center">
-                                    <div class="flex flex-col items-center justify-center">
-                                        <svg class="w-12 h-12 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-                                        <span class="font-medium text-slate-600">Belum ada Lead Measure yang ditemukan.</span>
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+            <div class="mt-4 space-y-4">
+                @php
+                    $groupedLms = collect($lms)->groupBy('wig_id');
+                @endphp
+
+                @forelse($wigs as $wig)
+                    @php
+                        $wigLms = $groupedLms->get($wig->id, collect());
+                    @endphp
+                    @if($wigLms->count() > 0)
+                    <div x-data="{ expanded: false }" class="bg-white shadow-sm sm:rounded-xl border border-slate-200 overflow-hidden">
+                        <div @click="expanded = !expanded" class="cursor-pointer bg-slate-50 hover:bg-slate-100 px-6 py-4 flex justify-between items-center transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <div class="bg-indigo-100 text-indigo-700 font-bold p-2 rounded-lg text-xs w-8 h-8 flex items-center justify-center">
+                                    {{ $loop->iteration }}
+                                </div>
+                                <h3 class="font-bold text-slate-800 text-sm">{{ $wig->judul }}</h3>
+                                <span class="bg-slate-200 text-slate-600 text-xs px-2 py-0.5 rounded-full font-semibold">{{ $wigLms->count() }} LM</span>
+                            </div>
+                            <svg class="w-5 h-5 text-slate-400 transform transition-transform duration-200" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                        
+                        <div x-show="expanded" x-collapse x-cloak>
+                            <div class="p-0 bg-white overflow-x-auto border-t border-slate-200">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-slate-50/50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-1/2">Judul LM</th>
+                                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Satuan</th>
+                                            <th class="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                                            <th class="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-100">
+                                        @foreach($wigLms as $lm)
+                                        <tr class="hover:bg-slate-50/50 transition-colors">
+                                            <td class="px-6 py-4 text-sm font-semibold text-slate-800 break-words max-w-lg">
+                                                <div class="flex items-start">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 mr-2.5 mt-2 hidden sm:block flex-shrink-0"></span>
+                                                    <span>{{ $lm->judul_lm }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                                                    {{ $lm->satuan->name ?? '-' }}
+                                                </span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                                @if($lm->is_approved)
+                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Aktif</span>
+                                                @else
+                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Draft</span>
+                                                @endif
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium flex justify-center items-center space-x-2">
+                                                @if(!$lm->is_approved && auth()->user()->hasRole('Super Admin'))
+                                                    <form action="{{ route('master-lms.approve', $lm->id) }}" method="POST" class="inline m-0">
+                                                        @csrf
+                                                        <button type="submit" class="text-green-600 hover:text-green-900 hover:bg-green-100 font-bold bg-green-50 px-3 py-1.5 rounded-md border border-green-200 transition-colors text-xs">Setujui</button>
+                                                    </form>
+                                                @endif
+                                                <button @click="openEdit({{ $lm->toJson() }})" class="text-indigo-600 hover:text-white hover:bg-indigo-600 font-bold px-3 py-1.5 rounded-md border border-indigo-200 hover:border-transparent transition-all duration-200 text-xs">Edit</button>
+                                                
+                                                <form action="{{ route('master-lms.destroy', $lm->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus Master LM ini?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-red-600 hover:text-white hover:bg-red-600 font-bold px-3 py-1.5 rounded-md border border-red-200 hover:border-transparent transition-all duration-200 text-xs">Hapus</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                @empty
+                    <!-- No LMs at all -->
+                @endforelse
+
+                @if(count($lms ?? []) == 0)
+                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl border border-slate-200">
+                        <div class="px-6 py-12 text-sm text-slate-500 text-center">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="w-12 h-12 text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                                <span class="font-medium text-slate-600">Belum ada Lead Measure yang ditemukan.</span>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
 
             <!-- Create Modal -->

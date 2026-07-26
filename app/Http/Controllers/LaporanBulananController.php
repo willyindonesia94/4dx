@@ -38,14 +38,16 @@ class LaporanBulananController extends Controller
     public function importData(Request $request)
     {
         $request->validate([
-            'file_excel' => 'required|mimes:xlsx,xls,csv|max:10240'
+            'file_excel' => 'required|mimes:xlsx,xls,csv|max:10240',
+            'tanggal_awal_periode' => 'required|date'
         ]);
 
         $bulan = $request->input('bulan', date('n'));
         $tahun = $request->input('tahun', date('Y'));
+        $tanggalAwal = $request->input('tanggal_awal_periode');
 
         try {
-            Excel::import(new HistoricalDataImport($tahun, $bulan), $request->file('file_excel'));
+            Excel::import(new HistoricalDataImport($tahun, $bulan, $tanggalAwal), $request->file('file_excel'));
             return redirect()->back()->with('success', 'Data historis berhasil diimpor!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Terjadi kesalahan saat mengimpor data: ' . $e->getMessage());
@@ -72,5 +74,38 @@ class LaporanBulananController extends Controller
         }
 
         return Excel::download($export, "{$filename}.xlsx");
+    }
+
+    public function exportWig(Request $request)
+    {
+        // Placeholder for WIG Export (Excel)
+        return back()->with('error', 'Export WIG format Excel belum diimplementasikan sepenuhnya.');
+    }
+
+    public function exportLengkap(Request $request)
+    {
+        $bulan = $request->input('bulan', date('n'));
+        $tahun = $request->input('tahun', date('Y'));
+        $wigId = $request->input('wig_id');
+        
+        if (!$wigId) {
+            return back()->with('error', 'Pilih WIG terlebih dahulu.');
+        }
+
+        if ($wigId === 'all') {
+            $wigs = \App\Models\MasterWig::with(['masterLms' => function($q) {
+                $q->orderBy('judul_lm');
+            }])->get();
+        } else {
+            $wig = \App\Models\MasterWig::with(['masterLms' => function($q) {
+                $q->orderBy('judul_lm');
+            }])->findOrFail($wigId);
+            $wigs = collect([$wig]);
+        }
+        
+        $units = \App\Models\MasterUnit::where('type', 'up3')->orderBy('name')->get();
+        
+        // Generate Dashboard Print View Data
+        return view('exports.lengkap_html', compact('bulan', 'tahun', 'wigs', 'units'));
     }
 }

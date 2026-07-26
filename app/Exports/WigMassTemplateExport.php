@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\MasterWig;
+use App\Models\BreakdownWig;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -13,24 +14,48 @@ class WigMassTemplateExport implements FromCollection, WithHeadings, ShouldAutoS
 {
     public function collection()
     {
-        $wigs = MasterWig::with(['unitPemilik', 'satuan'])->get();
+        // For the template, we can provide an empty structure or existing data.
+        // As per standard templates, it's usually empty with a dummy row or populated with existing breakdown.
+        // We'll export existing breakdown WIGs so the user can modify and reupload if they want.
+        $breakdowns = BreakdownWig::with(['wig', 'unit', 'satuan'])->get();
         $rows = collect([]);
 
-        foreach ($wigs as $wig) {
+        foreach ($breakdowns as $b) {
+            $no = '';
+            if (preg_match('/WIG\s*(\d+)/i', $b->wig->judul ?? '', $matches)) {
+                $no = 'WIG-' . $matches[1];
+            }
+
             $rows->push([
-                $wig->judul,
-                $wig->unitPemilik->name ?? '',
-                $wig->divisi ?? '',
-                $wig->angka_target,
-                $wig->satuan->name ?? '',
-                $wig->polaritas ?? 'positif'
+                'Tenaga Listrik', // PRIMARY placeholder
+                '4DX',            // KM placeholder
+                $b->tahun,        // 20... -> tahun
+                $no,              // NO -> e.g. WIG-1
+                '4DX',            // TYPE
+                $b->wig->judul ?? '', // INDIKATOR KINERJA 2026
+                $b->wig->polaritas ?? '3',
+                $b->satuan->name ?? '',
+                $b->unit->name ?? '',
+                $b->target_jan,
+                $b->target_feb,
+                $b->target_mar,
+                $b->target_apr,
+                $b->target_mei,
+                $b->target_jun,
+                $b->target_jul,
+                $b->target_agu,
+                $b->target_sep,
+                $b->target_okt,
+                $b->target_nov,
+                $b->target_des,
             ]);
         }
         
         // Add one empty row for them to understand they can add more if empty
         if ($rows->count() === 0) {
             $rows->push([
-                'Contoh WIG Penjualan', 'UID JABAR', 'Niaga', '1000000', 'Rupiah', 'positif'
+                'Tenaga Listrik', '4DX', '2026', 'WIG-1', '4DX', 'WIG 1 - PENJUALAN', '3', 'GWh', 'UID JABAR', 
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
             ]);
         }
 
@@ -40,12 +65,27 @@ class WigMassTemplateExport implements FromCollection, WithHeadings, ShouldAutoS
     public function headings(): array
     {
         return [
-            'JUDUL WIG',
-            'NAMA UNIT PEMILIK WIG',
-            'DIVISI WIG',
-            'TARGET WIG',
-            'NAMA SATUAN WIG',
-            'POLARITAS WIG (positif/negatif)'
+            'PRIMARY',
+            'KM',
+            '20',
+            'NO',
+            'TYPE',
+            'INDIKATOR KINERJA 2026',
+            'POLARITAS',
+            'SATUAN',
+            'UNIT',
+            'TARGET JANUARI',
+            'TARGET FEBRUARI',
+            'TARGET MARET',
+            'TARGET APRIL',
+            'TARGET MEI',
+            'TARGET JUNI',
+            'TARGET JULI',
+            'TARGET AGUSTUS',
+            'TARGET SEPTEMBER',
+            'TARGET OKTOBER',
+            'TARGET NOVEMBER',
+            'TARGET DESEMBER'
         ];
     }
 

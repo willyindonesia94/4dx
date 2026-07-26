@@ -15,15 +15,22 @@ class RealisasiWigController extends Controller
     {
         $bulanFilter = $request->input('bulan', date('n'));
         $tahunFilter = $request->input('tahun', date('Y'));
+        $wigFilter = $request->input('wig_id', '');
 
-        $query = RealisasiWig::with(['wig.satuan', 'unit', 'user']);
+        $query = RealisasiWig::with(['wig.satuan', 'unit', 'user'])
+                             ->where('bulan', $bulanFilter)
+                             ->where('tahun', $tahunFilter);
+        
+        if (!empty($wigFilter)) {
+            $query->where('wig_id', $wigFilter);
+        }
         
         // Filter by user's unit if not superadmin/pusat (assuming UP3 only sees their own)
         if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin']) && auth()->user()->unit_id) {
             $query->where('unit_id', auth()->user()->unit_id);
         }
 
-        $realisasis = $query->orderBy('tahun', 'desc')->orderBy('bulan', 'desc')->get();
+        $realisasis = $query->orderBy('unit_id', 'asc')->get();
         
         // We only show WIGs that have breakdown for this user's unit (for the input modal)
         $unitId = auth()->user()->unit_id;
@@ -36,7 +43,7 @@ class RealisasiWigController extends Controller
 
         $availableUnits = \App\Models\MasterUnit::where('type', 'up3')->get();
 
-        return view('realisasis.wig', compact('realisasis', 'wigs', 'bulanFilter', 'tahunFilter', 'availableUnits'));
+        return view('realisasis.wig', compact('realisasis', 'wigs', 'bulanFilter', 'tahunFilter', 'wigFilter', 'availableUnits'));
     }
 
     public function getTargetBulanan(Request $request)
@@ -70,9 +77,12 @@ class RealisasiWigController extends Controller
                                  ->first();
 
         if ($breakdown) {
+            $wig = MasterWig::find($wigId);
+        
             return response()->json([
                 'target' => $breakdown->$column,
-                'satuan' => $breakdown->satuan->name ?? ''
+                'satuan' => $wig->satuan->name ?? '',
+                'polaritas' => $wig->polaritas ?? '1'
             ]);
         }
 
@@ -181,6 +191,89 @@ class RealisasiWigController extends Controller
     {
         if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin'])) {
             abort(403, 'Akses Ditolak: Hanya Superadmin yang dapat mengedit/menghapus Realisasi WIG.');
+        }
+    }
+    public function downloadTemplate(Request $request)
+    {
+        $this->authorizeSuperadmin();
+        
+        $tahun = $request->query('tahun', date('Y'));
+        
+        $wigs = MasterWig::all();
+        $up3s = \App\Models\MasterUnit::where('type', 'up3')->get();
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Template Realisasi WIG ' . $tahun);
+
+        $months = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
+        $monthCols = ['target_jan', 'target_feb', 'target_mar', 'target_apr', 'target_mei', 'target_jun', 'target_jul', 'target_agu', 'target_sep', 'target_okt', 'target_nov', 'target_des'];
+
+        $headers = ['NO', 'TYPE', 'INDIKATOR KINERJA ' . $tahun, 'POLARITAS', 'SATUAN', 'UNIT'];
+        foreach ($months as $m) $headers[] = 'TARGET ' . $m;
+        foreach ($months as $m) $headers[] = 'REALISASI ' . $m;
+
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . '1', $header);
+            $col++;
+        }
+
+        $row = 2;
+        foreach ($up3s as $up3) {
+            foreach ($wigs as $wig) {
+                $breakdown = BreakdownWig::where('wig_id', $wig->id)
+                                         ->where('unit_id', $up3->id)
+                                         ->where('tahun', $tahun)
+                                         ->first();
+                
+                $sheet->setCellValue('A' . $row, $row - 1); // NO
+                $sheet->setCellValue('B' . $row, '4DX'); // TYPE
+                $sheet->setCellValue('C' . $row, $wig->judul); // INDIKATOR
+                $sheet->setCellValue('D' . $row, $wig->polaritas ?? '3'); // POLARITAS
+                $sheet->setCellValue('E' . $row, $wig->satuan->name ?? ''); // SATUAN
+                $sheet->setCellValue('F' . $row, $up3->name); // UNIT
+                
+                // Targets
+                $c = 'G';
+                foreach ($monthCols as $mCol) {
+                    $sheet->setCellValue($c . $row, $breakdown ? $breakdown->$mCol : 0);
+                    $c++;
+                }
+
+                // Realisasi (empty by default)
+                foreach ($monthCols as $mCol) {
+                    $sheet->setCellValue($c . $row, '');
+                    $c++;
+                }
+                
+                $row++;
+            }
+        }
+        
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $fileName = "Template_Realisasi_WIG_Tahun_{$tahun}.xlsx";
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="'. urlencode($fileName).'"');
+        $writer->save('php://output');
+        exit;
+    }
+
+    public function import(Request $request)
+    {
+        $this->authorizeSuperadmin();
+        
+        $request->validate([
+            'file_import' => 'required|mimes:xlsx,xls,csv',
+            'tahun' => 'required|integer',
+        ]);
+
+        try {
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\RealisasiWigImport($request->tahun), $request->file('file_import'));
+            return redirect()->back()->with('success', 'Data Realisasi WIG berhasil diimpor.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat impor: ' . $e->getMessage());
         }
     }
 }

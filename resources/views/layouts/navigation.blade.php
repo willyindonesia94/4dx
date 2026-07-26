@@ -69,7 +69,7 @@
                     </div>
                     @endrole
                     <x-nav-link :href="route('laporan.index')" :active="request()->routeIs('laporan.*')">
-                        {{ __('Laporan Bulanan') }}
+                        {{ __('Laporan') }}
                     </x-nav-link>
                 </div>
             </div>

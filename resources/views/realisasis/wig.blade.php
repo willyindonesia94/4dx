@@ -9,14 +9,22 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 px-2 sm:px-0">
                 <p class="text-gray-600 text-sm sm:text-base">Berikut adalah daftar realisasi pencapaian WIG secara bulanan.</p>
-                <button @click="openModal = true" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors">
-                    + Input Realisasi WIG
-                </button>
+                <div class="flex gap-2">
+                    @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin']))
+                    <button @click="openUploadModal = true" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        Upload Massal WIG
+                    </button>
+                    @endif
+                    <button @click="openModal = true" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors">
+                        + Input Realisasi WIG
+                    </button>
+                </div>
             </div>
 
             <!-- Filter -->
             <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex gap-4 items-end">
-                <form action="{{ route('realisasi-wig.index') }}" method="GET" class="flex gap-4 items-end w-full">
+                <form action="{{ route('realisasi-wig.index') }}" method="GET" class="flex flex-wrap gap-4 items-end w-full">
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1">Bulan</label>
                         <select name="bulan" class="rounded-md border-gray-300 shadow-sm text-sm">
@@ -30,6 +38,15 @@
                         <select name="tahun" class="rounded-md border-gray-300 shadow-sm text-sm">
                             @foreach(range(date('Y')-2, date('Y')+1) as $y)
                                 <option value="{{ $y }}" {{ $tahunFilter == $y ? 'selected' : '' }}>{{ $y }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">WIG</label>
+                        <select name="wig_id" class="w-full rounded-md border-gray-300 shadow-sm text-sm">
+                            <option value="">-- Semua WIG --</option>
+                            @foreach(\App\Models\MasterWig::all() as $wigOp)
+                                <option value="{{ $wigOp->id }}" {{ (isset($wigFilter) && $wigFilter == $wigOp->id) ? 'selected' : '' }}>{{ $wigOp->judul }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -64,7 +81,27 @@
                                         ->first();
                                     $target = $breakdown ? $breakdown->$targetCol : 0;
                                     $satuan = $realisasi->wig->satuan->name ?? '';
-                                    $persen = $target > 0 ? ($realisasi->angka_realisasi / $target) * 100 : ($realisasi->angka_realisasi > 0 ? 100 : 0);
+                                    $polaritas = strtolower(trim($realisasi->wig->polaritas ?? 'positif')); // positif / negatif
+                                    $real = $realisasi->angka_realisasi;
+                                    
+                                    if ($polaritas == 'negatif' || $polaritas == '3') { // Negatif (makin kecil makin baik)
+                                        if ($target == 0) {
+                                            $persen = ($real == 0) ? 100 : 0;
+                                        } else {
+                                            if ($real == 0) {
+                                                $persen = 100; // Atau maksimal PLN 120%
+                                            } else {
+                                                // PLN standard untuk Negatif: jika capai lebih kecil dari target, maka lebih dari 100%
+                                                $persen = ($target / $real) * 100;
+                                            }
+                                        }
+                                    } else { // Positif
+                                        if ($target == 0) {
+                                            $persen = ($real > 0) ? 100 : (($real == 0) ? 100 : 0);
+                                        } else {
+                                            $persen = ($real / $target) * 100;
+                                        }
+                                    }
                                 @endphp
                             <tr>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -284,6 +321,64 @@
             </div>
         </div>
 
+        <!-- Upload Massal Modal -->
+        <div x-show="openUploadModal" class="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="display: none;">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="openUploadModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+                <div x-show="openUploadModal" class="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100">
+                    <div class="bg-gradient-to-r from-emerald-600 to-teal-700 px-6 py-4 flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-white tracking-wide">Upload Massal Realisasi WIG</h3>
+                        <button @click="openUploadModal = false" type="button" class="text-emerald-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 focus:outline-none">
+                            <span class="sr-only">Close</span>
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                    
+                    <form action="{{ route('realisasi-wig.import') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div class="bg-white px-6 pt-5 pb-6">
+                            <div class="space-y-6">
+                                <!-- Pilih Tahun -->
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Tahun</label>
+                                    <select name="tahun" x-model="uploadForm.tahun" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm">
+                                        @php $curYear = (int)date('Y'); @endphp
+                                        @foreach(range($curYear-1, $curYear+1) as $y)
+                                            <option value="{{ $y }}">{{ $y }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <!-- Download Template Button -->
+                                <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-md flex justify-between items-center">
+                                    <div class="text-sm text-emerald-800">
+                                        <p class="font-semibold">Langkah 1: Unduh Template</p>
+                                        <p class="text-xs mt-1">Gunakan template ini untuk mengisi data.</p>
+                                    </div>
+                                    <button type="button" @click="downloadTemplate()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded text-xs font-bold shadow transition-colors flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                        Download Excel
+                                    </button>
+                                </div>
+
+                                <!-- File Upload -->
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Langkah 2: Upload File Template Terisi</label>
+                                    <input type="file" name="file_import" accept=".xlsx,.xls,.csv" required class="block w-full py-2 px-3 text-sm text-slate-700 border border-slate-200 rounded-md cursor-pointer bg-slate-50 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 rounded-b-lg">
+                            <button @click="openUploadModal = false" type="button" class="w-full sm:w-auto px-6 py-2.5 border border-slate-200 rounded-md bg-white text-slate-700 font-semibold shadow-sm hover:bg-slate-50 text-sm">Batal</button>
+                            <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-md shadow-lg shadow-emerald-200 hover:from-emerald-700 hover:to-teal-700 text-sm transition-colors">Import Data</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+
     </div>
 
     <script>
@@ -291,7 +386,11 @@
             return {
                 openModal: false,
                 openEditModal: false,
+                openUploadModal: false,
                 isLoadingTarget: false,
+                uploadForm: {
+                    tahun: '{{ (int)date("Y") }}'
+                },
                 editForm: {
                     id: null,
                     angka_realisasi: '',
@@ -305,6 +404,7 @@
                     tahun: '{{ (int)date("Y") }}',
                     target: null,
                     satuan: '',
+                    polaritas: '1',
                     realisasi: '',
                     error: null,
                     get targetFormatted() {
@@ -315,10 +415,22 @@
                 get persentase() {
                     let target = parseFloat(this.form.target) || 0;
                     let realisasi = parseFloat(this.form.realisasi) || 0;
-                    if (target > 0) {
-                        return (realisasi / target) * 100;
+                    let polar = (this.form.polaritas || '').toString().toLowerCase().trim();
+                    
+                    if (polar === 'negatif' || polar === '3') { // Negatif
+                        if (target === 0) {
+                            return realisasi === 0 ? 100 : 0;
+                        } else {
+                            if (realisasi === 0) return 100;
+                            return (target / realisasi) * 100;
+                        }
+                    } else { // Positif
+                        if (target === 0) {
+                            return realisasi > 0 ? 100 : (realisasi === 0 ? 100 : 0);
+                        } else {
+                            return (realisasi / target) * 100;
+                        }
                     }
-                    return realisasi > 0 ? 100 : 0;
                 },
                 get persentaseFormatted() {
                     return this.persentase.toFixed(1) + '%';
@@ -343,10 +455,12 @@
                             if (data.target !== undefined && data.target !== null) {
                                 this.form.target = data.target;
                                 this.form.satuan = data.satuan;
+                                this.form.polaritas = data.polaritas || '1';
                                 this.form.error = null;
                             } else {
                                 this.form.target = null;
                                 this.form.satuan = '';
+                                this.form.polaritas = '1';
                                 this.form.error = data.message || 'Data target tidak ditemukan';
                             }
                         })
@@ -354,6 +468,9 @@
                             this.form.target = null;
                             this.form.error = 'Terjadi kesalahan saat mengambil target';
                         });
+                },
+                downloadTemplate() {
+                    window.location.href = `{{ route('realisasi-wig.template') }}?tahun=${this.uploadForm.tahun}`;
                 }
             }
         }

@@ -27,7 +27,10 @@ class User extends Authenticatable
         'division_id',
         'location_type',
         'location_id',
-        'profile_photo'
+        'profile_photo',
+        'role_name',
+        'unit_id',
+        'matrix_group_id'
     ];
 
     public function location()

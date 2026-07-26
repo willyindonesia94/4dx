@@ -29,7 +29,14 @@ class LeadMeasureController extends Controller
             });
         }
         
-        $lms = $query->get();
+        $lms = $query->get()->sortBy([
+            fn($a, $b) => $a->wig_id <=> $b->wig_id,
+            function ($a, $b) {
+                preg_match('/LM-?(\d+)/i', $a->judul_lm, $mA);
+                preg_match('/LM-?(\d+)/i', $b->judul_lm, $mB);
+                return (int)($mA[1] ?? 999) <=> (int)($mB[1] ?? 999);
+            }
+        ])->values();
         $wigs = MasterWig::all();
         $satuans = MasterSatuan::all();
         return view('master-lms.index', compact('lms', 'status', 'wigs', 'satuans'));

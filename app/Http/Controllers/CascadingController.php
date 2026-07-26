@@ -33,7 +33,13 @@ class CascadingController extends Controller
             ->with(['masterLms' => function($q) {
                 $q->where('is_approved', true);
             }, 'masterLms.breakdowns.unit', 'masterLms.breakdowns.satuan'])
-            ->get();
+            ->get()
+            ->each(function($wig) {
+                $wig->setRelation('masterLms', $wig->masterLms->sortBy(function($lm) {
+                    preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
+                    return (int)($m[1] ?? 999);
+                })->values());
+            });
         
         $satuans = MasterSatuan::all();
         
@@ -63,7 +69,61 @@ class CascadingController extends Controller
             'periode_end' => 'required|date|after_or_equal:periode_start',
         ]);
 
+        // Create main (monthly) target
         BreakdownLm::create($request->all());
+        
+        // Handle weekly targets if provided
+        $weeklyKeys = ['target_m1', 'target_m2', 'target_m3', 'target_m4', 'target_m5'];
+        $hasWeekly = false;
+        foreach($weeklyKeys as $wk) {
+            if ($request->filled($wk)) $hasWeekly = true;
+        }
+        
+        if ($hasWeekly) {
+            $carbonStart = \Carbon\Carbon::parse($request->periode_start);
+            $carbonEnd = \Carbon\Carbon::parse($request->periode_end);
+            
+            // Calculate rolling weeks
+            $endM1 = $carbonStart->copy()->addDays(6);
+            if ($endM1->gt($carbonEnd)) $endM1 = $carbonEnd->copy();
+
+            $startM2 = $endM1->copy()->addDay();
+            $endM2 = $startM2->copy()->addDays(6);
+            if ($endM2->gt($carbonEnd)) $endM2 = $carbonEnd->copy();
+
+            $startM3 = $endM2->copy()->addDay();
+            $endM3 = $startM3->copy()->addDays(6);
+            if ($endM3->gt($carbonEnd)) $endM3 = $carbonEnd->copy();
+
+            $startM4 = $endM3->copy()->addDay();
+            $endM4 = $startM4->copy()->addDays(6);
+            if ($endM4->gt($carbonEnd)) $endM4 = $carbonEnd->copy();
+
+            $startM5 = $endM4->copy()->addDay();
+            $endM5 = $carbonEnd->copy();
+
+            $weeks = [
+                'target_m1' => ['start' => $carbonStart->format('Y-m-d'), 'end' => $endM1->format('Y-m-d')],
+                'target_m2' => ['start' => $startM2->format('Y-m-d'), 'end' => $endM2->format('Y-m-d')],
+                'target_m3' => ['start' => $startM3->format('Y-m-d'), 'end' => $endM3->format('Y-m-d')],
+                'target_m4' => ['start' => $startM4->format('Y-m-d'), 'end' => $endM4->format('Y-m-d')],
+                'target_m5' => ['start' => $startM5->format('Y-m-d'), 'end' => $endM5->format('Y-m-d')],
+            ];
+            
+            foreach ($weeks as $key => $dates) {
+                if ($request->filled($key) && $dates['start'] <= $dates['end']) {
+                    BreakdownLm::create([
+                        'lm_id' => $request->lm_id,
+                        'unit_id' => $request->unit_id,
+                        'bidang' => $request->bidang,
+                        'satuan_id' => $request->satuan_id,
+                        'angka_target' => $request->input($key),
+                        'periode_start' => $dates['start'],
+                        'periode_end' => $dates['end']
+                    ]);
+                }
+            }
+        }
 
         return redirect()->back()->with('success', 'Breakdown LM berhasil ditambahkan ke Unit.');
     }
@@ -190,6 +250,22 @@ class CascadingController extends Controller
             return redirect()->back()->with('success', 'LM berhasil diimport secara massal!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Terjadi kesalahan saat mengimpor data: ' . $e->getMessage());
+        }
+    }
+
+    public function importBreakdownLm(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            "file_excel" => "required|mimes:xlsx,xls",
+            "bulan" => "required|integer|min:1|max:12",
+            "tahun" => "required|integer|min:2020",
+        ]);
+
+        try {
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\BreakdownLmMassImport($request->bulan, $request->tahun), $request->file("file_excel"));
+            return redirect()->back()->with("success", "Breakdown Target LM berhasil di-upload secara massal.");
+        } catch (\Exception $e) {
+            return redirect()->back()->with("error", "Terjadi kesalahan saat upload data: " . $e->getMessage());
         }
     }
 }

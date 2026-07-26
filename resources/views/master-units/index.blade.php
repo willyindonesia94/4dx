@@ -11,45 +11,56 @@
 
     <div class="py-12" x-data="unitForm()">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="flex justify-end mb-4">
-                <button @click="openCreate()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow">
-                    + Tambah Unit
-                </button>
-            </div>
-            
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Unit</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipe</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Induk Unit</th>
-                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            @forelse($units as $unit)
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $unit->name }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $unit->type }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $unit->parent ? $unit->parent->name : '-' }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                                    <button @click="openEdit({{ $unit->id }}, '{{ $unit->name }}', '{{ $unit->type }}', '{{ $unit->parent_id }}', '{{ $unit->latitude }}', '{{ $unit->longitude }}')" class="text-indigo-600 hover:text-indigo-900">Edit</button>
-                                    <form action="{{ route('master-units.destroy', $unit->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Hapus unit ini?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:text-red-900">Hapus</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">Belum ada unit.</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+            <div x-data="{ activeTab: 'UID' }">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex space-x-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm">
+                        <button @click="activeTab = 'UID'" :class="activeTab === 'UID' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="px-4 py-2 text-sm font-semibold rounded-md transition-colors">UID</button>
+                        <button @click="activeTab = 'UP3'" :class="activeTab === 'UP3' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="px-4 py-2 text-sm font-semibold rounded-md transition-colors">UP3</button>
+                        <button @click="activeTab = 'ULP'" :class="activeTab === 'ULP' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="px-4 py-2 text-sm font-semibold rounded-md transition-colors">ULP</button>
+                    </div>
+                    <button @click="openCreate()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow">
+                        + Tambah Unit
+                    </button>
+                </div>
+                
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                    <div class="p-6 bg-white border-b border-gray-200">
+                        @foreach(['UID', 'UP3', 'ULP'] as $tabType)
+                        <div x-show="activeTab === '{{ $tabType }}'" style="display: none;">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Unit</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipe</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Induk Unit</th>
+                                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    @forelse($units->where('type', $tabType) as $unit)
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $unit->name }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $unit->type }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $unit->parent ? $unit->parent->name : '-' }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                                            <button @click="openEdit({{ $unit->id }}, '{{ $unit->name }}', '{{ $unit->type }}', '{{ $unit->parent_id }}', '{{ $unit->latitude }}', '{{ $unit->longitude }}')" class="text-indigo-600 hover:text-indigo-900">Edit</button>
+                                            <form action="{{ route('master-units.destroy', $unit->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Hapus unit ini?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:text-red-900">Hapus</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">Belum ada unit {{ $tabType }}.</td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                        @endforeach
+                    </div>
                 </div>
             </div>
         </div>

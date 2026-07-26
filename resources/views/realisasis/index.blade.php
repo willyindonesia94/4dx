@@ -5,73 +5,219 @@
         </h2>
     </x-slot>
 
-    <div class="py-12" x-data="realisasiForm()">
+    <div class="py-12" x-data="{ ...realisasiForm(), openUploadModal: false }">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 px-2 sm:px-0">
                 <p class="text-gray-600 text-sm sm:text-base">Berikut adalah daftar realisasi pencapaian Lead Measures yang telah diinput.</p>
-                <button @click="openModal = true" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors">
-                    + Input Realisasi LM
-                </button>
+                <div class="flex flex-wrap gap-2 w-full sm:w-auto mt-3 sm:mt-0">
+                    @if(auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin'))
+                        <a href="{{ route('realisasis.template') }}" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2 px-4 rounded-lg shadow-sm border border-indigo-200 transition-colors text-sm flex items-center">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Template
+                        </a>
+                        <button @click="openUploadModal = true" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition-colors text-sm flex items-center">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            Upload Massal
+                        </button>
+                    @endif
+                    <button @click="openModal = true" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors text-sm flex items-center">
+                        + Input Realisasi LM
+                    </button>
+                </div>
             </div>
             
-            <div class="bg-white shadow-sm sm:rounded-lg">
-                <div class="p-4 sm:p-6 bg-white border-b border-gray-200 overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Tanggal Input</th>
-                                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Penginput</th>
-                                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Target WIG</th>
-                                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Lead Measure</th>
-                                <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Capaian</th>
-                                <th class="px-4 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            @forelse($realisasis as $realisasi)
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    {{ \Carbon\Carbon::parse($realisasi->tanggal_input)->format('d M Y') }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ $realisasi->user->name ?? '-' }}
-                                </td>
-                                <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                                    {{ $realisasi->lm->wig->judul ?? '-' }}
-                                </td>
-                                <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                                    {{ $realisasi->lm->judul_lm ?? '-' }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                                    {{ number_format($realisasi->angka_realisasi, 2) }} 
-                                    <span class="text-xs text-gray-500 font-normal">{{ $realisasi->lm->satuan->name ?? '' }}</span>
-                                </td>
-                                <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                                    @php
-                                        $canEdit = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin']) || \Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now());
-                                        $canDelete = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin']);
-                                    @endphp
+        @php
+            $namaBulan = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+        @endphp
 
-                                    @if($canEdit)
-                                    <button @click="openEditModal = true; editForm.id = {{ $realisasi->id }}; editForm.angka_realisasi = '{{ $realisasi->angka_realisasi }}'; editForm.keterangan_tambahan = '{{ $realisasi->keterangan_tambahan }}'; editForm.actionUrl = '{{ route('realisasis.update', $realisasi->id) }}'" class="text-indigo-600 hover:text-indigo-900 transition-colors">Edit</button>
-                                    @endif
+        <!-- Filter Dropdown Bar -->
+        <form method="GET" action="{{ route('realisasis.index') }}" class="mb-5">
+            <div class="flex flex-wrap items-end gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3 shadow-sm">
+                <!-- Periode -->
+                <div class="flex flex-col gap-1 min-w-[160px]">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Periode</label>
+                    <select name="bulan" id="bulanSelect" class="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-700 font-medium">
+                        @foreach([2025, 2026] as $yr)
+                            @foreach(range(1,12) as $mn)
+                                <option value="{{ $mn }}" data-tahun="{{ $yr }}"
+                                    {{ ($mn == $bulan && $yr == $tahun) ? 'selected' : '' }}>
+                                    {{ $namaBulan[$mn] }} {{ $yr }}
+                                </option>
+                            @endforeach
+                        @endforeach
+                    </select>
+                    <input type="hidden" name="tahun" id="tahunHidden" value="{{ $tahun }}">
+                </div>
 
-                                    @if($canDelete)
-                                    <form action="{{ route('realisasis.destroy', $realisasi->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus realisasi ini?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:text-red-900 transition-colors">Hapus</button>
-                                    </form>
-                                    @endif
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="7" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">Belum ada data realisasi yang diinput.</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                <!-- WIG -->
+                <div class="flex flex-col gap-1 min-w-[200px]">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Filter WIG</label>
+                    <select name="wig_id" class="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-700 font-medium">
+                        <option value="">— Semua WIG —</option>
+                        @foreach($wigs as $wig)
+                            <option value="{{ $wig->id }}" {{ $wigId == $wig->id ? 'selected' : '' }}>
+                                {{ $wig->judul }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg shadow transition-colors flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
+                    Terapkan
+                </button>
+
+                <!-- Info -->
+                <p class="text-xs text-gray-400 ml-auto self-center">
+                    <strong class="text-gray-700">{{ $realisasis->total() }}</strong> data ditemukan
+                </p>
+            </div>
+        </form>
+
+        <script>
+            // Sync tahun hidden field when bulan changes
+            document.querySelector('select[name="bulan"]')?.addEventListener('change', function() {
+                const selected = this.options[this.selectedIndex];
+                const tahun = selected.getAttribute('data-tahun');
+                if (tahun) document.getElementById('tahunHidden').value = tahun;
+            });
+        </script>
+
+        <div class="bg-white shadow-sm sm:rounded-lg">
+            <div class="p-4 sm:p-6 bg-white border-b border-gray-200 overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Tanggal Input</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Unit</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Target WIG</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Lead Measure</th>
+                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Capaian</th>
+                            <th class="px-4 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @forelse($realisasis as $realisasi)
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {{ \Carbon\Carbon::parse($realisasi->tanggal_input)->format('d M Y') }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {{ $realisasi->unit->name ?? ($realisasi->user->name ?? '-') }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                                {{ $realisasi->lm->wig->judul ?? '-' }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                                {{ $realisasi->lm->judul_lm ?? '-' }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                                {{ number_format($realisasi->angka_realisasi, 2) }} 
+                                <span class="text-xs text-gray-500 font-normal">{{ $realisasi->lm->satuan->name ?? '' }}</span>
+                            </td>
+                            <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                                @php
+                                    $canEdit = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin']) || \Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now());
+                                    $canDelete = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin']);
+                                @endphp
+
+                                @if($canEdit)
+                                <button @click="openEditModal = true; editForm.id = {{ $realisasi->id }}; editForm.angka_realisasi = '{{ $realisasi->angka_realisasi }}'; editForm.keterangan_tambahan = '{{ $realisasi->keterangan_tambahan }}'; editForm.actionUrl = '{{ route('realisasis.update', $realisasi->id) }}'" class="text-indigo-600 hover:text-indigo-900 transition-colors">Edit</button>
+                                @endif
+
+                                @if($canDelete)
+                                <form action="{{ route('realisasis.destroy', $realisasi->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus realisasi ini?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-600 hover:text-red-900 transition-colors">Hapus</button>
+                                </form>
+                                @endif
+                            </td>
+                        </tr>
+                        @empty
+                        <tr>
+                            <td colspan="6" class="px-6 py-10 text-sm text-gray-400 text-center">
+                                <div class="flex flex-col items-center gap-2">
+                                    <svg class="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                                    <span>Belum ada data realisasi untuk periode <strong>{{ $namaBulan[$bulan] }} {{ $tahun }}</strong>.</span>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            @if($realisasis->hasPages())
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                {{ $realisasis->links() }}
+            </div>
+            @endif
+        </div>
+
+        </div>
+
+        <!-- Upload Modal -->
+        <div x-show="openUploadModal" class="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="display: none;">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="openUploadModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div x-show="openUploadModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100 max-h-[90vh] flex flex-col">
+                    <form action="{{ route('laporan.import') }}" method="POST" enctype="multipart/form-data" class="flex flex-col">
+                        @csrf
+                        <div class="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+                            <h3 class="text-lg font-bold text-white tracking-wide" id="modal-title">Upload Massal Realisasi</h3>
+                            <button @click="openUploadModal = false" type="button" class="text-indigo-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 focus:outline-none">
+                                <span class="sr-only">Close</span>
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        <div class="p-6 bg-slate-50 flex-1 overflow-y-auto">
+                            <div class="space-y-4">
+                                <!-- Info Box -->
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <p class="text-xs text-blue-800 font-semibold mb-1">📋 Format File Excel</p>
+                                    <p class="text-[11px] text-blue-700">Gunakan file Excel dengan kolom: <strong>JUDUL WIG, JUDUL LM, SATUAN, UNIT, TARGET BULANAN, REALISASI MINGGU-1 s.d. REALISASI MINGGU-5</strong>. (Sama seperti Template Laporan Bulanan)</p>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-slate-700 mb-1">Bulan</label>
+                                        <select name="bulan" required class="block w-full py-2 px-3 rounded-md border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm text-slate-700">
+                                            @foreach(['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'] as $i => $bulanNama)
+                                                <option value="{{ $i + 1 }}" {{ ($i + 1) == date('n') ? 'selected' : '' }}>{{ $bulanNama }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-slate-700 mb-1">Tahun</label>
+                                        <select name="tahun" required class="block w-full py-2 px-3 rounded-md border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm text-slate-700">
+                                            @for($y = date('Y') - 1; $y <= date('Y') + 1; $y++)
+                                                <option value="{{ $y }}" {{ $y == date('Y') ? 'selected' : '' }}>{{ $y }}</option>
+                                            @endfor
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1">Tanggal Awal Periode (Minggu 1)</label>
+                                    <input type="date" name="tanggal_awal_periode" required class="w-full text-sm text-slate-700 border border-slate-200 rounded-lg p-2 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                                    <p class="text-[11px] text-slate-500 mt-1">Sistem akan otomatis menghitung tanggal input realisasi M1, M2, dst berpatokan pada tanggal ini (M1 = +6 Hari, M2 = +13 Hari, dst).</p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1">File Excel (.xlsx / .xls)</label>
+                                    <input type="file" name="file_excel" accept=".xlsx,.xls" required class="w-full text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-200 rounded-lg p-2 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-100 px-6 py-4 border-t border-slate-200 flex flex-col-reverse sm:flex-row justify-end gap-2">
+                            <button @click="openUploadModal = false" type="button" class="w-full sm:w-auto px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500/20 transition-all text-sm">Batal</button>
+                            <button type="submit" class="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-lg shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm flex items-center justify-center">
+                                Upload Data
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

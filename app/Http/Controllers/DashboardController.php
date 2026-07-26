@@ -118,7 +118,12 @@ class DashboardController extends Controller
             $q->where('is_approved', true)->with('satuan');
         }]);
         if ($selectedDivisi) $wigQuery->where('divisi', $selectedDivisi);
-        $wigs = $wigQuery->get();
+        $wigs = $wigQuery->get()->each(function($wig) {
+            $wig->setRelation('masterLms', $wig->masterLms->sortBy(function($lm) {
+                preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
+                return (int)($m[1] ?? 999);
+            })->values());
+        });
 
         $wigProgresses = [];
         foreach ($wigs as $wig) {
@@ -129,34 +134,84 @@ class DashboardController extends Controller
             foreach ($wig->masterLms as $lm) {
                 $target      = $scopedTarget[$lm->id] ?? 0;
                 $realisasi   = $scopedRealisasi[$lm->id] ?? 0;
+                $pct = 0;
+                $lmPolaritas = strtolower(trim($wig->polaritas ?? 'positif'));
 
-                if ($target > 0) {
-                    if ($wig->polaritas === 'negatif') {
-                        $pct = max(0, 100 + (($target - $realisasi) / $target) * 100);
+                if ($target >= 0) {
+                    if ($lmPolaritas === 'negatif' || $lmPolaritas === '3') {
+                        if ($target == 0) {
+                            $pct = ($realisasi == 0) ? 100 : 0;
+                        } else {
+                            $pct = ($realisasi == 0) ? 100 : ($target / $realisasi) * 100;
+                        }
                     } else {
-                        $pct = ($realisasi / $target) * 100;
+                        if ($target == 0) {
+                            $pct = ($realisasi > 0) ? 100 : (($realisasi == 0) ? 100 : 0);
+                        } else {
+                            $pct = ($realisasi / $target) * 100;
+                        }
                     }
-                    $pct = min($pct, 100);
                     $totalPct += $pct;
                     $count++;
+                }
 
-                    $lmDetails[] = [
-                        'judul'     => $lm->judul_lm,
-                        'target'    => $target,
-                        'realisasi' => $realisasi,
-                        'progress'  => round($pct, 1),
-                        'satuan'    => $lm->satuan->name ?? '',
-                        'polaritas' => $wig->polaritas,
-                    ];
+                $lmDetails[] = [
+                    'judul'     => $lm->judul_lm,
+                    'target'    => $target,
+                    'realisasi' => $realisasi,
+                    'progress'  => round($pct, 1),
+                    'satuan'    => $lm->satuan->name ?? '',
+                    'polaritas' => $wig->polaritas,
+                ];
+            }
+
+            // Calculate WIG Progress based on Yearly Target and YTD Realisasi
+            $wigTargetQuery = DB::table('breakdown_wigs')->where('wig_id', $wig->id)->where('tahun', $tahun);
+            if ($scopedUnitIds !== null) {
+                $wigTargetQuery->whereIn('unit_id', $scopedUnitIds);
+            }
+            $wigTarget = $wigTargetQuery->sum('target_tahunan');
+            
+            // Fallback to global WIG target if no breakdown target is found
+            if ($wigTarget == 0) {
+                $wigTarget = $wig->angka_target;
+            }
+
+            $wigRealQuery = DB::table('realisasi_wigs')
+                ->where('wig_id', $wig->id)
+                ->where('tahun', $tahun)
+                ->where('bulan', '<=', $bulan);
+            if ($scopedUnitIds !== null) {
+                $wigRealQuery->whereIn('unit_id', $scopedUnitIds);
+            }
+            $wigRealisasi = (float) $wigRealQuery->sum('angka_realisasi');
+
+            $wigProgress = 0;
+            $wigPolaritas = strtolower(trim($wig->polaritas ?? 'positif'));
+            
+            if ($wigTarget >= 0) {
+                if ($wigPolaritas === 'negatif' || $wigPolaritas === '3') {
+                    if ($wigTarget == 0) {
+                        $wigProgress = ($wigRealisasi == 0) ? 100 : 0;
+                    } else {
+                        $wigProgress = ($wigRealisasi == 0) ? 100 : ($wigTarget / $wigRealisasi) * 100;
+                    }
+                } else {
+                    if ($wigTarget == 0) {
+                        $wigProgress = ($wigRealisasi > 0) ? 100 : (($wigRealisasi == 0) ? 100 : 0);
+                    } else {
+                        $wigProgress = ($wigRealisasi / $wigTarget) * 100;
+                    }
                 }
             }
 
             $wigProgresses[] = [
                 'id'          => $wig->id,
                 'judul'       => $wig->judul,
-                'angka_target' => $wig->angka_target,
+                'deskripsi'   => $wig->deskripsi,
+                'angka_target' => $wigTarget, // Updated to show scoped target if applicable
                 'satuan'      => $wig->satuan->name ?? '',
-                'progress'    => $count > 0 ? round($totalPct / $count, 1) : 0,
+                'progress'    => round($wigProgress, 1),
                 'lm_count'    => $count,
                 'lms'         => $lmDetails,
             ];
@@ -175,12 +230,33 @@ class DashboardController extends Controller
             $leaderboard[] = ['unit' => $ulp->name, 'score' => $leaderboardScores[$ulp->id] ?? 0];
         }
         usort($leaderboard, fn($a, $b) => $b['score'] <=> $a['score']);
-        $leaderboard = array_slice($leaderboard, 0, 10);
+        foreach ($leaderboard as $idx => &$item) {
+            $item['rank'] = $idx + 1;
+        }
+        if (count($leaderboard) > 10) {
+            $leaderboard = array_merge(array_slice($leaderboard, 0, 5), array_slice($leaderboard, -5));
+        }
 
-        // ── Map Data ───────────────────────────────────────────────────────────
-        $mapData = $allUlps->filter(fn($u) => $u->latitude && $u->longitude)
-            ->map(fn($u) => ['name' => $u->name, 'lat' => $u->latitude, 'lng' => $u->longitude, 'progress' => rand(40, 100)])
-            ->values();
+        $leaderboardUp3 = [];
+        foreach ($up3s as $up3) {
+            $childIds = $allUlps->where('parent_id', $up3->id)->pluck('id')->toArray();
+            $up3Score = 0;
+            foreach ($childIds as $cId) {
+                $up3Score += $leaderboardScores[$cId] ?? 0;
+            }
+            $up3Score += $leaderboardScores[$up3->id] ?? 0;
+            $leaderboardUp3[] = ['unit' => $up3->name, 'score' => $up3Score];
+        }
+        usort($leaderboardUp3, fn($a, $b) => $b['score'] <=> $a['score']);
+        foreach ($leaderboardUp3 as $idx => &$item) {
+            $item['rank'] = $idx + 1;
+        }
+        if (count($leaderboardUp3) > 10) {
+            $leaderboardUp3 = array_merge(array_slice($leaderboardUp3, 0, 5), array_slice($leaderboardUp3, -5));
+        }
+
+        // ── Map Data (moved to latestSesiWig block) ───────────────────────────
+        $mapData = [];
 
         // ── Menang / Kalah ─────────────────────────────────────────────────────
         $menangKalah = ['divisi' => ['menang' => [], 'kalah' => []], 'up3' => ['menang' => [], 'kalah' => []], 'ulp' => ['menang' => [], 'kalah' => []]];
@@ -238,17 +314,285 @@ class DashboardController extends Controller
             $menangKalah['ulp'][$avg >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => $avg];
         }
 
+        // ── Trend Data Calculation (Jan to Current Month) ──
+        $trendData = [
+            'labels' => [],
+            'wig_progress' => [],
+        ];
+        
+        foreach ($wigs as $wig) {
+            $trendData['wig_progress'][$wig->id] = ['name' => $wig->judul, 'data' => []];
+        }
+
+        $bulanNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+
+        $maxBulan = max(1, $bulan - 1);
+        for ($m = 1; $m <= $maxBulan; $m++) {
+            $trendData['labels'][] = $bulanNames[$m - 1];
+            $tPeriodeStart = sprintf('%04d-%02d-01', $tahun, $m);
+            $tPeriodeEnd = date('Y-m-t', strtotime($tPeriodeStart));
+            
+            $tBdQuery = DB::table('breakdown_lms')
+                ->where('periode_start', '<=', $tPeriodeEnd)
+                ->where('periode_end', '>=', $tPeriodeStart)
+                ->select('lm_id', 'unit_id', DB::raw('SUM(angka_target) as target'))
+                ->groupBy('lm_id', 'unit_id')
+                ->get();
+            $tBdMap = [];
+            foreach ($tBdQuery as $row) {
+                $tBdMap[$row->unit_id][$row->lm_id] = (float) $row->target;
+            }
+            
+            $tRealBaseQuery = DB::table('realisasis')->whereMonth('tanggal_input', $m)->whereYear('tanggal_input', $tahun);
+            if ($scopedUnitIds !== null) {
+                $tRealBaseQuery->whereIn('unit_id', $scopedUnitIds);
+            }
+            $tRealQuery = $tRealBaseQuery->select('lm_id', 'unit_id', DB::raw('SUM(angka_realisasi) as realisasi'))
+                ->groupBy('lm_id', 'unit_id')
+                ->get();
+            $tRealMap = [];
+            foreach ($tRealQuery as $row) {
+                $tRealMap[$row->unit_id][$row->lm_id] = (float) $row->realisasi;
+            }
+            
+            $tScopedTarget = [];
+            $tScopedRealisasi = [];
+            if ($scopedUnitIds !== null) {
+                foreach ($scopedUnitIds as $uid) {
+                    foreach ($tBdMap[$uid] ?? [] as $lmId => $t) $tScopedTarget[$lmId] = ($tScopedTarget[$lmId] ?? 0) + $t;
+                    foreach ($tRealMap[$uid] ?? [] as $lmId => $r) $tScopedRealisasi[$lmId] = ($tScopedRealisasi[$lmId] ?? 0) + $r;
+                }
+            } else {
+                foreach ($tBdMap as $uid => $lms) {
+                    foreach ($lms as $lmId => $t) $tScopedTarget[$lmId] = ($tScopedTarget[$lmId] ?? 0) + $t;
+                }
+                foreach ($tRealMap as $uid => $lms) {
+                    foreach ($lms as $lmId => $r) $tScopedRealisasi[$lmId] = ($tScopedRealisasi[$lmId] ?? 0) + $r;
+                }
+            }
+            
+            $bulanNamesFull = [1 => 'jan', 2 => 'feb', 3 => 'mar', 4 => 'apr', 5 => 'mei', 6 => 'jun', 7 => 'jul', 8 => 'agu', 9 => 'sep', 10 => 'okt', 11 => 'nov', 12 => 'des'];
+            $colTarget = 'target_' . $bulanNamesFull[$m];
+            
+            // Get WIG target for month $m
+            $tWigTargetQuery = DB::table('breakdown_wigs')->where('tahun', $tahun);
+            if ($scopedUnitIds !== null) {
+                $tWigTargetQuery->whereIn('unit_id', $scopedUnitIds);
+            }
+            $tWigTargets = $tWigTargetQuery->select('wig_id', DB::raw("SUM($colTarget) as total_target"))->groupBy('wig_id')->pluck('total_target', 'wig_id')->toArray();
+            
+            // Get WIG realisasi for month $m
+            $tWigRealQuery = DB::table('realisasi_wigs')->where('tahun', $tahun)->where('bulan', $m);
+            if ($scopedUnitIds !== null) {
+                $tWigRealQuery->whereIn('unit_id', $scopedUnitIds);
+            }
+            $tWigRealisasis = $tWigRealQuery->select('wig_id', DB::raw('SUM(angka_realisasi) as total_realisasi'))->groupBy('wig_id')->pluck('total_realisasi', 'wig_id')->toArray();
+
+            foreach ($wigs as $wig) {
+                $target = (float) ($tWigTargets[$wig->id] ?? 0);
+                $realisasi = (float) ($tWigRealisasis[$wig->id] ?? 0);
+                $wigPolaritas = strtolower(trim($wig->polaritas ?? 'positif'));
+                $pct = 0;
+                
+                if ($target >= 0) {
+                    if ($wigPolaritas === 'negatif' || $wigPolaritas === '3') {
+                        if ($target == 0) {
+                            $pct = ($realisasi == 0) ? 100 : 0;
+                        } else {
+                            $pct = ($realisasi == 0) ? 100 : ($target / $realisasi) * 100;
+                        }
+                    } else {
+                        if ($target == 0) {
+                            $pct = ($realisasi > 0) ? 100 : (($realisasi == 0) ? 100 : 0);
+                        } else {
+                            $pct = ($realisasi / $target) * 100;
+                        }
+                    }
+                }
+                
+                $trendData['wig_progress'][$wig->id]['data'][] = round($pct, 1);
+            }
+        }
+
         // Sort all scoreboard levels
         foreach (['divisi', 'up3', 'ulp'] as $level) {
             usort($menangKalah[$level]['menang'], fn($a, $b) => $b['score'] <=> $a['score']);
             usort($menangKalah[$level]['kalah'],  fn($a, $b) => $b['score'] <=> $a['score']);
         }
 
+        // ── Sesi WIG Matrix Calculation (Latest Sesi in Month) ──
+        $latestSesiWig = \App\Models\SesiWig::where('bulan', $bulan)
+            ->where('tahun', $tahun)
+            ->orderBy('minggu_ke', 'desc')
+            ->first();
+            
+        $sesi_wigs_matrix = collect();
+        $matrixTargets = [];
+        $matrixRealisasi = [];
+        $matrixKomitmen = [];
+        $rtMenangKalah = [];
+        $dynamicMapData = [];
+        $lms = \App\Models\MasterLm::all();
+        $sesi_wigs_month = collect();
+
+        if ($latestSesiWig) {
+            $sesi_wigs_month = \App\Models\SesiWig::where('tahun', $tahun)
+                ->where('bulan', $bulan)
+                ->orderBy('minggu_ke')
+                ->get();
+                
+            $sesi_wigs_matrix = $sesi_wigs_month;
+            if ($latestSesiWig->tipe_sesi === 'Mingguan') {
+                $sesi_wigs_matrix = $sesi_wigs_month->filter(function($sw) use ($latestSesiWig) {
+                    return $sw->tipe_sesi === 'Mingguan' && $sw->minggu_ke > 0 && $sw->minggu_ke <= $latestSesiWig->minggu_ke;
+                });
+            }
+
+            $targetQuery = \Illuminate\Support\Facades\DB::table('breakdown_lms')
+                ->where('periode_start', '<=', $latestSesiWig->tanggal_pelaksanaan)
+                ->where('periode_end', '>=', $latestSesiWig->tanggal_pelaksanaan)
+                ->select('lm_id', 'unit_id', \Illuminate\Support\Facades\DB::raw('SUM(angka_target) as target'))
+                ->groupBy('lm_id', 'unit_id')
+                ->get();
+            $rtBdMap = [];
+            foreach ($targetQuery as $t) {
+                $matrixTargets[$t->lm_id][$t->unit_id] = $t->target;
+                $rtBdMap[$t->unit_id][$t->lm_id] = (float) $t->target;
+            }
+
+            foreach ($sesi_wigs_month as $sw) {
+                $swDate = \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->endOfDay();
+                $sums = \Illuminate\Support\Facades\DB::table('realisasis')
+                    ->where('tanggal_input', '<=', $swDate)
+                    ->select('lm_id', 'unit_id', \Illuminate\Support\Facades\DB::raw('SUM(angka_realisasi) as total'))
+                    ->groupBy('lm_id', 'unit_id')
+                    ->get();
+                foreach ($sums as $s) {
+                    $matrixRealisasi[$s->lm_id][$s->unit_id][$sw->id] = $s->total;
+                }
+            }
+
+            // Fetch Komitmen
+            $komitmens = \App\Models\SesiWigKomitmen::whereIn('sesi_wig_id', $sesi_wigs_month->pluck('id'))->get();
+            foreach ($komitmens as $k) {
+                $matrixKomitmen[$k->lm_id][$k->unit_id][$k->sesi_wig_id] = [
+                    'komitmen' => $k->komitmen,
+                    'carry_over' => $k->carry_over
+                ];
+            }
+
+            // Calculate Menang Kalah for latest sesi
+            $rtRealQuery = \Illuminate\Support\Facades\DB::table('realisasis')
+                ->where('tanggal_input', '<=', \Carbon\Carbon::parse($latestSesiWig->tanggal_pelaksanaan)->endOfDay())
+                ->select('lm_id', 'unit_id', \Illuminate\Support\Facades\DB::raw('SUM(angka_realisasi) as realisasi'))
+                ->groupBy('lm_id', 'unit_id')
+                ->get();
+            $rtRealMap = [];
+            foreach ($rtRealQuery as $row) { $rtRealMap[$row->unit_id][$row->lm_id] = (float) $row->realisasi; }
+
+            foreach ($lms as $lm) {
+                $rtMenangKalah[$lm->id] = ['divisi' => ['menang' => [], 'kalah' => []], 'up3' => ['menang' => [], 'kalah' => []], 'ulp' => ['menang' => [], 'kalah' => []]];
+
+                $wig = $wigs->where('id', $lm->wig_id)->first();
+                if ($wig) {
+                    $name = $wig->divisi ?? 'Lainnya';
+                    $target = 0; foreach ($rtBdMap as $uid => $lmsBd) { $target += $lmsBd[$lm->id] ?? 0; }
+                    $realisasi = 0; foreach ($rtRealMap as $uid => $lmsReal) { $realisasi += $lmsReal[$lm->id] ?? 0; }
+                    if ($target > 0) {
+                        $pct = min($realisasi / $target * 100, 100);
+                        $rtMenangKalah[$lm->id]['divisi'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $name, 'score' => round($pct, 1)];
+                    }
+                }
+
+                foreach ($up3s as $up3) {
+                    $target = $rtBdMap[$up3->id][$lm->id] ?? 0;
+                    if ($target <= 0) continue;
+                    $sum = $rtRealMap[$up3->id][$lm->id] ?? 0;
+                    $childIds = $ulps->where('parent_id', $up3->id)->pluck('id')->toArray();
+                    foreach ($childIds as $cId) {
+                        $sum += $rtRealMap[$cId][$lm->id] ?? 0;
+                    }
+                    $pct = min($sum / $target * 100, 100);
+                    $rtMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => round($pct, 1)];
+                }
+
+                foreach ($ulps as $ulp) {
+                    $target = $rtBdMap[$ulp->id][$lm->id] ?? 0;
+                    if ($target <= 0) continue;
+                    $sum = $rtRealMap[$ulp->id][$lm->id] ?? 0;
+                    $pct = min($sum / $target * 100, 100);
+                    $rtMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => round($pct, 1)];
+                }
+
+                foreach (['divisi', 'up3', 'ulp'] as $level) {
+                    usort($rtMenangKalah[$lm->id][$level]['menang'], fn($a, $b) => $b['score'] <=> $a['score']);
+                    usort($rtMenangKalah[$lm->id][$level]['kalah'],  fn($a, $b) => $b['score'] <=> $a['score']);
+                }
+            }
+            
+            // Generate Map Data specifically by LM for the dashboard
+            $dynamicMapData = [];
+            foreach ($lms as $lm) {
+                $dynamicMapData[$lm->id] = ['up3' => [], 'ulp' => []];
+                
+                // ULP Map Data
+                foreach ($allUlps->filter(fn($u) => $u->latitude && $u->longitude) as $ulp) {
+                    $target = $rtBdMap[$ulp->id][$lm->id] ?? 0;
+                    $sum = $rtRealMap[$ulp->id][$lm->id] ?? 0;
+                    $pct = $target > 0 ? min(($sum / $target) * 100, 100) : 0;
+                    
+                    $komitmenVal = '';
+                    if ($latestSesiWig) {
+                        $komitmenData = $matrixKomitmen[$lm->id][$ulp->id][$latestSesiWig->id] ?? ['komitmen' => ''];
+                        $komitmenVal = $komitmenData['komitmen'];
+                    }
+                    
+                    $dynamicMapData[$lm->id]['ulp'][] = [
+                        'id' => $ulp->id,
+                        'name' => $ulp->name,
+                        'lat' => $ulp->latitude,
+                        'lng' => $ulp->longitude,
+                        'progress' => round($pct, 1),
+                        'komitmen' => $komitmenVal,
+                        'realisasi' => $sum
+                    ];
+                }
+                
+                // UP3 Map Data
+                foreach ($up3s->filter(fn($u) => $u->latitude && $u->longitude) as $up3) {
+                    $target = $rtBdMap[$up3->id][$lm->id] ?? 0;
+                    $sum = $rtRealMap[$up3->id][$lm->id] ?? 0;
+                    $childIds = $allUlps->where('parent_id', $up3->id)->pluck('id')->toArray();
+                    foreach ($childIds as $cId) {
+                        $sum += $rtRealMap[$cId][$lm->id] ?? 0;
+                    }
+                    $pct = $target > 0 ? min(($sum / $target) * 100, 100) : 0;
+                    
+                    $komitmenVal = '';
+                    if ($latestSesiWig) {
+                        $komitmenData = $matrixKomitmen[$lm->id][$up3->id][$latestSesiWig->id] ?? ['komitmen' => ''];
+                        $komitmenVal = $komitmenData['komitmen'];
+                    }
+                    
+                    $dynamicMapData[$lm->id]['up3'][] = [
+                        'id' => $up3->id,
+                        'name' => $up3->name,
+                        'lat' => $up3->latitude,
+                        'lng' => $up3->longitude,
+                        'progress' => round($pct, 1),
+                        'komitmen' => $komitmenVal,
+                        'realisasi' => $sum
+                    ];
+                }
+            }
+        }
+
         return view('dashboard.index', compact(
             'totalWigs', 'totalLms', 'totalRealisasis',
-            'wigProgresses', 'mapData', 'divisions', 'selectedDivisi',
+            'wigProgresses', 'mapData', 'dynamicMapData', 'divisions', 'selectedDivisi',
             'up3s', 'ulps', 'selectedUp3', 'selectedUlp',
-            'leaderboard', 'menangKalah', 'bulan', 'tahun'
+            'leaderboard', 'leaderboardUp3', 'menangKalah', 'bulan', 'tahun', 'trendData',
+            'wigs', 'latestSesiWig', 'sesi_wigs_month', 'sesi_wigs_matrix', 'matrixTargets', 'matrixRealisasi', 'matrixKomitmen', 'rtMenangKalah'
         ));
     }
 }

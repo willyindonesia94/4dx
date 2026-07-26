@@ -255,40 +255,55 @@
                     </div>
 
                     <!-- Fixed Leaderboard styling for High Contrast -->
-                    <div class="bg-slate-900 shadow-xl sm:rounded-2xl overflow-hidden border border-slate-800">
+                    <div class="bg-slate-900 shadow-xl sm:rounded-2xl overflow-hidden border border-slate-800" x-data="{ tabTop: 'ulp' }">
                         <div class="px-6 py-6 border-b border-slate-700 bg-slate-950 relative overflow-hidden">
                             <!-- Background Pattern -->
                             <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 16px 16px;"></div>
                             
                             <h4 class="text-xl font-extrabold flex items-center gap-3 text-white relative z-10 drop-shadow-md">
                                 <svg class="w-6 h-6 text-yellow-400 drop-shadow" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg>
-                                Papan Peringkat
+                                Ranking Realisasi LM
                             </h4>
-                            <p class="text-xs text-slate-400 mt-2 font-medium relative z-10">Rata-rata Penyelesaian Lead Measure Tertinggi antar Unit</p>
+                            <p class="text-xs text-slate-400 mt-2 font-medium relative z-10">Total Capaian Realisasi Tertinggi antar Unit Bulan Ini</p>
+                            
+                            <div class="flex space-x-1 bg-slate-800 p-1 rounded-lg mt-4 text-xs font-semibold relative z-10">
+                                <button @click="tabTop = 'up3'" :class="tabTop === 'up3' ? 'bg-slate-700 shadow text-yellow-400' : 'text-slate-400 hover:text-slate-200'" class="flex-1 py-1.5 rounded-md transition-all">UP3</button>
+                                <button @click="tabTop = 'ulp'" :class="tabTop === 'ulp' ? 'bg-slate-700 shadow text-yellow-400' : 'text-slate-400 hover:text-slate-200'" class="flex-1 py-1.5 rounded-md transition-all">ULP</button>
+                            </div>
                         </div>
                         
-                        <div class="p-0 bg-slate-900">
+                        <div class="p-0 bg-slate-900" x-show="tabTop === 'ulp'">
                             <ul class="divide-y divide-slate-800">
                                 @forelse($leaderboard as $index => $board)
+                                    @if($index === 0)
+                                        <li class="px-6 py-2 bg-slate-950/50 border-y border-slate-800 text-center">
+                                            <span class="text-xs font-black text-slate-500 uppercase tracking-widest">5 Teratas</span>
+                                        </li>
+                                    @endif
+                                    @if($index === 5 && count($leaderboard) > 5)
+                                        <li class="px-6 py-2 bg-slate-950/50 border-y border-slate-800 text-center mt-2">
+                                            <span class="text-xs font-black text-slate-500 uppercase tracking-widest">5 Terbawah</span>
+                                        </li>
+                                    @endif
                                     <li class="px-6 py-5 flex items-center justify-between hover:bg-slate-800 transition-colors duration-200">
                                         <div class="flex items-center gap-4">
                                             <!-- Rank Badge -->
                                             <div class="flex items-center justify-center w-10 h-10 rounded-full text-md font-extrabold shadow-lg
-                                                {{ $index == 0 ? 'bg-gradient-to-br from-yellow-300 to-yellow-600 text-yellow-950 ring-4 ring-yellow-500/30' : 
-                                                  ($index == 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500 text-gray-900 ring-2 ring-gray-400/30' : 
-                                                  ($index == 2 ? 'bg-gradient-to-br from-orange-400 to-orange-700 text-white ring-2 ring-orange-500/30' : 
+                                                {{ $board['rank'] == 1 ? 'bg-gradient-to-br from-yellow-300 to-yellow-600 text-yellow-950 ring-4 ring-yellow-500/30' : 
+                                                  ($board['rank'] == 2 ? 'bg-gradient-to-br from-gray-300 to-gray-500 text-gray-900 ring-2 ring-gray-400/30' : 
+                                                  ($board['rank'] == 3 ? 'bg-gradient-to-br from-orange-400 to-orange-700 text-white ring-2 ring-orange-500/30' : 
                                                   'bg-slate-800 text-slate-300 border border-slate-700')) }}">
-                                                {{ $index + 1 }}
+                                                {{ $board['rank'] }}
                                             </div>
                                             <div class="flex flex-col">
-                                                <span class="font-bold text-white text-md">{{ $board['location_name'] }}</span>
-                                                @if($index == 0)
+                                                <span class="font-bold text-white text-md">{{ $board['unit'] }}</span>
+                                                @if($board['rank'] == 1)
                                                     <span class="text-[10px] font-bold text-yellow-400 uppercase tracking-widest mt-0.5">Top Performer 🏆</span>
                                                 @endif
                                             </div>
                                         </div>
                                         <div class="font-black text-xl text-cyan-400 drop-shadow">
-                                            {{ $board['average_progress'] }}%
+                                            {{ number_format($board['score'], 1) }}
                                         </div>
                                     </li>
                                 @empty
@@ -298,6 +313,150 @@
                                     </li>
                                 @endforelse
                             </ul>
+                        </div>
+                        
+                        <div class="p-0 bg-slate-900" x-show="tabTop === 'up3'" style="display: none;">
+                            <ul class="divide-y divide-slate-800">
+                                @forelse($leaderboardUp3 as $index => $board)
+                                    @if($index === 0)
+                                        <li class="px-6 py-2 bg-slate-950/50 border-y border-slate-800 text-center">
+                                            <span class="text-xs font-black text-slate-500 uppercase tracking-widest">5 Teratas</span>
+                                        </li>
+                                    @endif
+                                    @if($index === 5 && count($leaderboardUp3) > 5)
+                                        <li class="px-6 py-2 bg-slate-950/50 border-y border-slate-800 text-center mt-2">
+                                            <span class="text-xs font-black text-slate-500 uppercase tracking-widest">5 Terbawah</span>
+                                        </li>
+                                    @endif
+                                    <li class="px-6 py-5 flex items-center justify-between hover:bg-slate-800 transition-colors duration-200">
+                                        <div class="flex items-center gap-4">
+                                            <!-- Rank Badge -->
+                                            <div class="flex items-center justify-center w-10 h-10 rounded-full text-md font-extrabold shadow-lg
+                                                {{ $board['rank'] == 1 ? 'bg-gradient-to-br from-yellow-300 to-yellow-600 text-yellow-950 ring-4 ring-yellow-500/30' : 
+                                                  ($board['rank'] == 2 ? 'bg-gradient-to-br from-gray-300 to-gray-500 text-gray-900 ring-2 ring-gray-400/30' : 
+                                                  ($board['rank'] == 3 ? 'bg-gradient-to-br from-orange-400 to-orange-700 text-white ring-2 ring-orange-500/30' : 
+                                                  'bg-slate-800 text-slate-300 border border-slate-700')) }}">
+                                                {{ $board['rank'] }}
+                                            </div>
+                                            <div class="flex flex-col">
+                                                <span class="font-bold text-white text-md">{{ $board['unit'] }}</span>
+                                                @if($board['rank'] == 1)
+                                                    <span class="text-[10px] font-bold text-yellow-400 uppercase tracking-widest mt-0.5">Top Performer 🏆</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="font-black text-xl text-cyan-400 drop-shadow">
+                                            {{ number_format($board['score'], 1) }}
+                                        </div>
+                                    </li>
+                                @empty
+                                    <li class="px-6 py-12 text-center text-slate-400 text-sm flex flex-col items-center gap-3">
+                                        <svg class="w-10 h-10 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                        Belum ada data.
+                                    </li>
+                                @endforelse
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Menang / Kalah Widget for Dashboard (Dark Theme) -->
+                    <div class="bg-slate-900 shadow-xl sm:rounded-2xl overflow-hidden border border-slate-800" x-data="{ tabMk: 'up3' }">
+                        <div class="px-6 py-5 border-b border-slate-700 bg-slate-950">
+                            <h4 class="text-lg font-extrabold flex items-center gap-2 text-white drop-shadow-md">
+                                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                                Parameter Menang Kalah LM
+                            </h4>
+                            
+                            <!-- Tabs -->
+                            <div class="flex space-x-1 bg-slate-800 p-1 rounded-lg mt-4 text-xs font-semibold">
+                                <button @click="tabMk = 'divisi'" :class="tabMk === 'divisi' ? 'bg-slate-700 shadow text-indigo-400' : 'text-slate-400 hover:text-slate-200'" class="flex-1 py-1.5 rounded-md transition-all">Divisi</button>
+                                <button @click="tabMk = 'up3'" :class="tabMk === 'up3' ? 'bg-slate-700 shadow text-indigo-400' : 'text-slate-400 hover:text-slate-200'" class="flex-1 py-1.5 rounded-md transition-all">UP3</button>
+                                <button @click="tabMk = 'ulp'" :class="tabMk === 'ulp' ? 'bg-slate-700 shadow text-indigo-400' : 'text-slate-400 hover:text-slate-200'" class="flex-1 py-1.5 rounded-md transition-all">ULP</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Divisi Tab -->
+                        <div x-show="tabMk === 'divisi'" class="p-5 space-y-4">
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <div class="bg-emerald-950/40 border border-emerald-900 rounded-md p-3 text-center">
+                                    <div class="text-2xl font-black text-emerald-400">{{ count($menangKalah['divisi']['menang'] ?? []) }}</div>
+                                    <div class="text-[10px] uppercase font-bold text-emerald-600">Menang</div>
+                                </div>
+                                <div class="bg-rose-950/40 border border-rose-900 rounded-md p-3 text-center">
+                                    <div class="text-2xl font-black text-rose-400">{{ count($menangKalah['divisi']['kalah'] ?? []) }}</div>
+                                    <div class="text-[10px] uppercase font-bold text-rose-600">Kalah</div>
+                                </div>
+                            </div>
+                            <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                                @foreach($menangKalah['divisi']['menang'] ?? [] as $item)
+                                    <div class="flex justify-between items-center bg-emerald-950/20 border border-emerald-900/50 px-3 py-2 rounded-md">
+                                        <span class="text-xs font-bold text-slate-300">{{ $item['name'] }}</span>
+                                        <span class="text-xs font-black text-emerald-400">{{ $item['score'] }}%</span>
+                                    </div>
+                                @endforeach
+                                @foreach($menangKalah['divisi']['kalah'] ?? [] as $item)
+                                    <div class="flex justify-between items-center bg-rose-950/20 border border-rose-900/50 px-3 py-2 rounded-md">
+                                        <span class="text-xs font-bold text-slate-300">{{ $item['name'] }}</span>
+                                        <span class="text-xs font-black text-rose-400">{{ $item['score'] }}%</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <!-- UP3 Tab -->
+                        <div x-show="tabMk === 'up3'" class="p-5 space-y-4" style="display: none;">
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <div class="bg-emerald-950/40 border border-emerald-900 rounded-md p-3 text-center">
+                                    <div class="text-2xl font-black text-emerald-400">{{ count($menangKalah['up3']['menang'] ?? []) }}</div>
+                                    <div class="text-[10px] uppercase font-bold text-emerald-600">Menang</div>
+                                </div>
+                                <div class="bg-rose-950/40 border border-rose-900 rounded-md p-3 text-center">
+                                    <div class="text-2xl font-black text-rose-400">{{ count($menangKalah['up3']['kalah'] ?? []) }}</div>
+                                    <div class="text-[10px] uppercase font-bold text-rose-600">Kalah</div>
+                                </div>
+                            </div>
+                            <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                                @foreach($menangKalah['up3']['menang'] ?? [] as $item)
+                                    <div class="flex justify-between items-center bg-emerald-950/20 border border-emerald-900/50 px-3 py-2 rounded-md">
+                                        <span class="text-xs font-bold text-slate-300">{{ $item['name'] }}</span>
+                                        <span class="text-xs font-black text-emerald-400">{{ $item['score'] }}%</span>
+                                    </div>
+                                @endforeach
+                                @foreach($menangKalah['up3']['kalah'] ?? [] as $item)
+                                    <div class="flex justify-between items-center bg-rose-950/20 border border-rose-900/50 px-3 py-2 rounded-md">
+                                        <span class="text-xs font-bold text-slate-300">{{ $item['name'] }}</span>
+                                        <span class="text-xs font-black text-rose-400">{{ $item['score'] }}%</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <!-- ULP Tab -->
+                        <div x-show="tabMk === 'ulp'" class="p-5 space-y-4" style="display: none;">
+                            <div class="grid grid-cols-2 gap-3 mb-4">
+                                <div class="bg-emerald-950/40 border border-emerald-900 rounded-md p-3 text-center">
+                                    <div class="text-2xl font-black text-emerald-400">{{ count($menangKalah['ulp']['menang'] ?? []) }}</div>
+                                    <div class="text-[10px] uppercase font-bold text-emerald-600">Menang</div>
+                                </div>
+                                <div class="bg-rose-950/40 border border-rose-900 rounded-md p-3 text-center">
+                                    <div class="text-2xl font-black text-rose-400">{{ count($menangKalah['ulp']['kalah'] ?? []) }}</div>
+                                    <div class="text-[10px] uppercase font-bold text-rose-600">Kalah</div>
+                                </div>
+                            </div>
+                            <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                                @foreach($menangKalah['ulp']['menang'] ?? [] as $item)
+                                    <div class="flex justify-between items-center bg-emerald-950/20 border border-emerald-900/50 px-3 py-2 rounded-md">
+                                        <span class="text-xs font-bold text-slate-300">{{ $item['name'] }}</span>
+                                        <span class="text-xs font-black text-emerald-400">{{ $item['score'] }}%</span>
+                                    </div>
+                                @endforeach
+                                @foreach($menangKalah['ulp']['kalah'] ?? [] as $item)
+                                    <div class="flex justify-between items-center bg-rose-950/20 border border-rose-900/50 px-3 py-2 rounded-md">
+                                        <span class="text-xs font-bold text-slate-300">{{ $item['name'] }}</span>
+                                        <span class="text-xs font-black text-rose-400">{{ $item['score'] }}%</span>
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
                     </div>
                 </div>

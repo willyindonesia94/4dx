@@ -45,9 +45,36 @@ class MasterWigController extends Controller
 
         $data = $request->all();
         $data['is_approved'] = true; // Created via UI is approved by default
-        MasterWig::create($data);
+        $wig = MasterWig::create($data);
 
-        return redirect()->route('master-wigs.index')->with('success', 'Master WIG berhasil dibuat.');
+        // Auto-create cascading to UID Jabar
+        $uidJabar = MasterUnit::where('type', 'UID')->first();
+        if ($uidJabar) {
+            $targetTahunan = $data['angka_target'];
+            $targetBulanan = round($targetTahunan / 12, 2);
+            
+            \App\Models\BreakdownWig::create([
+                'wig_id' => $wig->id,
+                'unit_id' => $uidJabar->id,
+                'satuan_id' => $data['satuan_id'],
+                'tahun' => date('Y'),
+                'target_tahunan' => $targetTahunan,
+                'target_jan' => $targetBulanan,
+                'target_feb' => $targetBulanan,
+                'target_mar' => $targetBulanan,
+                'target_apr' => $targetBulanan,
+                'target_mei' => $targetBulanan,
+                'target_jun' => $targetBulanan,
+                'target_jul' => $targetBulanan,
+                'target_agu' => $targetBulanan,
+                'target_sep' => $targetBulanan,
+                'target_okt' => $targetBulanan,
+                'target_nov' => $targetBulanan,
+                'target_des' => $targetBulanan,
+            ]);
+        }
+
+        return redirect()->route('master-wigs.index')->with('success', 'Master WIG berhasil dibuat beserta breakdown otomatis untuk UID.');
     }
 
     public function update(Request $request, MasterWig $masterWig)

@@ -7,14 +7,30 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="flex justify-end mb-4">
-                <a href="{{ route('users.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow">
-                    + Tambah Pengguna
-                </a>
+            <div class="flex justify-between items-center mb-6">
+                <!-- Role Tabs Filter -->
+                <div class="w-full mr-4 overflow-x-auto pb-2">
+                    <nav class="flex space-x-2" aria-label="Tabs">
+                        <a href="{{ route('users.index') }}" class="{{ !$selectedLevel ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100' }} px-3 py-2 font-medium text-sm rounded-md whitespace-nowrap transition-colors">
+                            Semua Level
+                        </a>
+                        @foreach($levels as $level)
+                            <a href="{{ route('users.index', ['level' => $level]) }}" class="{{ $selectedLevel === $level ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100' }} px-3 py-2 font-medium text-sm rounded-md whitespace-nowrap transition-colors">
+                                {{ $level }}
+                            </a>
+                        @endforeach
+                    </nav>
+                </div>
+
+                <div class="flex-shrink-0">
+                    <a href="{{ route('users.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow whitespace-nowrap">
+                        + Tambah Pengguna
+                    </a>
+                </div>
             </div>
             
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 bg-white border-b border-gray-200">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
+                <div class="p-0 sm:p-6 bg-white border-b border-gray-200 overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
@@ -26,7 +42,7 @@
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            @foreach($users as $user)
+                            @forelse($users as $user)
                             <tr>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="text-sm font-medium text-gray-900">{{ $user->name }}</div>
@@ -52,10 +68,21 @@
                                     </form>
                                 </td>
                             </tr>
-                            @endforeach
+                            @empty
+                            <tr>
+                                <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                                    Tidak ada pengguna yang ditemukan dengan level ini.
+                                </td>
+                            </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- Pagination Links -->
+            <div class="mt-4">
+                {{ $users->links() }}
             </div>
         </div>
     </div>

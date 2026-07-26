@@ -10,10 +10,24 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with('unit')->get();
-        return view('users.index', compact('users'));
+        $selectedLevel = $request->query('level');
+        $levels = ['Super Admin', 'UID', 'UP3', 'ULP'];
+
+        $query = User::with('unit');
+        
+        if ($selectedLevel) {
+            if ($selectedLevel === 'Super Admin') {
+                $query->where('role_name', 'Super Admin');
+            } else {
+                $query->where('role_name', 'LIKE', '%' . $selectedLevel . '%');
+            }
+        }
+
+        $users = $query->paginate(20)->appends($request->query());
+        
+        return view('users.index', compact('users', 'levels', 'selectedLevel'));
     }
 
     public function create()

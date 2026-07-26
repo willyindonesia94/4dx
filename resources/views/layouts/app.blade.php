@@ -7,14 +7,31 @@
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
-        <!-- Favicon & PWA -->
+        <!-- PWA & Chart -->
         <link rel="icon" type="image/svg+xml" href="https://upload.wikimedia.org/wikipedia/commons/2/20/Logo_PLN.svg">
         <link rel="manifest" href="/manifest.json">
-        <meta name="theme-color" content="#0ea5e9">
-        <link rel="apple-touch-icon" href="/logo.svg">
+        <meta name="theme-color" content="#4f46e5">
+        <link rel="apple-touch-icon" href="/pwa/icon.png">
+        <link rel="apple-touch-startup-image" href="/pwa/splash.png">
         <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <meta name="apple-mobile-web-app-title" content="Sesi WIG">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="4DX UID JABAR">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+        <!-- Splash Screen CSS -->
+        <style>
+            #pwa-splash {
+                position: fixed;
+                top: 0; left: 0; width: 100vw; height: 100vh;
+                background-color: #ffffff;
+                background-image: url('/pwa/splash.png');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                z-index: 999999;
+                transition: opacity 0.5s ease;
+            }
+        </style>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -24,6 +41,9 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">
+        <!-- PWA Splash Screen Overlay -->
+        <div id="pwa-splash"></div>
+
         <div class="min-h-screen bg-gray-100">
             @include('layouts.navigation')
 
@@ -42,8 +62,19 @@
             </main>
         </div>
 
-        <!-- PWA Service Worker Registration -->
+        <!-- PWA Service Worker Registration & Splash Script -->
         <script>
+            // Hide splash screen after a short delay
+            window.addEventListener('load', function() {
+                setTimeout(function() {
+                    const splash = document.getElementById('pwa-splash');
+                    if(splash) {
+                        splash.style.opacity = '0';
+                        setTimeout(() => splash.remove(), 500);
+                    }
+                }, 1500); // 1.5 seconds visible delay
+            });
+
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
                     navigator.serviceWorker.register('/sw.js').then(function(registration) {
