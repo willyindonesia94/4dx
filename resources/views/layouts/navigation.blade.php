@@ -12,22 +12,35 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                    @php
+                        $userRole = auth()->user()->role_name ?? (auth()->user()->roles->pluck('name')->first() ?? '');
+                        $isUlp = str_contains(strtoupper($userRole), 'ULP') || (auth()->user()->unit && strtoupper(auth()->user()->unit->type) === 'ULP');
+                        $isUp3 = str_contains(strtoupper($userRole), 'UP3') || (auth()->user()->unit && strtoupper(auth()->user()->unit->type) === 'UP3');
+                    @endphp
+
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
 
+                    @if(!$isUlp && !$isUp3)
                     <x-nav-link :href="route('cascading.wig.index')" :active="request()->routeIs('cascading.wig.*')">
                         {{ __('Cascading WIG') }}
                     </x-nav-link>
+                    @endif
+
+                    @if(!$isUlp)
                     <x-nav-link :href="route('cascading.lm.index')" :active="request()->routeIs('cascading.lm.*')">
                         {{ __('Cascading LM') }}
                     </x-nav-link>
                     <x-nav-link :href="route('realisasi-wig.index')" :active="request()->routeIs('realisasi-wig.*')">
                         {{ __('Realisasi WIG') }}
                     </x-nav-link>
+                    @endif
+                    @if($isUlp || (auth()->user() && auth()->user()->role_name === 'Super Admin'))
                     <x-nav-link :href="route('realisasis.index')" :active="request()->routeIs('realisasis.*')">
                         {{ __('Realisasi LM') }}
                     </x-nav-link>
+                    @endif
                     
                     <x-nav-link :href="route('sesi-wigs.index')" :active="request()->routeIs('sesi-wigs.*')">
                         {{ __('Sesi WIG') }}
@@ -55,8 +68,14 @@
                                 <x-dropdown-link :href="route('master-lms.index')">
                                     {{ __('Master LM') }}
                                 </x-dropdown-link>
+                                <x-dropdown-link :href="route('master-periodes.index')">
+                                    {{ __('Master Periode') }}
+                                </x-dropdown-link>
                                 <x-dropdown-link :href="route('users.index')">
                                     {{ __('Pengguna') }}
+                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('master-bidangs.index')">
+                                    {{ __('Master Bidang') }}
                                 </x-dropdown-link>
                                 <x-dropdown-link :href="route('master-units.index')">
                                     {{ __('Master Unit') }}
@@ -170,10 +189,13 @@
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
             
+            @if(!$isUlp && !$isUp3)
             <x-responsive-nav-link :href="route('cascading.wig.index')" :active="request()->routeIs('cascading.wig.*')">
                 {{ __('Cascading WIG') }}
             </x-responsive-nav-link>
+            @endif
             
+            @if(!$isUlp)
             <x-responsive-nav-link :href="route('cascading.lm.index')" :active="request()->routeIs('cascading.lm.*')">
                 {{ __('Cascading LM') }}
             </x-responsive-nav-link>
@@ -181,12 +203,20 @@
             <x-responsive-nav-link :href="route('realisasi-wig.index')" :active="request()->routeIs('realisasi-wig.*')">
                 {{ __('Realisasi WIG') }}
             </x-responsive-nav-link>
+            @endif
+
+            @if($isUlp || (auth()->user() && auth()->user()->role_name === 'Super Admin'))
             <x-responsive-nav-link :href="route('realisasis.index')" :active="request()->routeIs('realisasis.*')">
                 {{ __('Realisasi LM') }}
             </x-responsive-nav-link>
+            @endif
 
             <x-responsive-nav-link :href="route('sesi-wigs.index')" :active="request()->routeIs('sesi-wigs.*')">
                 {{ __('Sesi WIG') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('laporan.index')" :active="request()->routeIs('laporan.*')">
+                {{ __('Laporan') }}
             </x-responsive-nav-link>
 
             @role('Super Admin')
@@ -202,6 +232,9 @@
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
                     {{ __('Pengguna') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('master-bidangs.index')" :active="request()->routeIs('master-bidangs.*')">
+                    {{ __('Master Bidang') }}
                 </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('master-units.index')" :active="request()->routeIs('master-units.*')">
                     {{ __('Master Unit') }}

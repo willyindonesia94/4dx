@@ -32,16 +32,22 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
     {
         DB::beginTransaction();
         try {
-            $endOfMonth = Carbon::create($this->tahun, $this->bulan, 1)->endOfMonth()->day;
+            $carbonStart = \Carbon\Carbon::create($this->tahun, $this->bulan, 1);
+            $carbonEnd = $carbonStart->copy()->endOfMonth();
+            $masterWeeks = \App\Models\MasterPeriode::getWeekDates($this->tahun, $this->bulan);
+
+            $startBulan = $masterWeeks['target_m1'] ? $masterWeeks['target_m1']['start'] : $carbonStart->format('Y-m-d');
+            $endWeek = isset($masterWeeks['target_m5']) && $masterWeeks['target_m5'] ? 'target_m5' : 'target_m4';
+            $endBulan = $masterWeeks[$endWeek] ? $masterWeeks[$endWeek]['end'] : $carbonEnd->format('Y-m-d');
 
             $weeks = [
-                "bulanan" => ["start" => 1, "end" => $endOfMonth],
-                "minggu_1" => ["start" => 1, "end" => 7],
-                "minggu_2" => ["start" => 8, "end" => 14],
-                "minggu_3" => ["start" => 15, "end" => 21],
-                "minggu_4" => ["start" => 22, "end" => 28],
-                "minggu_5" => ["start" => 29, "end" => $endOfMonth]
+                "bulanan" => ["start" => $startBulan, "end" => $endBulan],
             ];
+            if ($masterWeeks['target_m1']) $weeks["minggu_1"] = $masterWeeks['target_m1'];
+            if ($masterWeeks['target_m2']) $weeks["minggu_2"] = $masterWeeks['target_m2'];
+            if ($masterWeeks['target_m3']) $weeks["minggu_3"] = $masterWeeks['target_m3'];
+            if ($masterWeeks['target_m4']) $weeks["minggu_4"] = $masterWeeks['target_m4'];
+            if ($masterWeeks['target_m5']) $weeks["minggu_5"] = $masterWeeks['target_m5'];
 
             $lastJudulLm = null;
             $lastNoWig = null;
@@ -53,7 +59,7 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
                 if (!$headerRowFound) {
                     foreach ($row as $index => $val) {
                         $v = strtolower(trim((string)$val));
-                        if (str_contains($v, "indikator") || str_contains($v, "judul_lm")) $colMap["judul_lm"] = $index;
+                        if (str_contains($v, "indikator") || str_contains($v, "judul_lm") || str_contains($v, "judul lm")) $colMap["judul_lm"] = $index;
                         if (str_contains($v, "unit")) $colMap["unit"] = $index;
                         if (str_contains($v, "no_wig") || (str_contains($v, "wig") && !str_contains($v, "judul"))) $colMap["no_wig"] = $index;
                         if (str_contains($v, "no") && strlen($v) <= 5 && !isset($colMap["no_wig"])) $colMap["no_wig"] = $index;
@@ -189,14 +195,9 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
                 }
 
                 foreach ($targets as $tipe => $angka) {
-                    if ($angka !== null && $angka !== "") {
-                        $startDay = $weeks[$tipe]["start"];
-                        $endDay = $weeks[$tipe]["end"];
-                        
-                        if ($startDay > $endOfMonth) continue; 
-                        
-                        $startDate = Carbon::create($this->tahun, $this->bulan, $startDay)->format("Y-m-d");
-                        $endDate = Carbon::create($this->tahun, $this->bulan, $endDay)->format("Y-m-d");
+                    if ($angka !== null && $angka !== "" && isset($weeks[$tipe])) {
+                        $startDate = $weeks[$tipe]["start"];
+                        $endDate = $weeks[$tipe]["end"];
 
                         BreakdownLm::updateOrCreate(
                             [
@@ -207,7 +208,9 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
                             ],
                             [
                                 "angka_target" => $angka,
-                                "satuan_id" => $lm->satuan_id 
+                                "satuan_id" => $lm->satuan_id,
+                                "bulan" => $this->bulan,
+                                "tahun" => $this->tahun
                             ]
                         );
                     }

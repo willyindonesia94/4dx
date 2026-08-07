@@ -139,7 +139,9 @@
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Pilih Jenis Laporan</label>
                                 <select id="selectJenisLaporan" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                                     <option value="lm">Laporan Capaian LM (Excel)</option>
-                                    <option value="wig">Laporan Capaian WIG (Excel)</option>
+                                    @if(empty($isUlpLevel))
+                                        <option value="wig">Laporan Capaian WIG (Excel)</option>
+                                    @endif
                                     <option value="lengkap">Laporan Lengkap WIG Dashboard (Print/PDF)</option>
                                 </select>
                             </div>
@@ -149,9 +151,9 @@
                                 <select id="selectWigId" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                                     <option value="all">-- Semua WIG --</option>
                                     @php
-                                        $availableWigs = \App\Models\MasterWig::all();
+                                        $wigsList = $availableWigs ?? \App\Models\MasterWig::all();
                                     @endphp
-                                    @foreach($availableWigs as $wig)
+                                    @foreach($wigsList as $wig)
                                         <option value="{{ $wig->id }}">{{ $wig->judul }}</option>
                                     @endforeach
                                 </select>

@@ -42,7 +42,7 @@
                         <thead class="bg-slate-50/80 border-b border-slate-200">
                             <tr>
                                 <th class="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-1/3">Judul WIG</th>
-                                <th class="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Divisi</th>
+                                <th class="px-6 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Sub Bidang</th>
                                 <th class="px-6 py-5 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Target / Polaritas</th>
                                 <th class="px-6 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Aksi</th>
@@ -123,17 +123,12 @@
                                     <textarea name="deskripsi" rows="3" class="block w-full py-2 px-3 rounded-md border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 sm:text-sm"></textarea>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Divisi</label>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Sub Bidang</label>
                                     <select name="divisi" required class="block w-full py-2 px-3 rounded-md border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 sm:text-sm">
-                                        <option value="">-- Pilih Divisi --</option>
-                                        <option value="Niaga dan Pelayanan Pelanggan">Niaga dan Pelayanan Pelanggan</option>
-                                        <option value="Jaringan">Jaringan</option>
-                                        <option value="Konstruksi">Konstruksi</option>
-                                        <option value="Perencanaan">Perencanaan</option>
-                                        <option value="Transaksi Energi">Transaksi Energi</option>
-                                        <option value="KSA (Keuangan, SDM dan Administrasi)">KSA (Keuangan, SDM dan Administrasi)</option>
-                                        <option value="K3L (Keselamatan, Kesehatan Kerja dan Lingkungan)">K3L (Keselamatan, Kesehatan Kerja dan Lingkungan)</option>
-                                        <option value="Pengadaan">Pengadaan</option>
+                                        <option value="">-- Pilih Sub Bidang --</option>
+                                        @foreach($bidangs as $bidang)
+                                            <option value="{{ $bidang->name }}">{{ $bidang->name }} ({{ $bidang->level == 'UID_BIDANG' ? 'UID' : ($bidang->level == 'UID_SUBBIDANG' ? 'Sub UID' : ($bidang->level == 'UP3_BIDANG' ? 'UP3' : 'ULP')) }})</option>
+                                        @endforeach
                                     </select>
                                 </div>
                                 <div>
@@ -202,17 +197,12 @@
                                     <textarea name="deskripsi" x-model="editData.deskripsi" rows="3" class="block w-full py-2 px-3 rounded-md border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 sm:text-sm"></textarea>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Divisi</label>
+                                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Sub Bidang</label>
                                     <select name="divisi" x-model="editData.divisi" required class="block w-full py-2 px-3 rounded-md border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 sm:text-sm">
-                                        <option value="">-- Pilih Divisi --</option>
-                                        <option value="Niaga dan Pelayanan Pelanggan">Niaga dan Pelayanan Pelanggan</option>
-                                        <option value="Jaringan">Jaringan</option>
-                                        <option value="Konstruksi">Konstruksi</option>
-                                        <option value="Perencanaan">Perencanaan</option>
-                                        <option value="Transaksi Energi">Transaksi Energi</option>
-                                        <option value="KSA (Keuangan, SDM dan Administrasi)">KSA (Keuangan, SDM dan Administrasi)</option>
-                                        <option value="K3L (Keselamatan, Kesehatan Kerja dan Lingkungan)">K3L (Keselamatan, Kesehatan Kerja dan Lingkungan)</option>
-                                        <option value="Pengadaan">Pengadaan</option>
+                                        <option value="">-- Pilih Sub Bidang --</option>
+                                        @foreach($bidangs as $bidang)
+                                            <option value="{{ $bidang->name }}">{{ $bidang->name }} ({{ $bidang->level == 'UID_BIDANG' ? 'UID' : ($bidang->level == 'UID_SUBBIDANG' ? 'Sub UID' : ($bidang->level == 'UP3_BIDANG' ? 'UP3' : 'ULP')) }})</option>
+                                        @endforeach
                                     </select>
                                 </div>
                                 <div>

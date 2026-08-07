@@ -35,8 +35,8 @@ class LmImportTemplateExport implements FromCollection, WithHeadings, WithMappin
             $role = $lm->tujuan_unit_role;
             $unitType = '';
             
-            if ($role === 'Divisi UID') $unitType = 'UID';
-            elseif ($role === 'Divisi UP3') $unitType = 'UP3';
+            if ($role === 'Bidang UID' || $role === 'Sub Bidang UID') $unitType = 'UID';
+            elseif ($role === 'Bidang UP3') $unitType = 'UP3';
             elseif ($role === 'TL ULP') $unitType = 'ULP';
 
             $applicableUnits = $units->where('type', $unitType);

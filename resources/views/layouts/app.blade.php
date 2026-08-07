@@ -18,6 +18,11 @@
         <meta name="apple-mobile-web-app-title" content="4DX UID JABAR">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+        <!-- Pustaka Flatpickr (Global) -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <script src="https://npmcdn.com/flatpickr/dist/l10n/id.js"></script>
+
         <!-- Splash Screen CSS -->
         <style>
             #pwa-splash {
@@ -84,6 +89,16 @@
                     });
                 });
             }
+
+            // Convert native date inputs to Flatpickr with Indonesian locale
+            document.addEventListener('DOMContentLoaded', function() {
+                if (typeof flatpickr !== 'undefined') {
+                    flatpickr('input[type="date"]', {
+                        locale: 'id',
+                        dateFormat: 'Y-m-d'
+                    });
+                }
+            });
         </script>
     </body>
 </html>

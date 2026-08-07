@@ -17,6 +17,10 @@ class RealisasiWigController extends Controller
         $tahunFilter = $request->input('tahun', date('Y'));
         $wigFilter = $request->input('wig_id', '');
 
+        $user = auth()->user();
+        $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin']);
+
         $query = RealisasiWig::with(['wig.satuan', 'unit', 'user'])
                              ->where('bulan', $bulanFilter)
                              ->where('tahun', $tahunFilter);
@@ -25,21 +29,35 @@ class RealisasiWigController extends Controller
             $query->where('wig_id', $wigFilter);
         }
         
+        // Filter by Matrix Bidang
+        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+            $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
+            $query->whereHas('wig', function($q) use ($allowedDivisis) {
+                $q->whereIn('divisi', $allowedDivisis);
+            });
+        }
+        
         // Filter by user's unit if not superadmin/pusat (assuming UP3 only sees their own)
-        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin']) && auth()->user()->unit_id) {
-            $query->where('unit_id', auth()->user()->unit_id);
+        if (!$isSuperAdmin && $user->unit_id) {
+            $query->where('unit_id', $user->unit_id);
         }
 
         $realisasis = $query->orderBy('unit_id', 'asc')->get();
         
         // We only show WIGs that have breakdown for this user's unit (for the input modal)
-        $unitId = auth()->user()->unit_id;
-        $wigs = MasterWig::whereHas('breakdowns', function($q) use ($unitId, $tahunFilter) {
+        $unitId = $user->unit_id;
+        $wigsQuery = MasterWig::whereHas('breakdowns', function($q) use ($unitId, $tahunFilter) {
             if ($unitId) {
                 $q->where('unit_id', $unitId);
             }
             $q->where('tahun', $tahunFilter);
-        })->get();
+        });
+
+        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+            $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
+            $wigsQuery->whereIn('divisi', $allowedDivisis);
+        }
+        $wigs = $wigsQuery->get();
 
         $availableUnits = \App\Models\MasterUnit::where('type', 'up3')->get();
 

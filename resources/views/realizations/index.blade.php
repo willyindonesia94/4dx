@@ -78,7 +78,7 @@
                             </div>
                             
                             <div class="flex justify-between items-center bg-gray-50 p-2.5 rounded-lg text-[11px] border border-gray-100">
-                                <div class="text-gray-600"><span class="font-medium text-gray-400">Tgl:</span> {{ \Carbon\Carbon::parse($realization->report_date)->format('d M Y') }}</div>
+                                <div class="text-gray-600"><span class="font-medium text-gray-400">Tgl:</span> {{ \Carbon\Carbon::parse($realization->report_date)->locale('id')->translatedFormat('d M Y') }}</div>
                                 <div class="text-gray-600 flex items-center gap-1"><span class="font-medium text-gray-400">Oleh:</span> <span class="truncate max-w-[90px] inline-block">{{ $realization->creator->name ?? 'Staf ULP' }}</span></div>
                             </div>
 
@@ -140,7 +140,7 @@
                                         <div class="text-xs font-medium text-blue-600 mt-0.5">{{ $realization->target->metric->name }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
-                                        {{ \Carbon\Carbon::parse($realization->report_date)->format('d M Y') }}
+                                        {{ \Carbon\Carbon::parse($realization->report_date)->locale('id')->translatedFormat('d M Y') }}
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-black text-green-600 text-right">
                                         +{{ number_format($realization->realization_value, 2) }}

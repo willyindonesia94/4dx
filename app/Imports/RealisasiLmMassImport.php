@@ -30,42 +30,69 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
         try {
             foreach ($rows as $row) {
                 // Cari kolom berdasarkan kata kunci agar robust
+                $judulWig = null;
                 $judulLm = null;
                 $nip = null;
                 $tanggal = null;
                 $angka = 0;
                 $bukti = null;
 
-                foreach($row as $key => $val) {
-                    if (!$val) continue;
+                foreach ($row as $key => $val) {
+                    if ($val === null || $val === '') continue;
                     
-                    if (str_contains($key, "judul") || str_contains($key, "lm")) $judulLm = $val;
-                    if (str_contains($key, "nip")) $nip = $val;
-                    if (str_contains($key, "tanggal")) $tanggal = $val;
-                    if (str_contains($key, "angka") || str_contains($key, "realisasi")) $angka = $val;
-                    if (str_contains($key, "bukti") || str_contains($key, "link")) $bukti = $val;
+                    $cleanKey = strtolower(trim((string)$key));
+                    if (str_contains($cleanKey, "wig")) $judulWig = $val;
+                    if (str_contains($cleanKey, "lm") || str_contains($cleanKey, "lead") || str_contains($cleanKey, "measure")) $judulLm = $val;
+                    if (str_contains($cleanKey, "nip") || str_contains($cleanKey, "email") || str_contains($cleanKey, "user") || str_contains($cleanKey, "pengguna") || str_contains($cleanKey, "penginput")) $nip = $val;
+                    if (str_contains($cleanKey, "tanggal") || str_contains($cleanKey, "date") || str_contains($cleanKey, "waktu")) $tanggal = $val;
+                    if (str_contains($cleanKey, "angka") || str_contains($cleanKey, "realisasi") || str_contains($cleanKey, "capaian")) $angka = $val;
+                    if (str_contains($cleanKey, "bukti") || str_contains($cleanKey, "link") || str_contains($cleanKey, "keterangan") || str_contains($cleanKey, "catatan")) $bukti = $val;
                 }
 
-                if (!$judulLm || !$nip) {
-                    continue; // Skip jika tidak ada judul LM atau NIP
+                if (!$judulLm) {
+                    continue; // Skip jika baris tidak memiliki judul LM
                 }
 
-                // Cari LM
-                $searchLm = trim($judulLm);
-                $lm = MasterLm::where("judul_lm", "like", "%" . $searchLm . "%")->first();
-                if (!$lm) continue;
+                // Cari LM (jika judul WIG ada, utamakan pencarian LM di dalam WIG tersebut)
+                $searchLm = trim((string)$judulLm);
+                $lmQuery = MasterLm::where("judul_lm", "like", "%" . $searchLm . "%");
+                if ($judulWig) {
+                    $searchWig = trim((string)$judulWig);
+                    $lmQuery->whereHas('wig', function($q) use ($searchWig) {
+                        $q->where('judul', 'like', '%' . $searchWig . '%');
+                    });
+                }
+                $lm = $lmQuery->first();
+                if (!$lm) {
+                    // Jika tidak terdeteksi dari kombinasi WIG + LM, cari dari judul LM saja
+                    $lm = MasterLm::where("judul_lm", "like", "%" . $searchLm . "%")->first();
+                    if (!$lm) continue;
+                }
 
-                // Cari User
-                $searchNip = trim($nip);
-                $user = User::where("nip", $searchNip)->first();
+                // Cari User: Jika ada NIP dicari di database, jika kosong otomatis gunakan auth user saat ini
+                $user = null;
+                if ($nip) {
+                    $searchNip = trim((string)$nip);
+                    $user = User::where("nip", $searchNip)
+                                ->orWhere("email", $searchNip)
+                                ->orWhere("name", "like", "%" . $searchNip . "%")
+                                ->first();
+                }
+                if (!$user) {
+                    $user = auth()->user();
+                }
                 if (!$user) continue;
 
-                // Format angka
-                $angkaRealisasi = floatval(str_replace(",", "", $angka));
+                // Format angka realisasi
+                $angkaRealisasi = floatval(str_replace(",", "", (string)$angka));
+                
+                // Format bukti dan keterangan
+                $buktiText = $bukti ? trim((string)$bukti) : 'Diimport dari Upload Massal Excel';
+                $buktiFile = (str_starts_with(strtolower($buktiText), 'http://') || str_starts_with(strtolower($buktiText), 'https://')) ? $buktiText : 'Upload Massal Excel';
 
                 if ($this->isProrata && $this->tanggalMulai && $this->tanggalSelesai) {
                     // Logic Distribusi Pro-Rata
-                    $days = $this->tanggalMulai->diffInDays($this->tanggalSelesai) + 1; // +1 to include both start and end
+                    $days = $this->tanggalMulai->diffInDays($this->tanggalSelesai) + 1;
                     if ($days <= 0) $days = 1;
 
                     $angkaPerHari = $angkaRealisasi / $days;
@@ -75,19 +102,20 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                         
                         Realisasi::updateOrCreate(
                             [
-                                "lm_id"        => $lm->id,
-                                "user_id"      => $user->id,
+                                "lm_id"         => $lm->id,
+                                "user_id"       => $user->id,
                                 "tanggal_input" => $currentDate,
                             ],
                             [
-                                "unit_id"        => $user->unit_id,
-                                "angka_realisasi" => $angkaPerHari,
-                                "bukti_file"     => $bukti ?? 'Prorata dari Upload Massal',
+                                "unit_id"             => $user->unit_id,
+                                "angka_realisasi"     => $angkaPerHari,
+                                "bukti_file"          => $buktiFile,
+                                "keterangan_tambahan" => $buktiText . " (Prorata)",
                             ]
                         );
                     }
                 } else {
-                    // Logic Normal
+                    // Logic Normal Harian
                     $parsedDate = now()->format("Y-m-d");
                     if ($tanggal) {
                         try {
@@ -103,14 +131,15 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
 
                     Realisasi::updateOrCreate(
                         [
-                            "lm_id"        => $lm->id,
-                            "user_id"      => $user->id,
+                            "lm_id"         => $lm->id,
+                            "user_id"       => $user->id,
                             "tanggal_input" => $parsedDate,
                         ],
                         [
-                            "unit_id"        => $user->unit_id,
-                            "angka_realisasi" => $angkaRealisasi,
-                            "bukti_file"     => $bukti,
+                            "unit_id"             => $user->unit_id,
+                            "angka_realisasi"     => $angkaRealisasi,
+                            "bukti_file"          => $buktiFile,
+                            "keterangan_tambahan" => $buktiText,
                         ]
                     );
                 }

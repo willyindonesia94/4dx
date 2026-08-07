@@ -45,7 +45,7 @@
                         <label class="block text-xs font-semibold text-gray-600 mb-1">WIG</label>
                         <select name="wig_id" class="w-full rounded-md border-gray-300 shadow-sm text-sm">
                             <option value="">-- Semua WIG --</option>
-                            @foreach(\App\Models\MasterWig::all() as $wigOp)
+                            @foreach($wigs as $wigOp)
                                 <option value="{{ $wigOp->id }}" {{ (isset($wigFilter) && $wigFilter == $wigOp->id) ? 'selected' : '' }}>{{ $wigOp->judul }}</option>
                             @endforeach
                         </select>

@@ -47,7 +47,7 @@ class LmMassImport implements ToCollection, WithHeadingRow
                 
                 if ($lm) {
                     $lm->update([
-                        'tujuan_unit_role' => $roleLm ?? 'Divisi UID',
+                        'tujuan_unit_role' => $roleLm ?? 'Bidang UID',
                         'angka_target' => $targetLm ?? $lm->angka_target,
                         'satuan_id' => $satuanLmObj ? $satuanLmObj->id : $lm->satuan_id,
                     ]);
@@ -55,7 +55,7 @@ class LmMassImport implements ToCollection, WithHeadingRow
                     MasterLm::create([
                         'wig_id' => $wig->id,
                         'judul_lm' => $judulLm,
-                        'tujuan_unit_role' => $roleLm ?? 'Divisi UID',
+                        'tujuan_unit_role' => $roleLm ?? 'Bidang UID',
                         'angka_target' => $targetLm ?? 0,
                         'satuan_id' => $satuanLmObj ? $satuanLmObj->id : null,
                         'is_approved' => false,

@@ -9,7 +9,12 @@ class SesiWigKomitmen extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    protected $guarded = [];
+
+    protected $casts = [
+        'hambatans' => 'array',
+        'aksi_konkrits' => 'array',
+    ];
 
     public function sesiWig()
     {

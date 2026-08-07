@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Lengkap - {{ $wigs->count() > 1 ? 'Semua WIG' : $wigs->first()->judul }}</title>
+    <title>Laporan Lengkap - {{ $wigs->count() > 1 ? 'Semua WIG' : ($wigs->first()->judul ?? 'Tidak Ada WIG') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @page { size: landscape; margin: 5mm; }
@@ -49,54 +49,22 @@
         </button>
     </div>
 
-    @foreach($wigs as $wig)
+    @forelse($wigs as $wig)
     @php
-        // Persiapan Data (Simulasi Kalkulasi UID)
-        // Dalam implementasi nyata, kita query ke database berdasarkan $bulan dan $tahun
+        $wData = $reportData[$wig->id] ?? null;
+        if (!$wData) continue;
         
-        // Ambil Data Target dan Realisasi WIG
-        $tahunT = (int)$tahun;
-        $isAllBulan = $bulan === 'all';
-        $bulanT = $isAllBulan ? 12 : (int)$bulan; // Default iterasi WIG ke 12 jika semua bulan
-        
-        $wigTargetTot = 0;
-        $wigRealTot = 0;
-        if ($isAllBulan) {
-            $wigTargetTot = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
-                ->where('wig_id', $wig->id)->where('tahun', $tahunT)
-                ->sum(\Illuminate\Support\Facades\DB::raw('target_jan + target_feb + target_mar + target_apr + target_mei + target_jun + target_jul + target_agu + target_sep + target_okt + target_nov + target_des'));
-                
-            $wigRealTot = \Illuminate\Support\Facades\DB::table('realisasi_wigs')
-                ->where('wig_id', $wig->id)->where('tahun', $tahunT)
-                ->sum('angka_realisasi');
-        } else {
-            $colBln = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][$bulanT];
-            $wigTargetTot = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
-                ->where('wig_id', $wig->id)->where('tahun', $tahunT)
-                ->sum($colBln);
-            $wigRealTot = \Illuminate\Support\Facades\DB::table('realisasi_wigs')
-                ->where('wig_id', $wig->id)->where('tahun', $tahunT)->where('bulan', $bulanT)
-                ->sum('angka_realisasi');
-        }
-            
-        $polaritas = strtolower(trim($wig->polaritas ?? 'positif'));
-        $pctUid = 0;
-        if ($wigTargetTot > 0) {
-            if ($polaritas === 'negatif' || $polaritas === '3') {
-                $pctUid = ($wigTargetTot / max(0.0001, $wigRealTot)) * 100;
-            } else {
-                $pctUid = ($wigRealTot / $wigTargetTot) * 100;
-            }
-        }
+        $wigTargetTot = $wData['target'];
+        $wigRealTot = $wData['realisasi'];
+        $pctUid = $wData['pct'];
     @endphp
 
     <div class="header-title mb-4">
         <div class="text-left w-1/4">
-            <!-- Placeholder Logo -->
-            <div class="text-sm font-bold leading-tight">UID JAWA BARAT</div>
+            <div class="text-sm font-bold leading-tight">{{ !empty($isUlpLevel) && $user && $user->unit ? strtoupper($user->unit->name) : (!empty($isUp3Level) && $user && $user->unit ? strtoupper($user->unit->name) : 'UID JAWA BARAT') }}</div>
         </div>
         <div class="w-1/2 text-center tracking-wider">
-            WIG {{ strtoupper($wig->judul) }}
+            {{ strtoupper($wig->judul) }}
             <div class="text-xs font-normal mt-1 text-gray-300">Periode: {{ $isAllBulan ? 'Semua Bulan (Tahunan)' : \Carbon\Carbon::create()->month($bulanT)->translatedFormat('F') }} {{ $tahun }}</div>
         </div>
         <div class="text-right w-1/4">
@@ -112,19 +80,15 @@
             <div class="box-content flex justify-between items-center h-28 relative">
                 <div class="text-center w-1/2">
                     <div class="text-4xl font-extrabold {{ $pctUid >= 100 ? 'text-green-600' : 'text-red-600' }}">{{ number_format($pctUid, 2) }} %</div>
-                    <div class="text-xs font-bold text-gray-700 mt-2">Capaian WIG UID Jabar</div>
+                    <div class="text-xs font-bold text-gray-700 mt-2">Capaian WIG {{ !empty($isUlpLevel) ? 'ULP' : (!empty($isUp3Level) ? 'UP3' : 'UID Jabar') }}</div>
                     <div class="text-xxs text-gray-500 mt-1">Target: {{ number_format($wigTargetTot, 2) }}</div>
                     <div class="text-xxs text-gray-500">Realisasi: {{ number_format($wigRealTot, 2) }}</div>
                 </div>
                 <div class="w-1/2 h-full flex flex-col justify-end items-center pb-2 pl-2 border-l border-gray-200">
                     <div class="text-xxs font-bold text-gray-600 mb-1">TREND CAPAIAN WIG (%)</div>
-                    <!-- Simple Sparkline Representation -->
                     <div class="flex items-end space-x-1 h-12 w-full px-2">
                         @for($i=1; $i<=$bulanT; $i++)
-                            @php
-                                $h = min(100, rand(70, 110)); // dummy sparkline
-                            @endphp
-                            <div class="w-1/6 bg-blue-500 rounded-t" style="height: {{ $h }}%;" title="Bulan {{ $i }}"></div>
+                            <div class="w-1/6 bg-blue-500 rounded-t" style="height: {{ min(100, $pctUid) }}%;" title="Bulan {{ $i }}"></div>
                         @endfor
                     </div>
                     <div class="flex justify-between w-full text-[8px] text-gray-400 font-bold px-2 mt-1">
@@ -138,10 +102,10 @@
         <div class="col-span-8 grid grid-cols-3 gap-3">
             @foreach($wig->masterLms->take(3) as $idx => $lm)
             @php
-                // Dummy LM calculations
-                $lmPct = rand(8000, 14000) / 100;
-                $menang = rand(10, 17);
-                $kalah = 17 - $menang;
+                $lmData = $wData['lms'][$lm->id] ?? ['pct' => 0, 'menang' => 0, 'kalah' => 0];
+                $lmPct = $lmData['pct'];
+                $menang = $lmData['menang'];
+                $kalah = $lmData['kalah'];
             @endphp
             <div>
                 <div class="bg-gray-100 border border-gray-300 rounded shadow-sm h-full flex flex-col items-center justify-center p-2 relative overflow-hidden">
@@ -149,7 +113,7 @@
                     <div class="text-xs font-bold text-gray-700 text-center mb-1 w-full truncate px-1">LM {{ $idx+1 }} {{ $lm->judul_lm }}</div>
                     <div class="text-3xl font-extrabold {{ $lmPct >= 100 ? 'text-green-600' : 'text-red-600' }} my-1">{{ number_format($lmPct, 2) }} %</div>
                     <div class="status-badge {{ $lmPct >= 100 ? 'bg-exceed' : 'bg-watch' }}">{{ $lmPct >= 100 ? 'EXCEEDED TARGET' : 'PERFORMANCE WATCH' }}</div>
-                    <div class="text-xxs font-bold text-gray-800 mt-2">UP3 Menang: {{ $menang }} | UP3 Kalah: {{ $kalah }}</div>
+                    <div class="text-xxs font-bold text-gray-800 mt-2">{{ !empty($isUlpLevel) || !empty($isUp3Level) ? 'ULP' : 'UP3' }} Menang: {{ $menang }} | {{ !empty($isUlpLevel) || !empty($isUp3Level) ? 'ULP' : 'UP3' }} Kalah: {{ $kalah }}</div>
                 </div>
             </div>
             @endforeach
@@ -157,16 +121,16 @@
     </div>
 
     <div class="grid grid-cols-12 gap-3">
-        <!-- HEATMAP KINERJA UP3 -->
+        <!-- HEATMAP KINERJA UP3 / ULP -->
         <div class="col-span-9">
-            <div class="box-title">HEATMAP KINERJA UP3 | WIG & LEAD MEASURE</div>
+            <div class="box-title">HEATMAP KINERJA {{ !empty($isUlpLevel) || !empty($isUp3Level) ? 'ULP' : 'UP3' }} | WIG & LEAD MEASURE</div>
             <table class="heatmap">
                 <thead>
                     <tr>
                         <th rowspan="2" class="w-1/6">UNIT</th>
                         <th colspan="3">WIG</th>
                         @foreach($wig->masterLms->take(3) as $idx => $lm)
-                            <th colspan="3">LM-{{ $idx+1 }}</th>
+                            <th colspan="5">LM-{{ $idx+1 }}</th>
                         @endforeach
                     </tr>
                     <tr>
@@ -174,19 +138,23 @@
                         <th>R</th>
                         <th>%</th>
                         @foreach($wig->masterLms->take(3) as $lm)
-                            <th>W-1</th>
-                            <th>W</th>
-                            <th>TREN</th>
+                            <th>M1</th>
+                            <th>M2</th>
+                            <th>M3</th>
+                            <th>M4</th>
+                            <th>M5</th>
                         @endforeach
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($units as $unit)
                     @php
-                        // Mocking unit data for the heatmap
-                        $uT = rand(5000, 20000)/100;
-                        $uR = rand(5000, 25000)/100;
-                        $uPct = ($uR/$uT)*100;
+                        $uData = $wData['units'][$unit->id] ?? null;
+                        if (!$uData) continue;
+
+                        $uT = $uData['t'];
+                        $uR = $uData['r'];
+                        $uPct = $uData['pct'];
                         $uWigBg = $uPct >= 100 ? 'cell-green' : 'cell-red';
                     @endphp
                     <tr>
@@ -197,15 +165,15 @@
                         
                         @foreach($wig->masterLms->take(3) as $lm)
                         @php
-                            $lmW1 = rand(70, 150);
-                            $lmW = rand(70, 150);
-                            $bg = $lmW >= 100 ? 'cell-green' : 'cell-red';
-                            $tren = $lmW >= $lmW1 ? '&#8679;' : '&#8681;';
-                            $trenColor = $lmW >= $lmW1 ? 'text-green-600' : 'text-red-600';
+                            $lmWeeks = $uData['lms'][$lm->id] ?? [];
                         @endphp
-                        <td>{{ number_format($lmW1, 2) }}%</td>
-                        <td class="{{ $bg }} font-bold">{{ number_format($lmW, 2) }}%</td>
-                        <td class="{{ $trenColor }} font-bold text-sm">{!! $tren !!}</td>
+                            @for($w = 1; $w <= 5; $w++)
+                            @php
+                                $wPct = $lmWeeks[$w]['pct'] ?? 0;
+                                $bg = $wPct >= 100 ? 'cell-green' : 'cell-red';
+                            @endphp
+                            <td class="{{ $bg }} font-bold">{{ number_format($wPct, 2) }}%</td>
+                            @endfor
                         @endforeach
                     </tr>
                     @endforeach
@@ -216,15 +184,15 @@
         <!-- SIDEBAR WIDGETS -->
         <div class="col-span-3 flex flex-col gap-3">
             <div>
-                <div class="box-title">STATUS WIG {{ strtoupper(substr($wig->judul, 0, 10)) }}</div>
+                <div class="box-title">STATUS {{ strtoupper($wig->judul) }}</div>
                 <div class="border border-gray-300 p-4 bg-white flex justify-between items-center h-24">
                     <div class="flex items-center">
-                        <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold mr-2">14</div>
-                        <div class="text-xs font-bold text-green-700">UP3 HIJAU<br><span class="text-xxs text-gray-500 font-normal">Menang</span></div>
+                        <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold mr-2">{{ $wData['status_menang'] }}</div>
+                        <div class="text-xs font-bold text-green-700">{{ !empty($isUlpLevel) || !empty($isUp3Level) ? 'ULP' : 'UP3' }} HIJAU<br><span class="text-xxs text-gray-500 font-normal">Menang</span></div>
                     </div>
                     <div class="flex items-center">
-                        <div class="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center font-bold mr-2">3</div>
-                        <div class="text-xs font-bold text-red-700">UP3 MERAH<br><span class="text-xxs text-gray-500 font-normal">Kalah</span></div>
+                        <div class="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center font-bold mr-2">{{ $wData['status_kalah'] }}</div>
+                        <div class="text-xs font-bold text-red-700">{{ !empty($isUlpLevel) || !empty($isUp3Level) ? 'ULP' : 'UP3' }} MERAH<br><span class="text-xxs text-gray-500 font-normal">Kalah</span></div>
                     </div>
                 </div>
             </div>
@@ -233,7 +201,7 @@
                 <div class="box-title">FOCUS AREA NEXT WEEK</div>
                 <div class="border border-gray-300 p-4 bg-white h-full text-xs text-gray-700">
                     <ul class="list-disc pl-4 space-y-2">
-                        <li>Perkuatan Eksekusi LM-1 di unit berkinerja merah.</li>
+                        <li>Perkuatan Eksekusi LM di unit berkinerja merah.</li>
                         <li>Monitoring Penyelesaian Target Bulanan.</li>
                         <li>Evaluasi Kendala Eksekusi Lapangan.</li>
                     </ul>
@@ -242,6 +210,14 @@
         </div>
     </div>
     <div class="page-break"></div>
-    @endforeach
+    @empty
+    <div class="text-center py-20 bg-gray-50 border border-gray-200 rounded-xl my-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-amber-100 text-amber-600 mb-4">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800 mb-2">Tidak Ada Data WIG</h3>
+        <p class="text-gray-500 max-w-md mx-auto">Saat ini belum ada WIG yang terdaftar atau terhubung dengan lingkup kepemilikan Bidang/Divisi akun Anda untuk periode ini.</p>
+    </div>
+    @endforelse
 </body>
 </html>

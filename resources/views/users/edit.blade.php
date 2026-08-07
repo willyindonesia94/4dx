@@ -54,9 +54,13 @@
 
                             <div class="md:col-span-2">
                                 <x-input-label for="matrix_group_id" :value="__('Matrix Group (Relasi Bidang)')" />
-                                <select id="matrix_group_id" name="matrix_group_id" class="block mt-1 w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
-                                    @foreach($matrixGroups as $group)
-                                        <option value="{{ $group }}" {{ $user->matrix_group_id === $group ? 'selected' : '' }}>{{ $group }}</option>
+                                <select id="matrix_group_id" name="matrix_group_id" class="block mt-1 w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm font-medium text-gray-800" required>
+                                    <option value="" disabled>-- Pilih Bidang / Matrix Group --</option>
+                                    <option value="ALL" {{ $user->matrix_group_id === 'ALL' ? 'selected' : '' }}>ALL (Semua Bidang / Tidak Dibatasi)</option>
+                                    @foreach($bidangs as $bidang)
+                                        <option value="{{ $bidang->name }}" {{ $user->matrix_group_id === $bidang->name ? 'selected' : '' }}>
+                                            {{ $bidang->name }} ({{ $bidang->level == 'UID_BIDANG' ? 'UID' : ($bidang->level == 'UID_SUBBIDANG' ? 'Sub UID' : ($bidang->level == 'UP3_BIDANG' ? 'UP3' : 'ULP')) }})
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>

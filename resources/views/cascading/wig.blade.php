@@ -9,6 +9,7 @@
         $role = auth()->user()->role_name ?? '';
         $isUid = auth()->user()->unit && auth()->user()->unit->type === 'UID';
         $canCreateUp3Breakdown = in_array($role, ['Super Admin', 'superadmin', 'Admin UID', 'admin_uid']) || $isUid;
+        $canEditDelete = !in_array(strtoupper($role), ['BIDANG UID', 'SUB BIDANG UID', 'MANAGER UP3', 'MANAGER ULP', 'GENERAL MANAGER UID']);
     @endphp
 
     <div class="py-12" x-data="{ 
@@ -178,11 +179,13 @@
                                                         <td class="px-3 py-2 text-center" @click.stop>
                                                             <div class="flex justify-center items-center space-x-2">
                                                                 <button type="button" @click='openEditModal({{ $bw->toJson() }}, { id: {{ $wig->id }}, judul: @json($wig->judul), deskripsi: @json($wig->deskripsi), satuan_id: "{{ $wig->satuan_id }}" }, "uid", [])' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
+                                                                @if($canEditDelete)
                                                                 <form action="{{ route('cascading.wig-breakdown.destroy', $bw->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Hapus breakdown WIG ini?');">
                                                                     @csrf
                                                                     @method('DELETE')
                                                                     <button type="submit" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
                                                                 </form>
+                                                                @endif
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -255,11 +258,13 @@
                                                             @if($canCreateUp3Breakdown)
                                                             <div class="flex justify-center items-center space-x-2">
                                                                 <button type="button" @click='openEditModal({{ $bw->toJson() }}, { id: {{ $wig->id }}, judul: @json($wig->judul), deskripsi: @json($wig->deskripsi), satuan_id: "{{ $wig->satuan_id }}" }, "up3", @json($uidBreakdowns->values()))' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
+                                                                @if($canEditDelete)
                                                                 <form action="{{ route('cascading.wig-breakdown.destroy', $bw->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Hapus breakdown WIG ini?');">
                                                                     @csrf
                                                                     @method('DELETE')
                                                                     <button type="submit" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
                                                                 </form>
+                                                                @endif
                                                             </div>
                                                             @endif
                                                         </td>

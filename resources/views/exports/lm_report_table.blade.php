@@ -1,68 +1,60 @@
-<style>
-    .report-table-preview { font-family: 'Helvetica', 'Arial', sans-serif; font-size: 11px; width: 100%; border-collapse: collapse; }
-    .report-table-preview th, .report-table-preview td { border: 1px solid #000; padding: 6px; text-align: center; }
-    .report-table-preview .bg-blue { background-color: #1f497d; color: #ffffff; }
-    .report-table-preview .bg-orange { background-color: #e26b0a; color: #ffffff; }
-    .report-table-preview .bg-green { background-color: #385d22; color: #ffffff; }
-    .report-table-preview .bg-purple { background-color: #60497a; color: #ffffff; }
-    .report-table-preview .bg-gray { background-color: #bfbfbf; }
-    .report-table-preview .bg-light-purple { background-color: #e4dfec; }
-    .report-table-preview .bg-uid-total { background-color: #ffc000; color: #000000; font-weight: bold; }
-    .report-table-preview .text-left { text-align: left; }
-    .report-table-preview .text-right { text-align: right; }
-    .report-table-preview .font-bold { font-weight: bold; }
-</style>
-
-<h2>DATA LM - {{ strtoupper($bulan) }} {{ $tahun }}</h2>
-<table class="report-table-preview">
+<table>
+    <tr>
+        <td colspan="14" style="font-size: 14px; font-weight: bold;">DATA LM - {{ strtoupper($bulan) }} {{ $tahun }}</td>
+    </tr>
+    <tr>
+        <td colspan="14"></td>
+    </tr>
+</table>
+<table border="1" style="border-collapse: collapse; width: 100%;">
     <thead>
         <tr>
-            <th class="bg-blue" rowspan="2">NO</th>
-            <th class="bg-blue" rowspan="2">WIG</th>
-            <th class="bg-blue" rowspan="2">INDIKATOR KINERJA (LM)</th>
-            <th class="bg-blue" rowspan="2">POLARITAS</th>
-            <th class="bg-blue" rowspan="2">SATUAN</th>
-            <th class="bg-blue" rowspan="2">UNIT</th>
-            <th class="bg-orange" rowspan="2">TARGET BULAN INI</th>
-            <th class="bg-green" colspan="5">REALISASI MINGGUAN</th>
-            <th class="bg-gray font-bold" rowspan="2">TOTAL REALISASI</th>
-            <th class="bg-gray font-bold" rowspan="2">% CAPAIAN</th>
+            <th rowspan="2" style="background-color: #1F497D; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">NO</th>
+            <th rowspan="2" style="background-color: #1F497D; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">WIG</th>
+            <th rowspan="2" style="background-color: #1F497D; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">INDIKATOR KINERJA (LM)</th>
+            <th rowspan="2" style="background-color: #1F497D; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">POLARITAS</th>
+            <th rowspan="2" style="background-color: #1F497D; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">SATUAN</th>
+            <th rowspan="2" style="background-color: #1F497D; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">UNIT</th>
+            <th rowspan="2" style="background-color: #E26B0A; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">TARGET BULAN INI</th>
+            <th colspan="5" style="background-color: #385D22; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">REALISASI MINGGUAN</th>
+            <th rowspan="2" style="background-color: #595959; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">TOTAL REALISASI</th>
+            <th rowspan="2" style="background-color: #595959; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">% CAPAIAN</th>
         </tr>
         <tr>
-            <th class="bg-green">M1</th>
-            <th class="bg-green">M2</th>
-            <th class="bg-green">M3</th>
-            <th class="bg-green">M4</th>
-            <th class="bg-green">M5</th>
+            <th style="background-color: #385D22; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">M1</th>
+            <th style="background-color: #385D22; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">M2</th>
+            <th style="background-color: #385D22; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">M3</th>
+            <th style="background-color: #385D22; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">M4</th>
+            <th style="background-color: #385D22; color: #FFFFFF; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle;">M5</th>
         </tr>
     </thead>
     <tbody>
         @php $no = 1; @endphp
-        @foreach($data as $row)
+        @forelse($data as $row)
             @php
-                $isUid = isset($row['is_uid']) ? $row['is_uid'] : false;
+                $isUid = isset($row['is_uid']) && $row['is_uid'];
+                $bgRow = $isUid ? 'background-color: #FFC000; font-weight: bold;' : '';
             @endphp
-            <tr class="{{ $isUid ? 'bg-uid-total' : '' }}">
-                <td>{{ $no++ }}</td>
-                <td class="text-left">{{ $row['wig'] }}</td>
-                <td class="text-left">{{ $row['lm'] }}</td>
-                <td>{{ $row['polaritas'] }}</td>
-                <td>{{ $row['satuan'] }}</td>
-                <td class="text-left">{{ $row['unit'] }}</td>
-                <td>{{ $row['target'] }}</td>
-                <td>{{ $row['r1'] }}</td>
-                <td>{{ $row['r2'] }}</td>
-                <td>{{ $row['r3'] }}</td>
-                <td>{{ $row['r4'] }}</td>
-                <td>{{ $row['r5'] }}</td>
-                <td class="bg-gray font-bold">{{ $row['total'] }}</td>
-                <td class="bg-gray font-bold">{{ $row['capaian'] }}%</td>
+            <tr style="{{ $bgRow }}">
+                <td style="border: 1px solid #000000; text-align: center; vertical-align: middle; {{ $bgRow }}">{{ $no++ }}</td>
+                <td style="border: 1px solid #000000; text-align: left; vertical-align: middle; {{ $bgRow }}">{{ $row['wig'] }}</td>
+                <td style="border: 1px solid #000000; text-align: left; vertical-align: middle; {{ $bgRow }}">{{ $row['lm'] }}</td>
+                <td style="border: 1px solid #000000; text-align: center; vertical-align: middle; {{ $bgRow }}">{{ strtoupper($row['polaritas'] ?? 'POSITIF') }}</td>
+                <td style="border: 1px solid #000000; text-align: center; vertical-align: middle; {{ $bgRow }}">{{ $row['satuan'] }}</td>
+                <td style="border: 1px solid #000000; text-align: left; vertical-align: middle; {{ $bgRow }}">{{ $row['unit'] }}</td>
+                <td style="border: 1px solid #000000; text-align: right; vertical-align: middle; {{ $bgRow }}">{{ is_numeric($row['target']) ? number_format($row['target'], 2) : $row['target'] }}</td>
+                <td style="border: 1px solid #000000; text-align: right; vertical-align: middle; {{ $bgRow }}">{{ is_numeric($row['r1']) ? number_format($row['r1'], 2) : $row['r1'] }}</td>
+                <td style="border: 1px solid #000000; text-align: right; vertical-align: middle; {{ $bgRow }}">{{ is_numeric($row['r2']) ? number_format($row['r2'], 2) : $row['r2'] }}</td>
+                <td style="border: 1px solid #000000; text-align: right; vertical-align: middle; {{ $bgRow }}">{{ is_numeric($row['r3']) ? number_format($row['r3'], 2) : $row['r3'] }}</td>
+                <td style="border: 1px solid #000000; text-align: right; vertical-align: middle; {{ $bgRow }}">{{ is_numeric($row['r4']) ? number_format($row['r4'], 2) : $row['r4'] }}</td>
+                <td style="border: 1px solid #000000; text-align: right; vertical-align: middle; {{ $bgRow }}">{{ is_numeric($row['r5']) ? number_format($row['r5'], 2) : $row['r5'] }}</td>
+                <td style="border: 1px solid #000000; text-align: right; vertical-align: middle; font-weight: bold; background-color: #F2F2F2; {{ $bgRow }}">{{ is_numeric($row['total']) ? number_format($row['total'], 2) : $row['total'] }}</td>
+                <td style="border: 1px solid #000000; text-align: right; vertical-align: middle; font-weight: bold; background-color: #F2F2F2; {{ $bgRow }}">{{ $row['capaian'] }}%</td>
             </tr>
-        @endforeach
-        @if(count($data) === 0)
+        @empty
             <tr>
-                <td colspan="14">Tidak ada data LM untuk periode ini.</td>
+                <td colspan="14" style="border: 1px solid #000000; text-align: center; font-style: italic; padding: 12px;">Tidak ada data LM untuk periode dan lingkup Bidang/Unit ini.</td>
             </tr>
-        @endif
+        @endforelse
     </tbody>
 </table>

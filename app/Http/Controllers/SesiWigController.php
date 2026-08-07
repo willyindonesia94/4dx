@@ -7,6 +7,7 @@ use App\Models\SesiWig;
 use App\Models\MasterLm;
 use App\Models\BreakdownLm;
 use App\Models\BreakdownWig;
+use App\Models\SesiWigKomitmen;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -30,53 +31,44 @@ class SesiWigController extends Controller
         $bulan = $request->bulan;
         $levels = $request->level_terlibat;
         
-        // Find representative Breakdown LM to get the calendar (Bulletproof method)
-        // Find the "Bulanan" target that covers the 15th of the requested month
-        $midMonth = \Carbon\Carbon::create($tahun, $bulan, 15)->format('Y-m-d');
-        $bulananBd = \Illuminate\Support\Facades\DB::table('breakdown_lms')
-            ->whereRaw('DATEDIFF(periode_end, periode_start) > 20')
-            ->where('periode_start', '<=', $midMonth)
-            ->where('periode_end', '>=', $midMonth)
-            ->first();
-            
-        if (!$bulananBd) {
-            return redirect()->back()->with('error', 'Tidak dapat men-generate Sesi WIG. Anda harus membuat minimal 1 Cascading LM (Breakdown Target) terlebih dahulu pada bulan tersebut sebagai patokan kalender.');
+        $master = \App\Models\MasterPeriode::where('tahun', $tahun)->where('bulan', $bulan)->first();
+        if (!$master) {
+            return redirect()->back()->with('error', 'Tidak dapat men-generate Sesi WIG. Master Periode untuk bulan tersebut belum dikonfigurasi.');
         }
-
-        // Fetch M1-M5 based on the boundaries of the bulanan target
-        $weeklyBds = \Illuminate\Support\Facades\DB::table('breakdown_lms')
-            ->where('lm_id', $bulananBd->lm_id)
-            ->where('unit_id', $bulananBd->unit_id)
-            ->whereRaw('DATEDIFF(periode_end, periode_start) <= 20')
-            ->where('periode_start', '>=', $bulananBd->periode_start)
-            ->where('periode_end', '<=', $bulananBd->periode_end)
-            ->orderBy('periode_start', 'asc')
-            ->get();
 
         $weeklyCalendars = [];
-        $wIndex = 1;
-        foreach ($weeklyBds as $bd) {
-            $weeklyCalendars[$wIndex] = $bd;
-            $wIndex++;
-        }
+        if ($master->end_m1) $weeklyCalendars[1] = $master->end_m1;
+        if ($master->end_m2) $weeklyCalendars[2] = $master->end_m2;
+        if ($master->end_m3) $weeklyCalendars[3] = $master->end_m3;
+        if ($master->end_m4) $weeklyCalendars[4] = $master->end_m4;
+        if ($master->end_m5) $weeklyCalendars[5] = $master->end_m5;
 
         // Create Mingguan sessions
-        foreach ($weeklyCalendars as $w => $bd) {
+        $createdCount = 0;
+        foreach ($weeklyCalendars as $w => $endDate) {
             // Tgl Pelaksanaan = 1 hari setelah periode berakhir
-            $execDate = \Carbon\Carbon::parse($bd->periode_end)->addDay();
+            $execDate = \Carbon\Carbon::parse($endDate)->addDay();
             
-            SesiWig::create([
-                'nama_sesi' => "Sesi WIG Mingguan $w - " . \Carbon\Carbon::create($tahun, $bulan, 1)->translatedFormat('F Y'),
-                'tahun' => $tahun,
-                'bulan' => $bulan,
-                'minggu_ke' => $w,
-                'tipe_sesi' => 'Mingguan',
-                'tanggal_pelaksanaan' => $execDate->format('Y-m-d'),
-                'level_terlibat' => $levels,
-            ]);
+            $exists = SesiWig::where('tahun', $tahun)->where('bulan', $bulan)->where('minggu_ke', $w)->first();
+            if (!$exists) {
+                SesiWig::create([
+                    'nama_sesi' => "Sesi WIG Mingguan $w - " . strtoupper(\Carbon\Carbon::create($tahun, $bulan, 1)->locale('id')->translatedFormat('F Y')),
+                    'tahun' => $tahun,
+                    'bulan' => $bulan,
+                    'minggu_ke' => $w,
+                    'tipe_sesi' => 'Mingguan',
+                    'tanggal_pelaksanaan' => $execDate->format('Y-m-d'),
+                    'level_terlibat' => $levels,
+                ]);
+                $createdCount++;
+            }
         }
 
-        return redirect()->route('sesi-wigs.index')->with('success', 'Sesi WIG Mingguan berhasil digenerate berdasarkan kalender Cascading LM.');
+        if ($createdCount > 0) {
+            return redirect()->route('sesi-wigs.index')->with('success', "$createdCount Sesi WIG Mingguan baru berhasil digenerate berdasarkan Master Periode.");
+        } else {
+            return redirect()->route('sesi-wigs.index')->with('info', "Semua Sesi WIG untuk bulan ini sudah ada. Tidak ada sesi baru yang ditambahkan.");
+        }
     }
 
     public function destroy(SesiWig $sesi_wig)
@@ -103,49 +95,47 @@ class SesiWigController extends Controller
         $wig_bulan = $request->get('wig_bulan');
         $lm_unit = $request->get('lm_unit');
 
-        // Fetch all WIGs
-        $wigs = MasterWig::all();
-        // Fetch all LMs
-        $lms = MasterLm::with('wig', 'satuan')->get()->sortBy(function($lm) {
+        $user = auth()->user();
+        $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin']);
+        $isUlpLevel = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'ULP') || str_contains(strtoupper($user->role_name ?? ''), 'ULP'));
+        $isUp3Level = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'UP3') || str_contains(strtoupper($user->role_name ?? ''), 'UP3'));
+
+        // Filter WIG & LM sesuai Matrix Bidang User
+        $wigsQuery = MasterWig::query();
+        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+            $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
+            $wigsQuery->whereIn('divisi', $allowedDivisis);
+        }
+        $wigs = $wigsQuery->get();
+
+        $lmsQuery = MasterLm::with('wig', 'satuan');
+        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+            $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
+            $lmsQuery->whereHas('wig', fn($q) => $q->whereIn('divisi', $allowedDivisis));
+        }
+        $lms = $lmsQuery->get()->sortBy(function($lm) {
             preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
             return (int)($m[1] ?? 999);
         });
 
-        // Determine dynamic calendars from BreakdownLm (Bulletproof method)
-        $sampleLm = collect($lms)->first();
         $weeklyCalendars = [];
         $monthlyCalendar = null;
         
         $targetStartDate = Carbon::parse($sesi_wig->tanggal_pelaksanaan)->startOfMonth()->format('Y-m-d');
         $targetEndDate = Carbon::parse($sesi_wig->tanggal_pelaksanaan)->endOfMonth()->format('Y-m-d');
 
-        if ($sampleLm) {
-            $midMonth = \Carbon\Carbon::create($sesi_wig->tahun, $sesi_wig->bulan, 15)->format('Y-m-d');
-            $bulananBd = \Illuminate\Support\Facades\DB::table('breakdown_lms')
-                ->where('lm_id', $sampleLm->id)
-                ->whereRaw('DATEDIFF(periode_end, periode_start) > 20')
-                ->where('periode_start', '<=', $midMonth)
-                ->where('periode_end', '>=', $midMonth)
-                ->first();
-
-            if ($bulananBd) {
-                $monthlyCalendar = ['start' => $bulananBd->periode_start, 'end' => $bulananBd->periode_end];
-                
-                $weeklyBds = \Illuminate\Support\Facades\DB::table('breakdown_lms')
-                    ->where('lm_id', $bulananBd->lm_id)
-                    ->where('unit_id', $bulananBd->unit_id)
-                    ->whereRaw('DATEDIFF(periode_end, periode_start) <= 20')
-                    ->where('periode_start', '>=', $bulananBd->periode_start)
-                    ->where('periode_end', '<=', $bulananBd->periode_end)
-                    ->orderBy('periode_start', 'asc')
-                    ->get();
-                    
-                $wIndex = 1;
-                foreach ($weeklyBds as $bd) {
-                    $weeklyCalendars[$wIndex] = ['start' => $bd->periode_start, 'end' => $bd->periode_end];
-                    $wIndex++;
-                }
-            }
+        $masterPeriode = \App\Models\MasterPeriode::where('tahun', $sesi_wig->tahun)->where('bulan', $sesi_wig->bulan)->first();
+        if ($masterPeriode) {
+            $monthlyCalendar = [
+                'start' => $masterPeriode->start_m1, 
+                'end' => $masterPeriode->end_m5 ?: ($masterPeriode->end_m4 ?: $masterPeriode->end_m1)
+            ];
+            if ($masterPeriode->start_m1 && $masterPeriode->end_m1) $weeklyCalendars[1] = ['start' => $masterPeriode->start_m1, 'end' => $masterPeriode->end_m1];
+            if ($masterPeriode->start_m2 && $masterPeriode->end_m2) $weeklyCalendars[2] = ['start' => $masterPeriode->start_m2, 'end' => $masterPeriode->end_m2];
+            if ($masterPeriode->start_m3 && $masterPeriode->end_m3) $weeklyCalendars[3] = ['start' => $masterPeriode->start_m3, 'end' => $masterPeriode->end_m3];
+            if ($masterPeriode->start_m4 && $masterPeriode->end_m4) $weeklyCalendars[4] = ['start' => $masterPeriode->start_m4, 'end' => $masterPeriode->end_m4];
+            if ($masterPeriode->start_m5 && $masterPeriode->end_m5) $weeklyCalendars[5] = ['start' => $masterPeriode->start_m5, 'end' => $masterPeriode->end_m5];
         }
 
         if (strtolower(trim($sesi_wig->tipe_sesi)) === 'mingguan') {
@@ -216,9 +206,30 @@ class SesiWigController extends Controller
             $lm->capaian = $target > 0 ? round(($realisasi / $target) * 100, 2) : 0;
         }
         
-        $allUlps = MasterUnit::where('type', 'ULP')->orderBy('name')->get();
-        $up3s    = MasterUnit::where('type', 'UP3')->orderBy('name')->get();
-        $units = MasterUnit::whereIn('type', ['UP3', 'ULP'])->orderBy('type')->orderBy('name')->get();
+        // Filter Unit sesuai tingkatan akses User (ULP/UP3/UID)
+        $ulpsQuery = MasterUnit::where('type', 'ULP')->orderBy('name');
+        $up3sQuery = MasterUnit::where('type', 'UP3')->orderBy('name');
+        $unitsQuery = MasterUnit::whereIn('type', ['UP3', 'ULP'])->orderBy('type')->orderBy('name');
+
+        if (!$isSuperAdmin && $user && $user->unit) {
+            $unitType = strtoupper(trim((string)$user->unit->type));
+            if ($unitType === 'ULP') {
+                $ulpsQuery->where('id', $user->unit_id);
+                $up3sQuery->where('id', $user->unit->parent_id);
+                $unitsQuery->whereIn('id', [$user->unit_id, $user->unit->parent_id]);
+            } elseif ($unitType === 'UP3') {
+                $ulpsQuery->where('parent_id', $user->unit_id);
+                $up3sQuery->where('id', $user->unit_id);
+                $unitsQuery->whereIn('id', function($q) use ($user) {
+                    $q->select('id')->from('master_units')
+                      ->where('id', $user->unit_id)
+                      ->orWhere('parent_id', $user->unit_id);
+                });
+            }
+        }
+        $allUlps = $ulpsQuery->get();
+        $up3s    = $up3sQuery->get();
+        $units   = $unitsQuery->get();
 
         $leaderboardScores = \Illuminate\Support\Facades\DB::table('realisasis')
             ->where('tanggal_input', '<=', $endDate)
@@ -305,7 +316,8 @@ class SesiWigController extends Controller
                 foreach ($komitmens as $k) {
                     $matrixKomitmen[$k->lm_id][$k->unit_id][$sw->id] = [
                         'komitmen' => $k->komitmen,
-                        'carry_over' => $k->carry_over
+                        'carry_over' => $k->carry_over,
+                        'has_form' => true
                     ];
                 }
             }
@@ -344,7 +356,7 @@ class SesiWigController extends Controller
             }
         }
 
-        return view('sesi-wigs.show', compact('sesi_wig', 'previousSesi', 'wigs', 'lms', 'units', 'wig_bulan', 'lm_unit', 'leaderboard', 'lmMenangKalah', 'presenters', 'up3s', 'allUlps', 'sesi_wigs_matrix', 'sesi_wigs_month', 'matrixTargets', 'matrixRealisasi', 'matrixKomitmen'));
+        return view('sesi-wigs.show', compact('sesi_wig', 'previousSesi', 'wigs', 'lms', 'units', 'wig_bulan', 'lm_unit', 'leaderboard', 'lmMenangKalah', 'presenters', 'up3s', 'allUlps', 'sesi_wigs_matrix', 'sesi_wigs_month', 'matrixTargets', 'matrixRealisasi', 'matrixKomitmen', 'isUlpLevel', 'isUp3Level', 'userMatrixGroup'));
     }
 
     public function drawPresenter(Request $request, SesiWig $sesi_wig)
@@ -395,5 +407,42 @@ class SesiWigController extends Controller
             'winner' => $winner,
             'candidates' => $eligibleUnits->map(fn($u) => $u->name)->toArray()
         ]);
+    }
+
+    public function saveKomitmen(Request $request, SesiWig $sesi_wig)
+    {
+        $request->validate([
+            'lm_id' => 'required|exists:master_lms,id',
+            'unit_id' => 'required|exists:master_units,id',
+            'komitmen' => 'nullable',
+            'carry_over' => 'nullable',
+        ]);
+
+        SesiWigKomitmen::updateOrCreate(
+            [
+                'sesi_wig_id' => $sesi_wig->id,
+                'lm_id' => $request->lm_id,
+                'unit_id' => $request->unit_id,
+            ],
+            [
+                'komitmen' => $request->komitmen !== '' ? $request->komitmen : null,
+                'carry_over' => $request->carry_over !== '' ? $request->carry_over : null,
+            ]
+        );
+
+        return response()->json(['success' => true]);
+    }
+
+    public function setPresenter(Request $request, SesiWig $sesi_wig)
+    {
+        $request->validate([
+            'up3_id' => 'nullable|exists:master_units,id',
+            'ulp_id' => 'nullable|exists:master_units,id',
+        ]);
+
+        $presenterIds = array_filter([$request->up3_id, $request->ulp_id]);
+        $sesi_wig->presenters()->sync($presenterIds);
+
+        return redirect()->back()->with('success', 'Presenter sesi berhasil disimpan.');
     }
 }

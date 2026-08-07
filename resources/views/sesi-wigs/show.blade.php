@@ -41,10 +41,12 @@
                             <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                             Presenter Sesi Ini
                         </h4>
+                        @if(!$isUlpLevel && $canEditSesiWig)
                         <button @click="showDrawModal = true" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition-all flex items-center gap-2 mt-4 md:mt-0">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             Pilih Presenter
                         </button>
+                        @endif
                     </div>
 
                     @if(isset($presenters) && $presenters->count() > 0)
@@ -126,10 +128,12 @@
                         </button>
 
                         <!-- Button to write new notes -->
+                        @if($canEditSesiWig)
                         <button @click="showModal = true" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-lg shadow-md transition-all flex items-center gap-2 w-full sm:w-auto justify-center">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                             Tulis Notulensi Sesi Ini
                         </button>
+                        @endif
                     </div>
                 </div>
 
@@ -167,7 +171,6 @@
                     </div>
                 </template>
 
-                <!-- Modal Tulis Notulensi -->
                 <!-- Modal Tulis Notulensi -->
                 <template x-teleport="body">
                     <div x-show="showModal" style="display: none; background-color: rgba(17, 24, 39, 0.5); backdrop-filter: blur(8px);" class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -243,7 +246,7 @@
                 <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
                     <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center">
                         <svg class="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        Scoreboard WIG UID (Matrix)
+                        Scoreboard WIG {{ $isUlpLevel ? 'ULP' : ($isUp3Level ? 'UP3' : 'UID') }} (Matrix)
                     </h3>
                     <div class="space-y-4">
                         @forelse($wigs as $wig)
@@ -287,7 +290,7 @@
                                                     <div class="flex-1 pr-4">
                                                         <span class="text-xs font-semibold text-gray-700">{{ $lm->judul_lm }}</span>
                                                         <div class="text-[10px] text-gray-500 mt-0.5">
-                                                            Target: {{ number_format($lm->total_target, 2) }} | Realisasi: {{ number_format($lm->total_realisasi, 2) }} {{ $lm->satuan->name ?? '' }} ({{ ucfirst($lm->polaritas) }})
+                                                            Target: {{ number_format($lm->total_target, 0, ",", ".") }} | Realisasi: {{ number_format($lm->total_realisasi, 0, ",", ".") }} {{ $lm->satuan->name ?? '' }} ({{ ucfirst($lm->polaritas) }})
                                                         </div>
                                                     </div>
                                                     <div class="text-right">
@@ -343,15 +346,16 @@
                                             <tr>
                                                 <th rowspan="2" class="px-4 py-3 border border-gray-300 text-left font-bold text-gray-800 sticky left-0 bg-gray-100 z-10">UNIT</th>
                                                 @foreach($sesi_wigs_matrix as $sw)
-                                                    <th colspan="6" class="px-4 py-2 border border-gray-300 text-center font-bold text-gray-800 bg-indigo-50">
+                                                    <th colspan="8" class="px-4 py-2 border border-gray-300 text-center font-bold text-gray-800 bg-indigo-50">
                                                         {{ strtolower(trim($sw->tipe_sesi)) === 'mingguan' ? 'MINGGU ' . $sw->minggu_ke : strtoupper($sw->tipe_sesi) }}
                                                     </th>
                                                 @endforeach
                                             </tr>
                                             <tr>
                                                 @foreach($sesi_wigs_matrix as $sw)
-                                                    <th class="px-2 py-2 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50">TARGET</th>
-                                                    <th class="px-2 py-2 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50 w-24">Komitmen</th>
+                                                    <th class="px-2 py-2 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50">TARGET AWAL</th>
+                                                    <th class="px-2 py-2 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50">TARGET+<br>CARRY OVER</th>
+                                                    <th colspan="2" class="px-2 py-2 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50">KOMITMEN</th>
                                                     <th class="px-2 py-2 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50">REALISASI</th>
                                                     <th class="px-2 py-2 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50">PENCAPAIAN (%)</th>
                                                     <th class="px-2 py-2 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50 w-24">CARRY OVER</th>
@@ -361,6 +365,7 @@
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
                                             <!-- Baris UID Jabar (Total Keseluruhan) -->
+                                            @if(!$isUlpLevel)
                                             <tr class="bg-indigo-50 border-b-2 border-indigo-200">
                                                 <td class="px-4 py-2 border border-gray-300 font-black text-indigo-900 whitespace-nowrap sticky left-0 bg-indigo-50 z-10 uppercase">
                                                     UID JABAR
@@ -378,9 +383,24 @@
                                                         }
                                                         
                                                         $uidPencapaian = $uidTarget > 0 ? round(($uidRealisasi / $uidTarget) * 100, 2) : 0;
-                                                        $uidBgColor = $uidPencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
+                                                        $uidBgColor = 'bg-red-500 text-white';
+                                                        if ($uidPencapaian >= 100) {
+                                                            $uidBgColor = 'bg-green-500 text-white'; // No komitmen on UID level currently
+                                                        }
+                                                        $uidCarryOver = max(0, $uidTarget - $uidRealisasi);
                                                         
                                                         $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
+                                                        $prevUidTarget = 0;
+                                                        $prevUidRealisasi = 0;
+                                                        if ($prevSw) {
+                                                            foreach($up3s as $up3Unit) {
+                                                                $prevUidTarget += $matrixTargets[$lm->id][$up3Unit->id][$prevSw->id] ?? 0;
+                                                                $prevUidRealisasi += $matrixRealisasi[$lm->id][$up3Unit->id][$prevSw->id] ?? 0;
+                                                            }
+                                                        }
+                                                        $prevUidCarryOver = max(0, $prevUidTarget - $prevUidRealisasi);
+                                                        $uidTargetPlusCarryOver = $uidTarget + $prevUidCarryOver;
+                                                        
                                                         $prevUidRealisasi = 0;
                                                         $uidTrendIcon = '<span class="text-gray-400">-</span>';
                                                         if ($prevSw) {
@@ -392,24 +412,26 @@
                                                             } else if ($uidRealisasi < $prevUidRealisasi) {
                                                                 $uidTrendIcon = '<svg class="w-5 h-5 text-red-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>';
                                                             } else {
-                                                                $uidTrendIcon = '<svg class="w-5 h-5 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 12h14"></path></svg>';
+                                                                $uidTrendIcon = '<svg class="w-5 h-5 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>';
                                                             }
                                                         }
                                                     @endphp
-                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ number_format($uidTarget, 2) }}</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ number_format($uidRealisasi, 2) }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ number_format($uidTarget, 0, ",", ".") }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black text-purple-900 bg-purple-50">{{ number_format($uidTargetPlusCarryOver, 0, ",", ".") }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td><td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ number_format($uidRealisasi, 0, ",", ".") }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $uidBgColor }}">{{ $uidPencapaian }}%</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{{ $uidCarryOver > 0 ? number_format($uidCarryOver, 0, ",", ".") : '0' }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{!! $uidTrendIcon !!}</td>
                                                 @endforeach
                                             </tr>
+                                            @endif
                                             @foreach($up3s as $up3)
                                                 @php
                                                     $ulps = $allUlps->where('parent_id', $up3->id);
                                                     $isExpanded = false;
                                                     $user = auth()->user();
-                                                    if ($user && $user->hasRole('Admin ULP') && $ulps->contains('id', $user->unit_id)) {
+                                                    if ($user && ($isUlpLevel || $user->hasRole('Admin ULP') || $ulps->contains('id', $user->unit_id))) {
                                                         $isExpanded = true;
                                                     }
                                                 @endphp
@@ -426,9 +448,29 @@
                                                             $up3Target = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                                                             $up3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
                                                             $up3Pencapaian = $up3Target > 0 ? round(($up3Realisasi / $up3Target) * 100, 2) : 0;
-                                                            $up3BgColor = $up3Pencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
+                                                            
+                                                            $up3KomData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
+                                                            $up3KomVal = $up3KomData !== null ? floatval($up3KomData['komitmen']) : 0;
+                                                            
+                                                            $up3BgColor = 'bg-red-500 text-white';
+                                                            if ($up3Pencapaian >= 100) {
+                                                                if ($up3KomData !== null && $up3KomVal > 0 && $up3Realisasi < $up3KomVal) {
+                                                                    $up3BgColor = 'bg-orange-500 text-white';
+                                                                } else {
+                                                                    $up3BgColor = 'bg-green-500 text-white';
+                                                                }
+                                                            }
+                                                            $up3CarryOver = max(0, $up3Target - $up3Realisasi);
                                                             
                                                             $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
+                                                            $prevUp3Target = 0;
+                                                            $prevUp3Realisasi = 0;
+                                                            if ($prevSw) {
+                                                                $prevUp3Target = $matrixTargets[$lm->id][$up3->id][$prevSw->id] ?? 0;
+                                                                $prevUp3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$prevSw->id] ?? 0;
+                                                            }
+                                                            $prevUp3CarryOver = max(0, $prevUp3Target - $prevUp3Realisasi);
+                                                            $up3TargetPlusCarryOver = $up3Target + $prevUp3CarryOver;
                                                             $prevUp3Realisasi = 0;
                                                             $up3TrendIcon = '<span class="text-gray-400">-</span>';
                                                             if ($prevSw) {
@@ -438,15 +480,39 @@
                                                                 } else if ($up3Realisasi < $prevUp3Realisasi) {
                                                                     $up3TrendIcon = '<svg class="w-5 h-5 text-red-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>';
                                                                 } else {
-                                                                    $up3TrendIcon = '<svg class="w-5 h-5 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 12h14"></path></svg>';
+                                                                    $up3TrendIcon = '<svg class="w-5 h-5 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>';
                                                                 }
                                                             }
                                                         @endphp
-                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ number_format($up3Target, 2) }}</td>
-                                                        <td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td>
-                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ number_format($up3Realisasi, 2) }}</td>
+                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ number_format($up3Target, 0, ",", ".") }}</td>
+                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold text-purple-900 bg-purple-50">{{ number_format($up3TargetPlusCarryOver, 0, ",", ".") }}</td>
+                                                        <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">
+                                                            @php 
+                                                                $komData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
+                                                                $hasKom = $komData !== null;
+                                                                $komitmenVal = $hasKom ? $komData['komitmen'] : '';
+                                                            @endphp
+                                                            <span class="text-xs font-semibold text-gray-700">{{ $komitmenVal !== '' && $komitmenVal !== null ? number_format((float)$komitmenVal, 0, ",", ".") : '-' }}</span>
+                                                            </td>
+                                                            <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
+                                                                @if($canEditSesiWig)
+                                                                <button type="button" 
+                                                                    @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3Target }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}' } }))"
+                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
+                                                                    title="{{ $hasKom ? 'Edit Form Komitmen' : 'Isi Form Komitmen' }}">
+                                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M12 4v16m8-8H4' }}"></path></svg>
+                                                                </button>
+                                                                @else
+                                                                <div class="inline-flex items-center justify-center w-6 h-6 rounded-full shadow-sm {{ $hasKom ? 'bg-green-100 text-green-600 border border-green-200' : 'bg-gray-100 text-gray-500 border border-gray-200' }}" title="{{ $hasKom ? 'Ada Komitmen' : 'Belum Ada Komitmen' }}">
+                                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M20 12H4' }}"></path></svg>
+                                                                </div>
+                                                                @endif
+                                                        </td>
+                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ number_format($up3Realisasi, 0, ",", ".") }}</td>
                                                         <td class="px-2 py-2 border border-gray-300 text-right font-bold {{ $up3BgColor }}">{{ $up3Pencapaian }}%</td>
-                                                        <td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td>
+                                                        <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 text-xs font-semibold text-gray-700">
+                                                            {{ $up3CarryOver > 0 ? number_format($up3CarryOver, 0, ",", ".") : '0' }}
+                                                        </td>
                                                         <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{!! $up3TrendIcon !!}</td>
                                                     @endforeach
                                                 </tr>
@@ -460,9 +526,9 @@
                                                                 $target = $matrixTargets[$lm->id][$u->id][$sw->id] ?? 0;
                                                                 $realisasi = $matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0;
                                                                 $pencapaian = $target > 0 ? round(($realisasi / $target) * 100, 2) : 0;
-                                                                $komitmenData = $matrixKomitmen[$lm->id][$u->id][$sw->id] ?? ['komitmen' => '', 'carry_over' => ''];
-                                                                $komitmenVal = $komitmenData['komitmen'];
-                                                                $carryOverVal = $komitmenData['carry_over'];
+                                                                $komitmenData = $matrixKomitmen[$lm->id][$u->id][$sw->id] ?? null;
+                                                                $komitmenVal = $komitmenData ? $komitmenData['komitmen'] : '';
+                                                                $carryOverVal = $komitmenData ? $komitmenData['carry_over'] : '';
                                                                 
                                                                 $bgColor = '';
                                                                 if ($pencapaian < 100) {
@@ -477,7 +543,7 @@
                                                                 
                                                                 $canEdit = false;
                                                                 $user = auth()->user();
-                                                                if ($user) {
+                                                                if ($user && $canEditSesiWig) {
                                                                     if ($user->hasRole('Super Admin') || ($user->hasRole('Admin ULP') && $user->unit_id == $u->id)) {
                                                                         $canEdit = true;
                                                                     }
@@ -493,32 +559,58 @@
                                                                     } else if ($realisasi < $prevRealisasi) {
                                                                         $trendIcon = '<svg class="w-5 h-5 text-red-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>';
                                                                     } else {
-                                                                        $trendIcon = '<svg class="w-5 h-5 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 12h14"></path></svg>';
+                                                                        $trendIcon = '<svg class="w-5 h-5 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>';
                                                                     }
                                                                 }
+                                                                
+                                                                $ulpCarryOver = max(0, $target - $realisasi);
+                                                                
+                                                                $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
+                                                                $prevUlpTarget = 0;
+                                                                $prevUlpRealisasi = 0;
+                                                                if ($prevSw) {
+                                                                    $prevUlpTarget = $matrixTargets[$lm->id][$u->id][$prevSw->id] ?? 0;
+                                                                    $prevUlpRealisasi = $matrixRealisasi[$lm->id][$u->id][$prevSw->id] ?? 0;
+                                                                }
+                                                                $prevUlpCarryOver = max(0, $prevUlpTarget - $prevUlpRealisasi);
+                                                                $ulpTargetPlusCarryOver = $target + $prevUlpCarryOver;
                                                             @endphp
-                                                            <td class="px-2 py-2 border border-gray-300 text-right">{{ number_format($target, 2) }}</td>
-                                                            <td class="px-2 py-2 border border-gray-300 text-center">
+                                                            <td class="px-2 py-2 border border-gray-300 text-right">{{ number_format($target, 0, ",", ".") }}</td>
+                                                                <td class="px-2 py-2 border border-gray-300 text-right text-purple-900 bg-purple-50">{{ number_format($ulpTargetPlusCarryOver, 0, ",", ".") }}</td>
+                                                            <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">
+                                                                @php 
+                                                                    $komData = $matrixKomitmen[$lm->id][$u->id][$sw->id] ?? null;
+                                                                    $hasKom = $komData !== null;
+                                                                    $komitmenVal = $hasKom ? $komData['komitmen'] : '';
+                                                                @endphp
                                                                 @if($canEdit)
-                                                                    <input type="number" step="any" class="w-20 text-xs p-1.5 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500 komitmen-input" 
-                                                                        data-lm="{{ $lm->id }}" data-unit="{{ $u->id }}" data-sesi="{{ $sw->id }}" data-type="komitmen"
-                                                                        value="{{ $komitmenVal }}">
-                                                                @else
-                                                                    {{ $komitmenVal !== '' ? number_format((float)$komitmenVal, 2) : '-' }}
-                                                                @endif
+                                                                        <input type="number" step="any" class="w-16 text-xs p-1 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500 komitmen-input" 
+                                                                            data-lm="{{ $lm->id }}" data-unit="{{ $u->id }}" data-sesi="{{ $sw->id }}" data-type="komitmen"
+                                                                            value="{{ $komitmenVal }}" placeholder="-">
+                                                                    @else
+                                                                        <span class="text-xs font-semibold text-gray-700">{{ $komitmenVal !== '' && $komitmenVal !== null ? number_format((float)$komitmenVal, 0, ",", ".") : '-' }}</span>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
+                                                                    @if($canEditSesiWig)
+                                                                    <button type="button" 
+                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $target }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}' } }))"
+                                                                        class="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
+                                                                        title="{{ $hasKom ? 'Edit Form Komitmen' : 'Isi Form Komitmen' }}">
+                                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M12 4v16m8-8H4' }}"></path></svg>
+                                                                    </button>
+                                                                    @else
+                                                                    <div class="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full shadow-sm {{ $hasKom ? 'bg-green-100 text-green-600 border border-green-200' : 'bg-gray-100 text-gray-500 border border-gray-200' }}" title="{{ $hasKom ? 'Ada Komitmen' : 'Belum Ada Komitmen' }}">
+                                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M20 12H4' }}"></path></svg>
+                                                                    </div>
+                                                                    @endif
                                                             </td>
-                                                            <td class="px-2 py-2 border border-gray-300 text-right">{{ number_format($realisasi, 2) }}</td>
+                                                            <td class="px-2 py-2 border border-gray-300 text-right">{{ number_format($realisasi, 0, ",", ".") }}</td>
                                                             <td class="px-2 py-2 border border-gray-300 text-right font-bold {{ $bgColor }}">
                                                                 {{ $pencapaian }}%
                                                             </td>
-                                                            <td class="px-2 py-2 border border-gray-300 text-center">
-                                                                @if($canEdit)
-                                                                    <input type="number" step="any" class="w-20 text-xs p-1.5 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500 komitmen-input" 
-                                                                        data-lm="{{ $lm->id }}" data-unit="{{ $u->id }}" data-sesi="{{ $sw->id }}" data-type="carry_over"
-                                                                        value="{{ $carryOverVal }}">
-                                                                @else
-                                                                    {{ $carryOverVal !== '' ? number_format((float)$carryOverVal, 2) : '-' }}
-                                                                @endif
+                                                            <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 text-xs font-semibold text-gray-700">
+                                                                {{ $ulpCarryOver > 0 ? number_format($ulpCarryOver, 0, ",", ".") : '0' }}
                                                             </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center">{!! $trendIcon !!}</td>
                                                         @endforeach
@@ -533,7 +625,7 @@
 
                                         <!-- Kanan: Menang/Kalah Widget per LM -->
                                         <div class="xl:col-span-1 w-full sticky top-6">
-                                            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6" x-data="{ tab: 'up3' }">
+                                            <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6" x-data="{ tab: '{{ $isUlpLevel ? 'ulp' : 'up3' }}' }">
                                                 <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
                                                     <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                                                     Menang Kalah LM
@@ -541,7 +633,9 @@
                                                 
                                                 <!-- Tabs -->
                                                 <div class="flex space-x-1 bg-gray-100/50 p-1 rounded-lg mb-4 text-xs font-semibold">
+                                                    @if(!$isUlpLevel)
                                                     <button @click="tab = 'up3'" :class="tab === 'up3' ? 'bg-white shadow text-indigo-700' : 'text-gray-500 hover:text-gray-700'" class="flex-1 py-1.5 rounded-md transition-all">UP3</button>
+                                                    @endif
                                                     <button @click="tab = 'ulp'" :class="tab === 'ulp' ? 'bg-white shadow text-indigo-700' : 'text-gray-500 hover:text-gray-700'" class="flex-1 py-1.5 rounded-md transition-all">ULP</button>
                                                 </div>
 
@@ -914,6 +1008,266 @@
             };
             
             html2pdf().set(opt).from(element).save();
+        }
+    </script>
+
+    <!-- Modal Form Komitmen LM -->
+    <div x-data="komitmenModal()" @open-komitmen.window="openModal($event.detail)" x-show="isOpen" style="display: none; z-index: 9999;" class="fixed inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div x-show="isOpen" x-transition.opacity class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div x-show="isOpen" x-transition class="relative z-10 inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle w-full max-w-4xl border border-slate-100 flex flex-col">
+                <form @submit.prevent="saveKomitmen" class="flex flex-col">
+                    <div class="bg-gradient-to-r from-blue-50 to-white px-4 sm:px-6 py-4 border-b border-gray-100 flex justify-between items-start sm:items-center">
+                        <h3 class="text-lg font-extrabold text-gray-900 flex items-start gap-3" id="modal-title">
+                            <svg class="w-5 h-5 text-blue-600 shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <span>FORM KOMITMEN LEAD MEASURE (LM)</span>
+                        </h3>
+                        <button @click="closeModal()" type="button" class="text-gray-400 hover:text-gray-600 transition bg-white hover:bg-gray-100 rounded-full p-1 focus:outline-none shrink-0 ml-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    
+                    <div class="p-4 sm:p-6 bg-white overflow-y-auto max-h-[75vh]">
+                        <!-- Top Info -->
+                        <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-6 text-sm">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-4">
+                                <div class="flex items-start"><span class="font-semibold text-slate-500 w-[110px] sm:w-32 shrink-0">Unit</span> <span class="font-bold text-slate-800">: <span x-text="params.unitName"></span></span></div>
+                                <div class="flex items-start"><span class="font-semibold text-slate-500 w-[110px] sm:w-32 shrink-0">Tanggal</span> <span class="font-bold text-slate-800">: <span x-text="params.date"></span></span></div>
+                                <div class="md:col-span-2 flex items-start"><span class="font-semibold text-slate-500 w-[110px] sm:w-32 shrink-0">WIG</span> <span class="font-bold text-slate-800 flex-1">: <span x-text="params.wigName"></span></span></div>
+                                <div class="md:col-span-2 flex items-start"><span class="font-semibold text-slate-500 w-[110px] sm:w-32 shrink-0">Lead Measure</span> <span class="font-bold text-indigo-700 flex-1">: <span x-text="params.lmName"></span></span></div>
+                                <div class="md:col-span-2 flex sm:items-center items-start gap-2">
+                                    <span class="font-semibold text-slate-500 w-[110px] sm:w-32 shrink-0 mt-1 sm:mt-0">PIC LM</span> 
+                                    <span class="mt-1 sm:mt-0">:</span>
+                                    <input type="text" x-model="form.pic_lm" class="w-full md:w-1/2 p-1.5 border border-slate-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white" placeholder="Nama PIC LM">
+                                </div>
+                                <div class="md:col-span-2 flex sm:items-center items-start gap-2 mt-1">
+                                    <span class="font-semibold text-slate-500 w-[110px] sm:w-32 shrink-0 mt-1 sm:mt-0">Angka Komitmen</span> 
+                                    <span class="mt-1 sm:mt-0">:</span>
+                                    <input type="number" step="any" x-model="form.komitmen" class="w-32 p-1.5 border border-slate-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white" placeholder="Target Angka">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 1. Target & Realisasi -->
+                        <h4 class="font-bold text-slate-800 mb-3 flex items-center gap-2 uppercase text-sm">
+                            <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">1</span> 
+                            Target & Realisasi
+                        </h4>
+                        <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-x-auto mb-6">
+                            <table class="min-w-full text-sm">
+                                <thead class="bg-slate-100 border-b border-slate-200 text-slate-700">
+                                    <tr>
+                                        <th class="py-2 px-4 text-left font-semibold whitespace-nowrap">Target LM</th>
+                                        <th class="py-2 px-4 text-left font-semibold whitespace-nowrap">Realisasi Minggu Ini</th>
+                                        <th class="py-2 px-4 text-left font-semibold whitespace-nowrap">Gap</th>
+                                        <th class="py-2 px-4 text-left font-semibold whitespace-nowrap">% Pencapaian</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="py-2 px-4 font-bold text-indigo-900 whitespace-nowrap" x-text="formatNumber(params.target)"></td>
+                                        <td class="py-2 px-4 font-bold text-slate-800 whitespace-nowrap" x-text="formatNumber(params.realisasi)"></td>
+                                        <td class="py-2 px-4 font-bold whitespace-nowrap" :class="(params.realisasi - params.target) >= 0 ? 'text-green-600' : 'text-red-600'">
+                                            <span x-show="(params.realisasi - params.target) > 0">+</span><span x-text="formatNumber(params.realisasi - params.target)"></span>
+                                        </td>
+                                        <td class="py-2 px-4 whitespace-nowrap">
+                                            <span class="px-2 py-1 rounded text-xs font-bold" 
+                                                :class="params.capai >= 100 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                                                x-text="params.capai + '%'"></span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 2. Hambatan -->
+                        <h4 class="font-bold text-slate-800 mb-2 flex items-center gap-2 uppercase text-sm">
+                            <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">2</span> 
+                            Hambatan (Obstacles)
+                        </h4>
+                        <p class="text-xs text-slate-500 mb-3 italic">Apa yang menjadi kendala/hambatan untuk mencapai target LM minggu ini?</p>
+                        <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden mb-6">
+                            <table class="min-w-full text-sm">
+                                <thead class="bg-slate-100 border-b border-slate-200 text-slate-700">
+                                    <tr>
+                                        <th class="py-2 px-4 text-left font-semibold w-1/2 border-r border-slate-200">Hambatan</th>
+                                        <th class="py-2 px-4 text-left font-semibold w-1/2">Dukungan yang Dibutuhkan</th>
+                                        <th class="py-2 px-2 text-center w-12"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <template x-for="(h, index) in form.hambatans" :key="index">
+                                        <tr>
+                                            <td class="py-2 px-2 border-r border-slate-200">
+                                                <textarea x-model="h.hambatan" class="w-full p-2 border-0 bg-transparent resize-none focus:ring-0 text-sm h-12" placeholder="Tulis hambatan..."></textarea>
+                                            </td>
+                                            <td class="py-2 px-2">
+                                                <textarea x-model="h.dukungan" class="w-full p-2 border-0 bg-transparent resize-none focus:ring-0 text-sm h-12" placeholder="Tulis dukungan yang dibutuhkan..."></textarea>
+                                            </td>
+                                            <td class="py-2 px-2 text-center text-red-400 hover:text-red-600">
+                                                <button type="button" @click="form.hambatans.splice(index, 1)" tabindex="-1" title="Hapus Baris">
+                                                    <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                            <div class="bg-slate-50 border-t border-slate-200 p-2 text-center">
+                                <button type="button" @click="form.hambatans.push({hambatan: '', dukungan: ''})" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    Tambah Hambatan
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 3. Aksi Konkrit -->
+                        <h4 class="font-bold text-slate-800 mb-2 flex items-center gap-2 uppercase text-sm">
+                            <span class="bg-indigo-100 text-indigo-700 w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">3</span> 
+                            Aksi Konkrit Untuk Minggu Depan
+                        </h4>
+                        <p class="text-xs text-slate-500 mb-3 italic">Komitmen spesifik, terukur, dan terbatas waktu untuk mencapai target LM.</p>
+                        <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden mb-6">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full text-sm">
+                                    <thead class="bg-slate-100 border-b border-slate-200 text-slate-700">
+                                        <tr>
+                                            <th class="py-2 px-3 text-center font-semibold w-10 border-r border-slate-200">No</th>
+                                            <th class="py-2 px-3 text-left font-semibold border-r border-slate-200">Aksi</th>
+                                            <th class="py-2 px-3 text-left font-semibold w-24 border-r border-slate-200">Target</th>
+                                            <th class="py-2 px-3 text-left font-semibold w-32 border-r border-slate-200">Deadline</th>
+                                            <th class="py-2 px-3 text-left font-semibold">Komitmen (Detil)</th>
+                                            <th class="py-2 px-2 text-center w-10"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <template x-for="(a, index) in form.aksi_konkrits" :key="index">
+                                            <tr>
+                                                <td class="py-2 px-2 text-center font-bold text-slate-400 border-r border-slate-200" x-text="index + 1"></td>
+                                                <td class="py-1 px-2 border-r border-slate-200">
+                                                    <textarea x-model="a.aksi" class="w-full p-1 border-0 bg-transparent resize-none focus:ring-0 text-sm h-10" placeholder="..."></textarea>
+                                                </td>
+                                                <td class="py-1 px-2 border-r border-slate-200">
+                                                    <input type="text" x-model="a.target" class="w-full p-1 border-0 bg-transparent focus:ring-0 text-sm" placeholder="...">
+                                                </td>
+                                                <td class="py-1 px-2 border-r border-slate-200">
+                                                    <input type="date" x-model="a.deadline" class="w-full p-1 border-0 bg-transparent focus:ring-0 text-xs text-slate-700">
+                                                </td>
+                                                <td class="py-1 px-2">
+                                                    <textarea x-model="a.detail_komitmen" class="w-full p-1 border-0 bg-transparent resize-none focus:ring-0 text-sm h-10" placeholder="..."></textarea>
+                                                </td>
+                                                <td class="py-2 px-2 text-center text-red-400 hover:text-red-600">
+                                                    <button type="button" @click="form.aksi_konkrits.splice(index, 1)" tabindex="-1" title="Hapus Baris">
+                                                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="bg-slate-50 border-t border-slate-200 p-2 text-center">
+                                <button type="button" @click="form.aksi_konkrits.push({aksi: '', target: '', deadline: '', detail_komitmen: ''})" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    Tambah Aksi Konkrit
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-blue-50 text-blue-800 p-3 rounded-lg text-xs border border-blue-200 shadow-sm">
+                            <span class="font-bold">Catatan:</span> Form ini diisi untuk setiap LM yang belum mencapai 100% realisasi. Simpan sebagai tracking & accountability untuk mencapai target minggu depan.
+                        </div>
+                    </div>
+
+                    <div class="bg-white border-t border-slate-200 px-6 py-4 rounded-b-xl flex justify-end gap-3 shrink-0">
+                        <button type="button" @click="closeModal()" class="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors">Batal</button>
+                        <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md transition-all flex items-center gap-2" :class="isSaving ? 'opacity-75 cursor-wait' : ''" :disabled="isSaving">
+                            <svg x-show="isSaving" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span x-text="isSaving ? 'Menyimpan...' : 'Simpan Komitmen'"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function komitmenModal() {
+            return {
+                isOpen: false,
+                isSaving: false,
+                params: {
+                    sesi: null, lm: null, unit: null, target: 0, realisasi: 0, capai: 0, unitName: '', lmName: '', wigName: '', date: ''
+                },
+                form: {
+                    pic_lm: '',
+                    komitmen: '',
+                    hambatans: [{hambatan: '', dukungan: ''}],
+                    aksi_konkrits: [{aksi: '', target: '', deadline: '', detail_komitmen: ''}]
+                },
+                formatNumber(num) {
+                    return Number(num).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                },
+                openModal(detail) {
+                    this.params = detail;
+                    this.form.pic_lm = '';
+                    this.form.komitmen = '';
+                    this.form.hambatans = [];
+                    this.form.aksi_konkrits = [];
+                    
+                    // Fetch existing data
+                    fetch(`/sesi-wigs/${this.params.sesi}/komitmen/${this.params.lm}/${this.params.unit}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.data) {
+                                this.form.pic_lm = data.data.pic_lm || '';
+                                this.form.komitmen = data.data.komitmen || '';
+                                this.form.hambatans = data.data.hambatans || [{hambatan: '', dukungan: ''}];
+                                this.form.aksi_konkrits = data.data.aksi_konkrits || [{aksi: '', target: '', deadline: '', detail_komitmen: ''}];
+                            } else {
+                                this.form.komitmen = '';
+                                this.form.hambatans = [{hambatan: '', dukungan: ''}];
+                                this.form.aksi_konkrits = [{aksi: '', target: '', deadline: '', detail_komitmen: ''}];
+                            }
+                            this.isOpen = true;
+                        });
+                },
+                closeModal() {
+                    this.isOpen = false;
+                },
+                saveKomitmen() {
+                    this.isSaving = true;
+                    
+                    fetch(`/sesi-wigs/${this.params.sesi}/komitmen/${this.params.lm}/${this.params.unit}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify(this.form)
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        this.isSaving = false;
+                        if(data.status === 'success') {
+                            this.closeModal();
+                            // Optional: show toast or just reload to update the matrix colors
+                            window.location.reload();
+                        } else {
+                            alert('Gagal menyimpan komitmen.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        this.isSaving = false;
+                        alert('Terjadi kesalahan jaringan.');
+                    });
+                }
+            }
         }
     </script>
 </x-app-layout>

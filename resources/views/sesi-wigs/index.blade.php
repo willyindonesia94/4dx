@@ -19,7 +19,7 @@
                 <div class="p-0 sm:p-6 bg-transparent sm:bg-white sm:border-b border-gray-200">
                     @php
                         $groupedSesis = $sesis->groupBy(function($s) {
-                            return \Carbon\Carbon::parse($s->tanggal_pelaksanaan)->translatedFormat('F Y');
+                            return strtoupper(\Carbon\Carbon::create(null, $s->bulan, 1)->locale('id')->translatedFormat('F') . ' ' . $s->tahun);
                         });
                     @endphp
                     

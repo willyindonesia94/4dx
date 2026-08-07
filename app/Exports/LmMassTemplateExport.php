@@ -44,7 +44,7 @@ class LmMassTemplateExport implements FromCollection, WithHeadings, ShouldAutoSi
             $rows->push([
                 'Contoh WIG (Harus ada di database)', 
                 'Contoh LM Penjualan 1', 
-                'Divisi UID', 
+                'Bidang UID', 
                 '500000', 
                 'Rupiah'
             ]);

@@ -13,10 +13,18 @@ class CascadingController extends Controller
     public function wigIndex()
     {
         $user = Auth::user();
+        $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
+        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasRole') && $user->hasRole('Super Admin')));
         
-        $wigs = MasterWig::where('is_approved', true)
-            ->with(['breakdowns.unit', 'breakdowns.satuan'])
-            ->get();
+        $wigsQuery = MasterWig::where('is_approved', true)
+            ->with(['breakdowns.unit', 'breakdowns.satuan']);
+            
+        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+            $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
+            $wigsQuery->whereIn('divisi', $allowedDivisis);
+        }
+        
+        $wigs = $wigsQuery->get();
         
         $satuans = MasterSatuan::all();
         $uidUnits = MasterUnit::where('type', 'UID')->get();
@@ -28,12 +36,29 @@ class CascadingController extends Controller
     public function lmIndex()
     {
         $user = Auth::user();
+        $userRole = strtolower(trim($user->role_name ?? ''));
+        $unitType = $user->unit ? strtoupper(trim((string)$user->unit->type)) : '';
+        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin']) || (method_exists($user, 'hasRole') && $user->hasRole('Super Admin')));
         
-        $wigs = MasterWig::where('is_approved', true)
+        $isUid = !$isSuperAdmin && ($unitType === 'UID' || str_contains($userRole, 'uid') || (str_contains($userRole, 'bidang') && !str_contains($userRole, 'up3')));
+        $isUp3 = !$isSuperAdmin && ($unitType === 'UP3' || str_contains($userRole, 'up3'));
+        
+        $canBreakdownToUid = $isSuperAdmin || str_contains($userRole, 'admin uid');
+        $canBreakdownToUp3 = $isSuperAdmin || $isUid;
+        $canBreakdownToUlp = $isSuperAdmin || $isUp3;
+        
+        $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
+        $wigsQuery = MasterWig::where('is_approved', true)
             ->with(['masterLms' => function($q) {
                 $q->where('is_approved', true);
-            }, 'masterLms.breakdowns.unit', 'masterLms.breakdowns.satuan'])
-            ->get()
+            }, 'masterLms.breakdowns.unit', 'masterLms.breakdowns.satuan']);
+
+        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+            $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
+            $wigsQuery->whereIn('divisi', $allowedDivisis);
+        }
+
+        $wigs = $wigsQuery->get()
             ->each(function($wig) {
                 $wig->setRelation('masterLms', $wig->masterLms->sortBy(function($lm) {
                     preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
@@ -44,17 +69,50 @@ class CascadingController extends Controller
         $satuans = MasterSatuan::all();
         
         $availableUnits = collect();
-        if ($user->hasRole('Super Admin')) {
+        if ($isSuperAdmin) {
             $availableUnits = MasterUnit::orderBy('type')->get();
-        } elseif ($user->unit) {
-            if ($user->unit->type === 'UID') {
-                $availableUnits = MasterUnit::where('type', 'UP3')->get();
-            } elseif ($user->unit->type === 'UP3') {
-                $availableUnits = MasterUnit::where('parent_id', $user->unit->id)->where('type', 'ULP')->get();
+        } elseif ($isUid) {
+            // Level Bidang UID breakdown ke Level UP3
+            $availableUnits = MasterUnit::where('type', 'UP3')->orderBy('name')->get();
+        } elseif ($isUp3) {
+            // Level UP3 breakdown ke ULP di bawah jangkauan UP3-nya
+            if ($user->unit_id) {
+                $availableUnits = MasterUnit::where('type', 'ULP')->where('parent_id', $user->unit_id)->orderBy('name')->get();
+            } else {
+                $availableUnits = MasterUnit::where('type', 'ULP')->orderBy('name')->get();
             }
         }
 
-        return view('cascading.lm', compact('wigs', 'satuans', 'availableUnits'));
+        return view('cascading.lm', compact(
+            'wigs', 'satuans', 'availableUnits', 
+            'canBreakdownToUid', 'canBreakdownToUp3', 'canBreakdownToUlp',
+            'isSuperAdmin', 'isUid', 'isUp3', 'user'
+        ));
+    }
+
+    private function checkUp3Permission($targetUnitId = null, $existingBreakdown = null)
+    {
+        $user = Auth::user();
+        $userRole = strtolower(trim($user->role_name ?? ''));
+        $unitType = $user->unit ? strtoupper(trim((string)$user->unit->type)) : '';
+        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin']) || (method_exists($user, 'hasRole') && $user->hasRole('Super Admin')));
+        $isUp3 = !$isSuperAdmin && ($unitType === 'UP3' || str_contains($userRole, 'up3'));
+
+        if ($isUp3 && $user->unit_id) {
+            if ($targetUnitId) {
+                $unit = MasterUnit::find($targetUnitId);
+                if (!$unit || strtoupper(trim($unit->type)) !== 'ULP' || (int)$unit->parent_id !== (int)$user->unit_id) {
+                    return false;
+                }
+            }
+            if ($existingBreakdown && $existingBreakdown->unit) {
+                $unit = $existingBreakdown->unit;
+                if (strtoupper(trim($unit->type)) !== 'ULP' || (int)$unit->parent_id !== (int)$user->unit_id) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     public function storeBreakdown(Request $request)
@@ -65,12 +123,27 @@ class CascadingController extends Controller
             'bidang' => 'nullable|string|max:255',
             'angka_target' => 'required|numeric',
             'satuan_id' => 'required|exists:master_satuans,id',
-            'periode_start' => 'required|date',
-            'periode_end' => 'required|date|after_or_equal:periode_start',
+            'bulan' => 'required|integer|min:1|max:12',
+            'tahun' => 'required|integer|min:2020|max:2040',
         ]);
 
+        if (!$this->checkUp3Permission($request->unit_id)) {
+            return redirect()->back()->with('error', 'Akses ditolak. UP3 hanya berwenang menurunkan target (breakdown) ke unit ULP di bawah naungannya.');
+        }
+
+        $carbonStart = \Carbon\Carbon::create($request->tahun, $request->bulan, 1);
+        $carbonEnd = $carbonStart->copy()->endOfMonth();
+
+        $weeks = \App\Models\MasterPeriode::getWeekDates($request->tahun, $request->bulan);
+
         // Create main (monthly) target
-        BreakdownLm::create($request->all());
+        $data = $request->except(['bulan', 'tahun', 'target_m1', 'target_m2', 'target_m3', 'target_m4', 'target_m5']);
+        $data['bulan'] = $request->bulan;
+        $data['tahun'] = $request->tahun;
+        $data['periode_start'] = $weeks['target_m1']['start'] ?? $carbonStart->format('Y-m-d');
+        $endWeek = isset($weeks['target_m5']) && $weeks['target_m5'] ? 'target_m5' : 'target_m4';
+        $data['periode_end'] = $weeks[$endWeek]['end'] ?? $carbonEnd->format('Y-m-d');
+        BreakdownLm::create($data);
         
         // Handle weekly targets if provided
         $weeklyKeys = ['target_m1', 'target_m2', 'target_m3', 'target_m4', 'target_m5'];
@@ -80,38 +153,8 @@ class CascadingController extends Controller
         }
         
         if ($hasWeekly) {
-            $carbonStart = \Carbon\Carbon::parse($request->periode_start);
-            $carbonEnd = \Carbon\Carbon::parse($request->periode_end);
-            
-            // Calculate rolling weeks
-            $endM1 = $carbonStart->copy()->addDays(6);
-            if ($endM1->gt($carbonEnd)) $endM1 = $carbonEnd->copy();
-
-            $startM2 = $endM1->copy()->addDay();
-            $endM2 = $startM2->copy()->addDays(6);
-            if ($endM2->gt($carbonEnd)) $endM2 = $carbonEnd->copy();
-
-            $startM3 = $endM2->copy()->addDay();
-            $endM3 = $startM3->copy()->addDays(6);
-            if ($endM3->gt($carbonEnd)) $endM3 = $carbonEnd->copy();
-
-            $startM4 = $endM3->copy()->addDay();
-            $endM4 = $startM4->copy()->addDays(6);
-            if ($endM4->gt($carbonEnd)) $endM4 = $carbonEnd->copy();
-
-            $startM5 = $endM4->copy()->addDay();
-            $endM5 = $carbonEnd->copy();
-
-            $weeks = [
-                'target_m1' => ['start' => $carbonStart->format('Y-m-d'), 'end' => $endM1->format('Y-m-d')],
-                'target_m2' => ['start' => $startM2->format('Y-m-d'), 'end' => $endM2->format('Y-m-d')],
-                'target_m3' => ['start' => $startM3->format('Y-m-d'), 'end' => $endM3->format('Y-m-d')],
-                'target_m4' => ['start' => $startM4->format('Y-m-d'), 'end' => $endM4->format('Y-m-d')],
-                'target_m5' => ['start' => $startM5->format('Y-m-d'), 'end' => $endM5->format('Y-m-d')],
-            ];
-            
             foreach ($weeks as $key => $dates) {
-                if ($request->filled($key) && $dates['start'] <= $dates['end']) {
+                if ($dates && $request->filled($key) && $dates['start'] <= $dates['end']) {
                     BreakdownLm::create([
                         'lm_id' => $request->lm_id,
                         'unit_id' => $request->unit_id,
@@ -119,13 +162,15 @@ class CascadingController extends Controller
                         'satuan_id' => $request->satuan_id,
                         'angka_target' => $request->input($key),
                         'periode_start' => $dates['start'],
-                        'periode_end' => $dates['end']
+                        'periode_end' => $dates['end'],
+                        'bulan' => $request->bulan,
+                        'tahun' => $request->tahun,
                     ]);
                 }
             }
         }
 
-        return redirect()->back()->with('success', 'Breakdown LM berhasil ditambahkan ke Unit.');
+        return redirect()->back()->with('success', 'Breakdown LM berhasil ditambahkan ke Unit sesuai kalender Master Periode.');
     }
 
     public function updateBreakdown(Request $request, $id)
@@ -135,19 +180,45 @@ class CascadingController extends Controller
             'bidang' => 'nullable|string|max:255',
             'angka_target' => 'required|numeric',
             'satuan_id' => 'required|exists:master_satuans,id',
-            'periode_start' => 'required|date',
-            'periode_end' => 'required|date|after_or_equal:periode_start',
+            'bulan' => 'nullable|integer|min:1|max:12',
+            'tahun' => 'nullable|integer|min:2020|max:2040',
         ]);
 
-        $breakdown = BreakdownLm::findOrFail($id);
-        $breakdown->update($request->all());
+        $breakdown = BreakdownLm::with('unit')->findOrFail($id);
+        if (!$this->checkUp3Permission($request->unit_id, $breakdown)) {
+            return redirect()->back()->with('error', 'Akses ditolak. UP3 hanya berwenang mengubah target untuk unit ULP di bawah naungannya.');
+        }
+
+        // Apply date changes only if it is a monthly target (safeguard weekly date ranges)
+        if ($request->filled('bulan') && $request->filled('tahun')) {
+            $isMonthly = \Carbon\Carbon::parse($breakdown->periode_start)->diffInDays(\Carbon\Carbon::parse($breakdown->periode_end)) >= 20;
+            if ($isMonthly) {
+                $weeks = \App\Models\MasterPeriode::getWeekDates($request->tahun, $request->bulan);
+                $breakdown->periode_start = $weeks['target_m1']['start'] ?? \Carbon\Carbon::create($request->tahun, $request->bulan, 1)->format('Y-m-d');
+                $endWeek = isset($weeks['target_m5']) && $weeks['target_m5'] ? 'target_m5' : 'target_m4';
+                $breakdown->periode_end = $weeks[$endWeek]['end'] ?? \Carbon\Carbon::create($request->tahun, $request->bulan, 1)->endOfMonth()->format('Y-m-d');
+                
+                $breakdown->bulan = $request->bulan;
+                $breakdown->tahun = $request->tahun;
+            }
+        }
+
+        $breakdown->unit_id = $request->unit_id;
+        $breakdown->bidang = $request->bidang;
+        $breakdown->angka_target = $request->angka_target;
+        $breakdown->satuan_id = $request->satuan_id;
+        $breakdown->save();
 
         return redirect()->back()->with('success', 'Breakdown LM berhasil diperbarui.');
     }
 
     public function destroyBreakdown($id)
     {
-        $breakdown = BreakdownLm::findOrFail($id);
+        $breakdown = BreakdownLm::with('unit')->findOrFail($id);
+        if (!$this->checkUp3Permission(null, $breakdown)) {
+            return redirect()->back()->with('error', 'Akses ditolak. UP3 hanya berwenang menghapus target untuk unit ULP di bawah naungannya.');
+        }
+
         $breakdown->delete();
 
         return redirect()->back()->with('success', 'Breakdown LM berhasil dihapus.');
@@ -251,6 +322,11 @@ class CascadingController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Terjadi kesalahan saat mengimpor data: ' . $e->getMessage());
         }
+    }
+
+    public function breakdownLmTemplate()
+    {
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\BreakdownLmTemplateExport, 'Template_Upload_Target_Unit.xlsx');
     }
 
     public function importBreakdownLm(\Illuminate\Http\Request $request)

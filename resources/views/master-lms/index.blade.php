@@ -8,6 +8,7 @@
         <!-- Modals using Alpine.js -->
         <div x-data="{ 
                 openModal: false, 
+                openUpload: false,
                 editModal: false, 
                 editData: { id: '', wig_id: '', judul_lm: '', satuan_id: '' },
                 openEdit(lm) {
@@ -15,9 +16,9 @@
                     this.editModal = true;
                 }
             }">
-               <div class="py-8" x-data="{ openModal: false }">
+               <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0 gap-4">
                 <!-- Filter Tabs -->
                 <div class="flex space-x-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm">
                     <a href="{{ route('master-lms.index', ['status' => 'all']) }}" class="px-4 py-2 text-sm font-semibold rounded-md transition-colors {{ ($status ?? 'all') === 'all' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">Semua LM</a>
@@ -32,10 +33,35 @@
                     </a>
                 </div>
 
-                <button @click="openModal = true" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-lg shadow-sm transition-colors flex items-center text-sm">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    Tambah Master LM
-                </button>
+                <div class="flex flex-wrap items-center gap-3">
+                    <a href="{{ route('cascading.lm.template') }}" class="whitespace-nowrap justify-center inline-flex items-center px-4 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-lg shadow-sm text-sm font-semibold transition-colors">
+                        <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Template LM
+                    </a>
+                    <button @click="openUpload = !openUpload" class="whitespace-nowrap justify-center inline-flex items-center px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg shadow-sm transition-colors text-sm">
+                        <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        Upload Master LM
+                    </button>
+                    <button @click="openModal = true" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-lg shadow-sm transition-colors flex items-center text-sm">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Tambah Master LM
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Upload Form (Hidden by default) -->
+            <div x-show="openUpload" x-collapse x-cloak class="mb-6 bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                <h3 class="font-bold text-slate-800 text-lg mb-2">Upload Excel Massal LM</h3>
+                <p class="text-sm text-slate-600 mb-4">Pastikan format kolom sesuai dengan template. Sistem akan memasukkan LM ke dalam WIG yang namanya sama persis. Jika WIG tidak ditemukan, baris akan dilewati.</p>
+                <form action="{{ route('cascading.lm.import') }}" method="POST" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                    @csrf
+                    <div class="flex-1 w-full">
+                        <input type="file" name="file_excel" accept=".xlsx, .xls" required class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-200 rounded-md bg-white">
+                    </div>
+                    <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md transition-colors shadow-sm">
+                        Proses Upload
+                    </button>
+                </form>
             </div>
             
             <div class="mt-4 space-y-4">

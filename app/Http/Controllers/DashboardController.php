@@ -140,13 +140,13 @@ class DashboardController extends Controller
                 if ($target >= 0) {
                     if ($lmPolaritas === 'negatif' || $lmPolaritas === '3') {
                         if ($target == 0) {
-                            $pct = ($realisasi == 0) ? 100 : 0;
+                            $pct = 0;
                         } else {
                             $pct = ($realisasi == 0) ? 100 : ($target / $realisasi) * 100;
                         }
                     } else {
                         if ($target == 0) {
-                            $pct = ($realisasi > 0) ? 100 : (($realisasi == 0) ? 100 : 0);
+                            $pct = ($realisasi > 0) ? 100 : 0;
                         } else {
                             $pct = ($realisasi / $target) * 100;
                         }
@@ -192,13 +192,13 @@ class DashboardController extends Controller
             if ($wigTarget >= 0) {
                 if ($wigPolaritas === 'negatif' || $wigPolaritas === '3') {
                     if ($wigTarget == 0) {
-                        $wigProgress = ($wigRealisasi == 0) ? 100 : 0;
+                        $wigProgress = 0;
                     } else {
                         $wigProgress = ($wigRealisasi == 0) ? 100 : ($wigTarget / $wigRealisasi) * 100;
                     }
                 } else {
                     if ($wigTarget == 0) {
-                        $wigProgress = ($wigRealisasi > 0) ? 100 : (($wigRealisasi == 0) ? 100 : 0);
+                        $wigProgress = ($wigRealisasi > 0) ? 100 : 0;
                     } else {
                         $wigProgress = ($wigRealisasi / $wigTarget) * 100;
                     }
@@ -397,13 +397,13 @@ class DashboardController extends Controller
                 if ($target >= 0) {
                     if ($wigPolaritas === 'negatif' || $wigPolaritas === '3') {
                         if ($target == 0) {
-                            $pct = ($realisasi == 0) ? 100 : 0;
+                            $pct = 0;
                         } else {
                             $pct = ($realisasi == 0) ? 100 : ($target / $realisasi) * 100;
                         }
                     } else {
                         if ($target == 0) {
-                            $pct = ($realisasi > 0) ? 100 : (($realisasi == 0) ? 100 : 0);
+                            $pct = ($realisasi > 0) ? 100 : 0;
                         } else {
                             $pct = ($realisasi / $target) * 100;
                         }

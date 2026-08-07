@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\MasterUnit;
+use App\Models\MasterBidang;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
@@ -34,10 +35,9 @@ class UserController extends Controller
     {
         $roles = Role::all();
         $units = MasterUnit::all();
-        // Divisi/Bidang matrices are defined globally, but we'll use a static array for the dropdown
-        $matrixGroups = ['ALL', 'JARINGAN', 'NIAGA', 'TRANSAKSI ENERGI', 'KEUANGAN', 'K3L', 'PERENCANAAN'];
+        $bidangs = MasterBidang::orderBy('name', 'asc')->get();
         
-        return view('users.create', compact('roles', 'units', 'matrixGroups'));
+        return view('users.create', compact('roles', 'units', 'bidangs'));
     }
 
     public function store(Request $request)
@@ -69,9 +69,9 @@ class UserController extends Controller
     {
         $roles = Role::all();
         $units = MasterUnit::all();
-        $matrixGroups = ['ALL', 'JARINGAN', 'NIAGA', 'TRANSAKSI ENERGI', 'KEUANGAN', 'K3L', 'PERENCANAAN'];
+        $bidangs = MasterBidang::orderBy('name', 'asc')->get();
         
-        return view('users.edit', compact('user', 'roles', 'units', 'matrixGroups'));
+        return view('users.edit', compact('user', 'roles', 'units', 'bidangs'));
     }
 
     public function update(Request $request, User $user)

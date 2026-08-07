@@ -185,7 +185,7 @@
                                         <span class="text-blue-600 ml-1 whitespace-nowrap">• {{ $realization->target->metric->name }}</span>
                                     </div>
                                     <div class="flex justify-between items-center text-[10px] text-gray-400 mt-1">
-                                        <span>{{ $realization->report_date->format('d M Y') }}</span>
+                                        <span>{{ $realization->report_date->locale('id')->translatedFormat('d M Y') }}</span>
                                         <span class="truncate max-w-[150px]">{{ $realization->creator->name ?? 'Sistem' }}</span>
                                     </div>
                                 </div>
@@ -219,7 +219,7 @@
                                                 <div class="text-xs font-medium text-blue-600 mt-0.5">{{ $realization->target->metric->name }}</div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
-                                                {{ $realization->report_date->format('d M Y') }}
+                                                {{ $realization->report_date->locale('id')->translatedFormat('d M Y') }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-black text-green-600 text-right">
                                                 +{{ number_format($realization->realization_value, 2) }}

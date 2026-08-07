@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\MasterWig;
 use App\Models\MasterUnit;
 use App\Models\MasterSatuan;
+use App\Models\MasterBidang;
 use Illuminate\Http\Request;
 
 class MasterWigController extends Controller
@@ -21,14 +22,16 @@ class MasterWigController extends Controller
         $wigs = $query->get();
         $units = MasterUnit::all();
         $satuans = MasterSatuan::all();
-        return view('master-wigs.index', compact('wigs', 'status', 'units', 'satuans'));
+        $bidangs = MasterBidang::where('level', 'UID_SUBBIDANG')->orderBy('name', 'asc')->get();
+        return view('master-wigs.index', compact('wigs', 'status', 'units', 'satuans', 'bidangs'));
     }
 
     public function create()
     {
         $units = MasterUnit::all();
         $satuans = MasterSatuan::all();
-        return view('master-wigs.create', compact('units', 'satuans'));
+        $bidangs = MasterBidang::where('level', 'UID_SUBBIDANG')->orderBy('name', 'asc')->get();
+        return view('master-wigs.create', compact('units', 'satuans', 'bidangs'));
     }
 
     public function store(Request $request)

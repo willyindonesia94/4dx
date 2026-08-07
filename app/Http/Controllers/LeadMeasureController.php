@@ -20,10 +20,9 @@ class LeadMeasureController extends Controller
             $query->where('is_approved', false);
         }
         
-        // If not superadmin, optionally filter based on matrix_group_id or unit_id
-        if ($user && !$user->hasRole('Super Admin')) {
+        // If not superadmin and matrix_group_id is not ALL, optionally filter based on matrix_group_id
+        if ($user && !$user->hasRole('Super Admin') && $user->matrix_group_id !== 'ALL') {
             $query->whereHas('wig', function($q) use ($user) {
-                // Adjust this according to specific business rules.
                 // Assuming we show LMs where the user's matrix_group_id matches the WIG's divisi
                 $q->where('divisi', $user->matrix_group_id);
             });

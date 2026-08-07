@@ -25,8 +25,34 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
 
     public function view(): View
     {
-        $lms = MasterLm::with(['wig', 'satuan'])->get();
-        $units = MasterUnit::all();
+        $user = auth()->user();
+        $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin']);
+        $isUlpLevel = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'ULP') || str_contains(strtoupper($user->role_name ?? ''), 'ULP'));
+        $isUp3Level = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'UP3') || str_contains(strtoupper($user->role_name ?? ''), 'UP3'));
+
+        // Filter LM by Matrix Bidang
+        $lmsQuery = MasterLm::with(['wig', 'satuan']);
+        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+            $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
+            $lmsQuery->whereHas('wig', fn($q) => $q->whereIn('divisi', $allowedDivisis));
+        }
+        $lms = $lmsQuery->get();
+
+        // Filter Units by user hierarchy level
+        $unitsQuery = MasterUnit::query();
+        if (!$isSuperAdmin && $user && $user->unit) {
+            $unitType = strtoupper(trim((string)$user->unit->type));
+            if ($unitType === 'ULP') {
+                $unitsQuery->where('id', $user->unit_id);
+            } elseif ($unitType === 'UP3') {
+                $unitsQuery->where(function($q) use ($user) {
+                    $q->where('id', $user->unit_id)
+                      ->orWhere('parent_id', $user->unit_id);
+                });
+            }
+        }
+        $units = $unitsQuery->get();
         $reportData = collect([]);
 
         // Get the end of the month day (28, 29, 30, 31)
@@ -44,7 +70,14 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
                 ->pluck('unit_id');
                 
             $applicableUnitIds = $targetUnitIds->concat($realisasiUnitIds)->unique();
-            $applicableUnits = $units->whereIn('id', $applicableUnitIds);
+            if ($isUlpLevel || $isUp3Level || $applicableUnitIds->isEmpty()) {
+                $applicableUnits = $units;
+            } else {
+                $applicableUnits = $units->whereIn('id', $applicableUnitIds);
+                if ($applicableUnits->isEmpty()) {
+                    $applicableUnits = $units;
+                }
+            }
 
             $lmRows = [];
             $uidTotal = [
@@ -55,12 +88,15 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
             $hasUp3s = false;
 
             foreach ($applicableUnits as $unit) {
-                // Fetch Target for this month
-                $target = \App\Models\BreakdownLm::where('lm_id', $lm->id)
+                $allTargets = \App\Models\BreakdownLm::where('lm_id', $lm->id)
                     ->where('unit_id', $unit->id)
-                    ->where('periode_start', '<=', $periodeEnd->format('Y-m-d'))
-                    ->where('periode_end', '>=', $periodeStart->format('Y-m-d'))
-                    ->first();
+                    ->where('bulan', $this->month)
+                    ->where('tahun', $this->year)
+                    ->get();
+                
+                $target = $allTargets->sortByDesc(function ($t) {
+                    return \Carbon\Carbon::parse($t->periode_start)->diffInDays(\Carbon\Carbon::parse($t->periode_end));
+                })->first();
                 
                 $angkaTarget = $target ? $target->angka_target : 0;
 
@@ -138,19 +174,21 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
                     }
                 }
 
-                // Push UID Row First
-                $reportData->push([
-                    'wig' => $lm->wig->judul ?? '-',
-                    'lm' => $lm->judul_lm,
-                    'satuan' => $lm->satuan->name ?? '',
-                    'polaritas' => $lm->wig->polaritas ?? 'positif',
-                    'unit' => 'UID Jawa Barat',
-                    'target' => $uidTotal['target'],
-                    'r1' => $uidTotal['r1'], 'r2' => $uidTotal['r2'], 'r3' => $uidTotal['r3'], 'r4' => $uidTotal['r4'], 'r5' => $uidTotal['r5'],
-                    'total' => $uidTotal['total'],
-                    'capaian' => round($uidCapaian, 2),
-                    'is_uid' => true
-                ]);
+                // Push UID Row First only if not ULP/UP3 level restricted
+                if (!$isUlpLevel && !$isUp3Level) {
+                    $reportData->push([
+                        'wig' => $lm->wig->judul ?? '-',
+                        'lm' => $lm->judul_lm,
+                        'satuan' => $lm->satuan->name ?? '',
+                        'polaritas' => $lm->wig->polaritas ?? 'positif',
+                        'unit' => 'UID Jawa Barat',
+                        'target' => $uidTotal['target'],
+                        'r1' => $uidTotal['r1'], 'r2' => $uidTotal['r2'], 'r3' => $uidTotal['r3'], 'r4' => $uidTotal['r4'], 'r5' => $uidTotal['r5'],
+                        'total' => $uidTotal['total'],
+                        'capaian' => round($uidCapaian, 2),
+                        'is_uid' => true
+                    ]);
+                }
 
                 // Then push the other units
                 foreach ($lmRows as $row) {
@@ -170,7 +208,8 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
     {
         return [
             1    => ['font' => ['bold' => true, 'size' => 14]],
-            3    => ['font' => ['bold' => true]],
+            3    => ['font' => ['bold' => true], 'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER]],
+            4    => ['font' => ['bold' => true], 'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER]],
         ];
     }
 }

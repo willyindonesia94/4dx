@@ -43,12 +43,16 @@ Route::middleware('auth')->group(function () {
     
     Route::post('/master-lms/{id}/approve', [\App\Http\Controllers\LeadMeasureController::class, 'approve'])->name('master-lms.approve');
     Route::resource('master-lms', \App\Http\Controllers\LeadMeasureController::class)->except(['show']);
+    
+    Route::post('/master-periodes/generate', [\App\Http\Controllers\MasterPeriodeController::class, 'generate'])->name('master-periodes.generate');
+    Route::resource('master-periodes', \App\Http\Controllers\MasterPeriodeController::class)->except(['show', 'create', 'store', 'destroy']);
     Route::get('/cascading/wig', [\App\Http\Controllers\CascadingController::class, 'wigIndex'])->name('cascading.wig.index');
     Route::get('/cascading/lm', [\App\Http\Controllers\CascadingController::class, 'lmIndex'])->name('cascading.lm.index');
     Route::get('/cascading/wig/template', [\App\Http\Controllers\CascadingController::class, 'wigTemplate'])->name('cascading.wig.template');
     Route::post('/cascading/wig/import', [\App\Http\Controllers\CascadingController::class, 'wigImport'])->name('cascading.wig.import');
     Route::get('/cascading/lm/template', [\App\Http\Controllers\CascadingController::class, 'lmTemplate'])->name('cascading.lm.template');
     Route::post('/cascading/lm/import', [\App\Http\Controllers\CascadingController::class, 'lmImport'])->name('cascading.lm.import');
+    Route::get('/cascading/lm/breakdown/template', [\App\Http\Controllers\CascadingController::class, 'breakdownLmTemplate'])->name('cascading.breakdown.template');
     Route::post('/cascading/lm/breakdown/import', [\App\Http\Controllers\CascadingController::class, 'importBreakdownLm'])->name('cascading.breakdown.import');
     Route::post('/cascading/breakdown', [\App\Http\Controllers\CascadingController::class, 'storeBreakdown'])->name('cascading.breakdown.store');
     Route::put('/cascading/breakdown/{id}', [\App\Http\Controllers\CascadingController::class, 'updateBreakdown'])->name('cascading.breakdown.update');
@@ -59,6 +63,7 @@ Route::middleware('auth')->group(function () {
 
     
     // Master Data Tambahan
+    Route::resource('master-bidangs', \App\Http\Controllers\MasterBidangController::class)->except(['create', 'edit', 'show']);
     Route::resource('master-satuans', \App\Http\Controllers\MasterSatuanController::class)->except(['create', 'edit', 'show']);
     Route::resource('master-units', \App\Http\Controllers\MasterUnitController::class)->except(['create', 'edit', 'show']);
 
@@ -67,6 +72,11 @@ Route::middleware('auth')->group(function () {
     Route::put('sesi-wigs/{sesi_wig}/notes', [\App\Http\Controllers\SesiWigController::class, 'updateNotes'])->name('sesi-wigs.update-notes');
     Route::post('sesi-wigs/{sesi_wig}/set-presenter', [\App\Http\Controllers\SesiWigController::class, 'setPresenter'])->name('sesi-wigs.set-presenter');
     Route::post('sesi-wigs/{sesi_wig}/komitmen', [\App\Http\Controllers\SesiWigController::class, 'saveKomitmen'])->name('sesi-wigs.save-komitmen');
+    
+    // API Routes for Form Komitmen LM (Per Unit & LM)
+    Route::get('sesi-wigs/{sesi_wig}/komitmen/{lm_id}/{unit_id}', [\App\Http\Controllers\SesiWigKomitmenController::class, 'show'])->name('sesi-wigs.komitmen.show');
+    Route::post('sesi-wigs/{sesi_wig}/komitmen/{lm_id}/{unit_id}', [\App\Http\Controllers\SesiWigKomitmenController::class, 'store'])->name('sesi-wigs.komitmen.store');
+
     Route::resource('sesi-wigs', \App\Http\Controllers\SesiWigController::class);
     
 

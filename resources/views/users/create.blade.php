@@ -56,10 +56,11 @@
                             <div class="md:col-span-2">
                                 <x-input-label for="matrix_group_id" :value="__('Matrix Group (Relasi Bidang)')" />
                                 <p class="text-xs text-gray-500 mb-1">Pilih bidang fungsional untuk mengaitkan target (Misal: Divisi Jaringan UID & TL Teknik ULP pilih JARINGAN).</p>
-                                <select id="matrix_group_id" name="matrix_group_id" class="block mt-1 w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
-                                    <option value="" disabled selected>-- Pilih Bidang --</option>
-                                    @foreach($matrixGroups as $group)
-                                        <option value="{{ $group }}">{{ $group }}</option>
+                                <select id="matrix_group_id" name="matrix_group_id" class="block mt-1 w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm font-medium text-gray-800" required>
+                                    <option value="" disabled selected>-- Pilih Bidang / Matrix Group --</option>
+                                    <option value="ALL">ALL (Semua Bidang / Tidak Dibatasi)</option>
+                                    @foreach($bidangs as $bidang)
+                                        <option value="{{ $bidang->name }}">{{ $bidang->name }} ({{ $bidang->level == 'UID_BIDANG' ? 'UID' : ($bidang->level == 'UID_SUBBIDANG' ? 'Sub UID' : ($bidang->level == 'UP3_BIDANG' ? 'UP3' : 'ULP')) }})</option>
                                     @endforeach
                                 </select>
                             </div>
