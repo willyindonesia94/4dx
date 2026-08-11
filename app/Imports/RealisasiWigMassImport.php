@@ -14,8 +14,14 @@ class RealisasiWigMassImport implements ToCollection, WithHeadingRow
 {
     private function parseNumber($val) {
         if ($val === null || $val === "") return null; // Only update if value is present
-        $val = str_replace(",", "", $val);
-        return floatval($val);
+        $valStr = (string)$val;
+        $isPercent = str_contains($valStr, '%');
+        $valClean = str_replace([",", "%"], "", $valStr);
+        $floatVal = floatval($valClean);
+        if ($isPercent) {
+            return $floatVal / 100;
+        }
+        return $floatVal;
     }
 
     public function collection(Collection $rows)

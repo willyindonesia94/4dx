@@ -14,9 +14,15 @@ use Illuminate\Support\Facades\DB;
 class WigMassImport implements ToCollection, WithHeadingRow
 {
     private function parseNumber($val) {
-        if (!$val) return 0;
-        $val = str_replace(",", "", $val);
-        return floatval($val);
+        if ($val === null || $val === "") return 0;
+        $valStr = (string)$val;
+        $isPercent = str_contains($valStr, '%');
+        $valClean = str_replace([",", "%"], "", $valStr);
+        $floatVal = floatval($valClean);
+        if ($isPercent) {
+            return $floatVal / 100;
+        }
+        return $floatVal;
     }
 
     public function collection(Collection $rows)

@@ -84,7 +84,13 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                 if (!$user) continue;
 
                 // Format angka realisasi
-                $angkaRealisasi = floatval(str_replace(",", "", (string)$angka));
+                $angkaStr = (string)$angka;
+                $isPercent = str_contains($angkaStr, '%');
+                $angkaClean = str_replace([",", "%"], "", $angkaStr);
+                $angkaRealisasi = floatval($angkaClean);
+                if ($isPercent) {
+                    $angkaRealisasi = $angkaRealisasi / 100;
+                }
                 
                 // Format bukti dan keterangan
                 $buktiText = $bukti ? trim((string)$bukti) : 'Diimport dari Upload Massal Excel';

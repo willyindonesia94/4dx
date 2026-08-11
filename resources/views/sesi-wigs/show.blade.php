@@ -1,4 +1,16 @@
 <x-app-layout>
+@php
+$formatLmValue = function($value, $satuan) {
+    if ($value === null || $value === '') return '-';
+    if (trim($satuan) === '%') {
+        $formatted = number_format((float)$value * 100, 2, ",", ".");
+        $formatted = rtrim(rtrim($formatted, '0'), ',');
+        return $formatted . '%';
+    }
+    return number_format((float)$value, 2, ",", ".");
+};
+@endphp
+
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
             
@@ -290,7 +302,7 @@
                                                     <div class="flex-1 pr-4">
                                                         <span class="text-xs font-semibold text-gray-700">{{ $lm->judul_lm }}</span>
                                                         <div class="text-[10px] text-gray-500 mt-0.5">
-                                                            Target: {{ number_format($lm->total_target, 0, ",", ".") }} | Realisasi: {{ number_format($lm->total_realisasi, 0, ",", ".") }} {{ $lm->satuan->name ?? '' }} ({{ ucfirst($lm->polaritas) }})
+                                                            Target: {{ $formatLmValue($lm->total_target, $lm->satuan->name ?? '') }} | Realisasi: {{ $formatLmValue($lm->total_realisasi, $lm->satuan->name ?? '') }} {{ trim($lm->satuan->name ?? '') !== '%' ? ($lm->satuan->name ?? '') : '' }} ({{ ucfirst($lm->polaritas) }})
                                                         </div>
                                                     </div>
                                                     <div class="text-right">
@@ -416,12 +428,12 @@
                                                             }
                                                         }
                                                     @endphp
-                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ number_format($uidTarget, 0, ",", ".") }}</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black text-purple-900 bg-purple-50">{{ number_format($uidTargetPlusCarryOver, 0, ",", ".") }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ $formatLmValue($uidTarget, $lm->satuan->name ?? '') }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black text-purple-900 bg-purple-50">{{ $formatLmValue($uidTargetPlusCarryOver, $lm->satuan->name ?? '') }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td><td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ number_format($uidRealisasi, 0, ",", ".") }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ $formatLmValue($uidRealisasi, $lm->satuan->name ?? '') }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $uidBgColor }}">{{ $uidPencapaian }}%</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{{ $uidCarryOver > 0 ? number_format($uidCarryOver, 0, ",", ".") : '0' }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{{ $uidCarryOver > 0 ? $formatLmValue($uidCarryOver, $lm->satuan->name ?? '') : '0' }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{!! $uidTrendIcon !!}</td>
                                                 @endforeach
                                             </tr>
@@ -484,15 +496,15 @@
                                                                 }
                                                             }
                                                         @endphp
-                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ number_format($up3Target, 0, ",", ".") }}</td>
-                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold text-purple-900 bg-purple-50">{{ number_format($up3TargetPlusCarryOver, 0, ",", ".") }}</td>
+                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ $formatLmValue($up3Target, $lm->satuan->name ?? '') }}</td>
+                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold text-purple-900 bg-purple-50">{{ $formatLmValue($up3TargetPlusCarryOver, $lm->satuan->name ?? '') }}</td>
                                                         <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">
                                                             @php 
                                                                 $komData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
                                                                 $hasKom = $komData !== null;
                                                                 $komitmenVal = $hasKom ? $komData['komitmen'] : '';
                                                             @endphp
-                                                            <span class="text-xs font-semibold text-gray-700">{{ $komitmenVal !== '' && $komitmenVal !== null ? number_format((float)$komitmenVal, 0, ",", ".") : '-' }}</span>
+                                                            <span class="text-xs font-semibold text-gray-700">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
                                                             </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
                                                                 @if($canEditSesiWig)
@@ -508,10 +520,10 @@
                                                                 </div>
                                                                 @endif
                                                         </td>
-                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ number_format($up3Realisasi, 0, ",", ".") }}</td>
+                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ $formatLmValue($up3Realisasi, $lm->satuan->name ?? '') }}</td>
                                                         <td class="px-2 py-2 border border-gray-300 text-right font-bold {{ $up3BgColor }}">{{ $up3Pencapaian }}%</td>
                                                         <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 text-xs font-semibold text-gray-700">
-                                                            {{ $up3CarryOver > 0 ? number_format($up3CarryOver, 0, ",", ".") : '0' }}
+                                                            {{ $up3CarryOver > 0 ? $formatLmValue($up3CarryOver, $lm->satuan->name ?? '') : '0' }}
                                                         </td>
                                                         <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{!! $up3TrendIcon !!}</td>
                                                     @endforeach
@@ -575,8 +587,8 @@
                                                                 $prevUlpCarryOver = max(0, $prevUlpTarget - $prevUlpRealisasi);
                                                                 $ulpTargetPlusCarryOver = $target + $prevUlpCarryOver;
                                                             @endphp
-                                                            <td class="px-2 py-2 border border-gray-300 text-right">{{ number_format($target, 0, ",", ".") }}</td>
-                                                                <td class="px-2 py-2 border border-gray-300 text-right text-purple-900 bg-purple-50">{{ number_format($ulpTargetPlusCarryOver, 0, ",", ".") }}</td>
+                                                            <td class="px-2 py-2 border border-gray-300 text-right">{{ $formatLmValue($target, $lm->satuan->name ?? '') }}</td>
+                                                                <td class="px-2 py-2 border border-gray-300 text-right text-purple-900 bg-purple-50">{{ $formatLmValue($ulpTargetPlusCarryOver, $lm->satuan->name ?? '') }}</td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">
                                                                 @php 
                                                                     $komData = $matrixKomitmen[$lm->id][$u->id][$sw->id] ?? null;
@@ -588,7 +600,7 @@
                                                                             data-lm="{{ $lm->id }}" data-unit="{{ $u->id }}" data-sesi="{{ $sw->id }}" data-type="komitmen"
                                                                             value="{{ $komitmenVal }}" placeholder="-">
                                                                     @else
-                                                                        <span class="text-xs font-semibold text-gray-700">{{ $komitmenVal !== '' && $komitmenVal !== null ? number_format((float)$komitmenVal, 0, ",", ".") : '-' }}</span>
+                                                                        <span class="text-xs font-semibold text-gray-700">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
                                                                     @endif
                                                                 </td>
                                                                 <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
@@ -605,12 +617,12 @@
                                                                     </div>
                                                                     @endif
                                                             </td>
-                                                            <td class="px-2 py-2 border border-gray-300 text-right">{{ number_format($realisasi, 0, ",", ".") }}</td>
+                                                            <td class="px-2 py-2 border border-gray-300 text-right">{{ $formatLmValue($realisasi, $lm->satuan->name ?? '') }}</td>
                                                             <td class="px-2 py-2 border border-gray-300 text-right font-bold {{ $bgColor }}">
                                                                 {{ $pencapaian }}%
                                                             </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 text-xs font-semibold text-gray-700">
-                                                                {{ $ulpCarryOver > 0 ? number_format($ulpCarryOver, 0, ",", ".") : '0' }}
+                                                                {{ $ulpCarryOver > 0 ? $formatLmValue($ulpCarryOver, $lm->satuan->name ?? '') : '0' }}
                                                             </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center">{!! $trendIcon !!}</td>
                                                         @endforeach
@@ -1271,3 +1283,4 @@
         }
     </script>
 </x-app-layout>
+

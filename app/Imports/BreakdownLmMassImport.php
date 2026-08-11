@@ -24,8 +24,14 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
 
     private function parseNumber($val) {
         if ($val === null || $val === "") return null;
-        $val = str_replace(",", "", $val);
-        return floatval($val);
+        $valStr = (string)$val;
+        $isPercent = str_contains($valStr, '%');
+        $valClean = str_replace([",", "%"], "", $valStr);
+        $floatVal = floatval($valClean);
+        if ($isPercent) {
+            return $floatVal / 100;
+        }
+        return $floatVal;
     }
 
     public function collection(Collection $rows)
