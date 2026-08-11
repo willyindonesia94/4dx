@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="py-12" x-data="bidangForm()">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
             @if(session('success'))
                 <div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl shadow-sm flex items-center justify-between">
@@ -26,34 +26,35 @@
             @endif
 
             <div>
-                <div class="flex flex-wrap justify-between items-center mb-5 gap-3">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-4">
                     <!-- 4 Tabs -->
-                    <div class="flex flex-wrap gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm">
-                        <button @click="activeTab = 'UID_BIDANG'" :class="activeTab === 'UID_BIDANG' ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm border-indigo-200' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border-transparent'" class="px-4 py-2 text-xs sm:text-sm rounded-lg border transition-all duration-200 flex items-center gap-2">
+                    <div class="flex flex-wrap gap-1 bg-white border border-slate-200 p-1 rounded-xl shadow-sm w-full sm:w-auto">
+                        <button @click="activeTab = 'UID_BIDANG'" :class="activeTab === 'UID_BIDANG' ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm border-indigo-200' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border-transparent'" class="flex-1 sm:flex-none px-4 py-2 text-xs sm:text-sm rounded-lg border transition-all duration-200 flex items-center justify-center sm:justify-start gap-2 whitespace-nowrap">
                             <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
                             Bidang UID
                         </button>
-                        <button @click="activeTab = 'UID_SUBBIDANG'" :class="activeTab === 'UID_SUBBIDANG' ? 'bg-blue-50 text-blue-700 font-bold shadow-sm border-blue-200' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border-transparent'" class="px-4 py-2 text-xs sm:text-sm rounded-lg border transition-all duration-200 flex items-center gap-2">
+                        <button @click="activeTab = 'UID_SUBBIDANG'" :class="activeTab === 'UID_SUBBIDANG' ? 'bg-blue-50 text-blue-700 font-bold shadow-sm border-blue-200' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border-transparent'" class="flex-1 sm:flex-none px-4 py-2 text-xs sm:text-sm rounded-lg border transition-all duration-200 flex items-center justify-center sm:justify-start gap-2 whitespace-nowrap">
                             <span class="w-2 h-2 rounded-full bg-blue-500"></span>
                             Sub-Bidang UID
                         </button>
-                        <button @click="activeTab = 'UP3_BIDANG'" :class="activeTab === 'UP3_BIDANG' ? 'bg-purple-50 text-purple-700 font-bold shadow-sm border-purple-200' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border-transparent'" class="px-4 py-2 text-xs sm:text-sm rounded-lg border transition-all duration-200 flex items-center gap-2">
+                        <button @click="activeTab = 'UP3_BIDANG'" :class="activeTab === 'UP3_BIDANG' ? 'bg-purple-50 text-purple-700 font-bold shadow-sm border-purple-200' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border-transparent'" class="flex-1 sm:flex-none px-4 py-2 text-xs sm:text-sm rounded-lg border transition-all duration-200 flex items-center justify-center sm:justify-start gap-2 whitespace-nowrap">
                             <span class="w-2 h-2 rounded-full bg-purple-500"></span>
                             Bidang UP3
                         </button>
-                        <button @click="activeTab = 'ULP_BIDANG'" :class="activeTab === 'ULP_BIDANG' ? 'bg-emerald-50 text-emerald-700 font-bold shadow-sm border-emerald-200' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border-transparent'" class="px-4 py-2 text-xs sm:text-sm rounded-lg border transition-all duration-200 flex items-center gap-2">
+                        <button @click="activeTab = 'ULP_BIDANG'" :class="activeTab === 'ULP_BIDANG' ? 'bg-emerald-50 text-emerald-700 font-bold shadow-sm border-emerald-200' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium border-transparent'" class="flex-1 sm:flex-none px-4 py-2 text-xs sm:text-sm rounded-lg border transition-all duration-200 flex items-center justify-center sm:justify-start gap-2 whitespace-nowrap">
                             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                             Bidang ULP
                         </button>
                     </div>
 
-                    <div class="flex items-center gap-3">
-                        <form action="{{ route('master-bidangs.index') }}" method="GET" class="relative">
-                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari Bidang..." class="w-64 px-4 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
+                    <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                        <form action="{{ route('master-bidangs.index') }}" method="GET" class="relative w-full sm:w-auto">
+                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari Bidang..." class="w-full sm:w-64 px-4 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
                         </form>
-                        <button @click="openCreate()" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow transition-all duration-150 shrink-0">
+                        <button @click="openCreate()" class="w-full sm:w-auto justify-center inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow transition-all duration-150 shrink-0 whitespace-nowrap">
                             <svg class="w-4 h-4 text-indigo-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
-                            <span x-text="activeTab === 'UID_BIDANG' ? 'Tambah Bidang UID' : (activeTab === 'UID_SUBBIDANG' ? 'Tambah Sub-Bidang UID' : (activeTab === 'UP3_BIDANG' ? 'Tambah Bidang UP3' : 'Tambah Bidang ULP'))"></span>
+                            <span class="hidden sm:inline" x-text="activeTab === 'UID_BIDANG' ? 'Tambah Bidang UID' : (activeTab === 'UID_SUBBIDANG' ? 'Tambah Sub-Bidang UID' : (activeTab === 'UP3_BIDANG' ? 'Tambah Bidang UP3' : 'Tambah Bidang ULP'))"></span>
+                            <span class="sm:hidden">Tambah</span>
                         </button>
                     </div>
                 </div>

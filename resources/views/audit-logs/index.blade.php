@@ -6,16 +6,16 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                <div class="p-6 text-gray-900">
+                <div class="p-4 sm:p-6 text-gray-900">
                     
-                    <div class="flex justify-between items-center mb-4">
-                        <form action="{{ route('audit-logs.index') }}" method="GET" class="flex items-center">
-                            <x-text-input type="text" name="search" value="{{ request('search') }}" placeholder="Cari aktivitas..." class="mr-2" />
-                            <x-primary-button type="submit">Cari</x-primary-button>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 w-full">
+                        <form action="{{ route('audit-logs.index') }}" method="GET" class="flex items-center w-full sm:w-auto">
+                            <x-text-input type="text" name="search" value="{{ request('search') }}" placeholder="Cari aktivitas..." class="mr-2 w-full sm:w-64" />
+                            <x-primary-button type="submit" class="shrink-0">Cari</x-primary-button>
                             @if(request('search'))
-                                <a href="{{ route('audit-logs.index') }}" class="ml-2 text-gray-500 hover:text-gray-700">Reset</a>
+                                <a href="{{ route('audit-logs.index') }}" class="ml-2 text-gray-500 hover:text-gray-700 shrink-0">Reset</a>
                             @endif
                         </form>
                     </div>

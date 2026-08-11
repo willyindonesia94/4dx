@@ -14,12 +14,12 @@
                 this.editModal = true;
             }
         }">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0 w-full">
                 <!-- Filter Tabs -->
-                <div class="flex space-x-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm">
-                    <a href="{{ route('master-wigs.index', ['status' => 'all']) }}" class="px-4 py-2 text-sm font-semibold rounded-md transition-colors {{ ($status ?? 'all') === 'all' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">Semua WIG</a>
-                    <a href="{{ route('master-wigs.index', ['status' => 'draft']) }}" class="px-4 py-2 text-sm font-semibold rounded-md transition-colors flex items-center {{ ($status ?? 'all') === 'draft' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                <div class="flex space-x-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm w-full sm:w-auto overflow-x-auto">
+                    <a href="{{ route('master-wigs.index', ['status' => 'all']) }}" class="whitespace-nowrap px-4 py-2 text-sm font-semibold rounded-md transition-colors {{ ($status ?? 'all') === 'all' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">Semua WIG</a>
+                    <a href="{{ route('master-wigs.index', ['status' => 'draft']) }}" class="whitespace-nowrap px-4 py-2 text-sm font-semibold rounded-md transition-colors flex items-center {{ ($status ?? 'all') === 'draft' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
                         Menunggu Persetujuan
                         @php
                             $draftCount = \App\Models\MasterWig::where('is_approved', false)->count();
@@ -30,18 +30,19 @@
                     </a>
                 </div>
 
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
                     <!-- Search Form -->
-                    <form action="{{ route('master-wigs.index') }}" method="GET" class="relative">
+                    <form action="{{ route('master-wigs.index') }}" method="GET" class="relative flex-1 sm:flex-none">
                         @if(request('status'))
                             <input type="hidden" name="status" value="{{ request('status') }}">
                         @endif
-                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari WIG atau Sub Bidang..." class="w-64 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari WIG..." class="w-full sm:w-64 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
                     </form>
 
-                    <button @click="openModal = true" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-lg shadow-sm transition-colors flex items-center text-sm">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        Tambah WIG
+                    <button @click="openModal = true" class="whitespace-nowrap bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 sm:px-5 rounded-lg shadow-sm transition-colors flex items-center justify-center text-sm">
+                        <svg class="w-5 h-5 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        <span class="hidden sm:inline">Tambah WIG</span>
+                        <span class="sm:hidden">Tambah</span>
                     </button>
                 </div>
             </div>

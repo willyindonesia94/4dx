@@ -6,10 +6,10 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center mb-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 w-full">
                 <!-- Role Tabs Filter -->
-                <div class="w-full mr-4 overflow-x-auto pb-2">
+                <div class="w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
                     <nav class="flex space-x-2" aria-label="Tabs">
                         <a href="{{ route('users.index') }}" class="{{ !$selectedLevel ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100' }} px-3 py-2 font-medium text-sm rounded-md whitespace-nowrap transition-colors">
                             Semua Level
@@ -22,16 +22,17 @@
                     </nav>
                 </div>
 
-                <div class="flex-shrink-0 flex items-center space-x-3">
+                <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                     <!-- Search Form -->
-                    <form action="{{ route('users.index') }}" method="GET" class="relative">
+                    <form action="{{ route('users.index') }}" method="GET" class="relative w-full sm:w-auto">
                         @if(request('level'))
                             <input type="hidden" name="level" value="{{ request('level') }}">
                         @endif
-                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari Nama atau Email..." class="w-64 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari Nama atau Email..." class="w-full sm:w-64 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
                     </form>
-                    <a href="{{ route('users.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow whitespace-nowrap">
-                        + Tambah Pengguna
+                    <a href="{{ route('users.create') }}" class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 sm:px-5 rounded-lg shadow flex items-center whitespace-nowrap">
+                        <span class="hidden sm:inline">+ Tambah Pengguna</span>
+                        <span class="sm:hidden">+ Tambah</span>
                     </a>
                 </div>
             </div>

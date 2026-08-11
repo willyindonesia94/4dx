@@ -10,26 +10,27 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <div class="py-12" x-data="unitForm()">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div x-data="{ activeTab: 'UID' }">
-                <div class="flex justify-between items-center mb-4">
-                    <div class="flex space-x-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm">
-                        <button @click="activeTab = 'UID'" :class="activeTab === 'UID' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="px-4 py-2 text-sm font-semibold rounded-md transition-colors">UID</button>
-                        <button @click="activeTab = 'UP3'" :class="activeTab === 'UP3' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="px-4 py-2 text-sm font-semibold rounded-md transition-colors">UP3</button>
-                        <button @click="activeTab = 'ULP'" :class="activeTab === 'ULP' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="px-4 py-2 text-sm font-semibold rounded-md transition-colors">ULP</button>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-4 w-full">
+                    <div class="flex space-x-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm w-full sm:w-auto overflow-x-auto">
+                        <button @click="activeTab = 'UID'" :class="activeTab === 'UID' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold rounded-md transition-colors whitespace-nowrap">UID</button>
+                        <button @click="activeTab = 'UP3'" :class="activeTab === 'UP3' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold rounded-md transition-colors whitespace-nowrap">UP3</button>
+                        <button @click="activeTab = 'ULP'" :class="activeTab === 'ULP' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold rounded-md transition-colors whitespace-nowrap">ULP</button>
                     </div>
-                    <div class="flex items-center space-x-3">
-                        <form action="{{ route('master-units.index') }}" method="GET" class="relative">
-                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari Unit..." class="w-64 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
+                    <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                        <form action="{{ route('master-units.index') }}" method="GET" class="relative w-full sm:w-auto">
+                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari Unit..." class="w-full sm:w-64 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
                         </form>
-                        <button @click="openCreate()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow whitespace-nowrap">
-                            + Tambah Unit
+                        <button @click="openCreate()" class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 sm:px-5 rounded-lg shadow flex items-center whitespace-nowrap">
+                            <span class="hidden sm:inline">+ Tambah Unit</span>
+                            <span class="sm:hidden">+ Tambah</span>
                         </button>
                     </div>
                 </div>
                 
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg" id="ajax-container">
-                    <div class="p-6 bg-white border-b border-gray-200">
+                    <div class="p-0 sm:p-6 bg-white border-b border-gray-200 overflow-x-auto">
                         @foreach(['UID', 'UP3', 'ULP'] as $tabType)
                         <div x-show="activeTab === '{{ $tabType }}'" style="display: none;">
                             <table class="min-w-full divide-y divide-gray-200">
