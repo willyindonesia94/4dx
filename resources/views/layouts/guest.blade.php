@@ -13,8 +13,8 @@
         <!-- PWA Meta Tags -->
         <link rel="manifest" href="/manifest.json">
         <meta name="theme-color" content="#4f46e5">
-        <link rel="apple-touch-icon" href="/pwa/icon.png">
-        <link rel="apple-touch-startup-image" href="/pwa/splash.png">
+        <link rel="apple-touch-icon" href="/pwa/apple-touch-icon.png">
+        <link rel="apple-touch-startup-image" href="/pwa/icon-512x512.png">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="default">
         <meta name="apple-mobile-web-app-title" content="4DX UID JABAR">
