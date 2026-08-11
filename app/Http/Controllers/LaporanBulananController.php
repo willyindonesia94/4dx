@@ -91,8 +91,11 @@ class LaporanBulananController extends Controller
 
     public function exportWig(Request $request)
     {
-        // Placeholder for WIG Export (Excel)
-        return back()->with('error', 'Export WIG format Excel belum diimplementasikan sepenuhnya.');
+        $bulan = $request->input('bulan', date('n'));
+        $tahun = $request->input('tahun', date('Y'));
+        
+        $filename = "Laporan_Capaian_WIG_{$tahun}_{$bulan}.xlsx";
+        return Excel::download(new \App\Exports\WigReportExport($tahun, $bulan), $filename);
     }
 
 
