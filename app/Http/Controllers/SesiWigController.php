@@ -159,10 +159,14 @@ class SesiWigController extends Controller
         // Calculate WIG Realization
         foreach ($wigs as $wig) {
             $realisasiQuery = \App\Models\RealisasiWig::where('wig_id', $wig->id);
+            $targetQuery = \Illuminate\Support\Facades\DB::table('breakdown_wigs')->where('wig_id', $wig->id);
             
             if ($wig_bulan) {
                 // If filtered by specific month
                 $realisasiQuery->where('tahun', $endDate->year)->where('bulan', $wig_bulan);
+                $targetQuery->where('tahun', $endDate->year);
+                $colBln = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][(int)$wig_bulan];
+                $target = $targetQuery->sum($colBln);
             } else {
                 // Up to session date
                 $realisasiQuery->where(function($query) use ($endDate) {
@@ -172,14 +176,24 @@ class SesiWigController extends Controller
                                 ->where('bulan', '<=', $endDate->month);
                           });
                 });
+                $targetQuery->where('tahun', $endDate->year);
+                $target = $targetQuery->sum(\Illuminate\Support\Facades\DB::raw('target_jan + target_feb + target_mar + target_apr + target_mei + target_jun + target_jul + target_agu + target_sep + target_okt + target_nov + target_des'));
             }
             $realisasi = $realisasiQuery->sum('angka_realisasi');
             
-            $target = $wig->angka_target;
-
+            // Laporan uses breakdown_wigs instead of master_wigs.angka_target
             $wig->total_target = $target;
             $wig->total_realisasi = $realisasi;
-            $wig->capaian = $target > 0 ? round(($realisasi / $target) * 100, 2) : 0;
+            
+            $capaian = 0;
+            if ($target > 0) {
+                if (strtolower($wig->polaritas) === 'negatif' || $wig->polaritas === '3') {
+                    $capaian = ($target / max(0.0001, $realisasi)) * 100;
+                } else {
+                    $capaian = ($realisasi / $target) * 100;
+                }
+            }
+            $wig->capaian = round($capaian, 2);
         }
 
         // Calculate LM Realization
@@ -204,7 +218,16 @@ class SesiWigController extends Controller
 
             $lm->total_target = $target;
             $lm->total_realisasi = $realisasi;
-            $lm->capaian = $target > 0 ? round(($realisasi / $target) * 100, 2) : 0;
+            
+            $capaian = 0;
+            if ($target > 0) {
+                if (strtolower($lm->polaritas) === 'negatif' || $lm->polaritas === '3') {
+                    $capaian = ($target / max(0.0001, $realisasi)) * 100;
+                } else {
+                    $capaian = ($realisasi / $target) * 100;
+                }
+            }
+            $lm->capaian = round($capaian, 2);
         }
         
         // Filter Unit sesuai tingkatan akses User (ULP/UP3/UID)

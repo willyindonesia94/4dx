@@ -394,7 +394,14 @@ $formatLmValue = function($value, $satuan) {
                                                             $uidRealisasi += $matrixRealisasi[$lm->id][$up3Unit->id][$sw->id] ?? 0;
                                                         }
                                                         
-                                                        $uidPencapaian = $uidTarget > 0 ? round(($uidRealisasi / $uidTarget) * 100, 2) : 0;
+                                                        $uidPencapaian = 0;
+                                                        if ($uidTarget > 0) {
+                                                            if (strtolower($lm->polaritas) === 'negatif' || $lm->polaritas === '3') {
+                                                                $uidPencapaian = round(($uidTarget / max(0.0001, $uidRealisasi)) * 100, 2);
+                                                            } else {
+                                                                $uidPencapaian = round(($uidRealisasi / $uidTarget) * 100, 2);
+                                                            }
+                                                        }
                                                         $uidBgColor = 'bg-red-500 text-white';
                                                         if ($uidPencapaian >= 100) {
                                                             $uidBgColor = 'bg-green-500 text-white'; // No komitmen on UID level currently
@@ -459,7 +466,14 @@ $formatLmValue = function($value, $satuan) {
                                                             // Menampilkan rekap target dan realisasi UP3
                                                             $up3Target = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                                                             $up3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
-                                                            $up3Pencapaian = $up3Target > 0 ? round(($up3Realisasi / $up3Target) * 100, 2) : 0;
+                                                            $up3Pencapaian = 0;
+                                                            if ($up3Target > 0) {
+                                                                if (strtolower($lm->polaritas) === 'negatif' || $lm->polaritas === '3') {
+                                                                    $up3Pencapaian = round(($up3Target / max(0.0001, $up3Realisasi)) * 100, 2);
+                                                                } else {
+                                                                    $up3Pencapaian = round(($up3Realisasi / $up3Target) * 100, 2);
+                                                                }
+                                                            }
                                                             
                                                             $up3KomData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
                                                             $up3KomVal = $up3KomData !== null ? floatval($up3KomData['komitmen']) : 0;
@@ -537,7 +551,14 @@ $formatLmValue = function($value, $satuan) {
                                                             @php
                                                                 $target = $matrixTargets[$lm->id][$u->id][$sw->id] ?? 0;
                                                                 $realisasi = $matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0;
-                                                                $pencapaian = $target > 0 ? round(($realisasi / $target) * 100, 2) : 0;
+                                                                $pencapaian = 0;
+                                                                if ($target > 0) {
+                                                                    if (strtolower($lm->polaritas) === 'negatif' || $lm->polaritas === '3') {
+                                                                        $pencapaian = round(($target / max(0.0001, $realisasi)) * 100, 2);
+                                                                    } else {
+                                                                        $pencapaian = round(($realisasi / $target) * 100, 2);
+                                                                    }
+                                                                }
                                                                 $komitmenData = $matrixKomitmen[$lm->id][$u->id][$sw->id] ?? null;
                                                                 $komitmenVal = $komitmenData ? $komitmenData['komitmen'] : '';
                                                                 $carryOverVal = $komitmenData ? $komitmenData['carry_over'] : '';
