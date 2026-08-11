@@ -10,10 +10,6 @@ Route::get('/api/debug-sesi', function() {
     return $sws;
 });
 
-Route::get('/', function () {
-    return redirect()->route('login');
-});
-
 Route::get('/run-migrations-temp', function () {
     try {
         \Illuminate\Support\Facades\DB::statement('ALTER TABLE realizations ADD COLUMN notes TEXT NULL AFTER realization_value');
