@@ -96,6 +96,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/laporan-bulanan/export', [\App\Http\Controllers\LaporanBulananController::class, 'exportLaporan'])->name('laporan.export');
     Route::get('/laporan-bulanan/export-wig', [\App\Http\Controllers\LaporanBulananController::class, 'exportWig'])->name('laporan.exportWig');
     Route::get('/laporan-bulanan/export-lengkap', [\App\Http\Controllers\LaporanBulananController::class, 'exportLengkap'])->name('laporan.exportLengkap');
+    Route::get('/laporan-bulanan/preview', [\App\Http\Controllers\LaporanBulananController::class, 'previewReport'])->name('laporan.preview');
 
     // User Management (Superadmin Only)
     Route::resource('users', \App\Http\Controllers\UserController::class)

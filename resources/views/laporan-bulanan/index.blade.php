@@ -160,7 +160,11 @@
                             </div>
                         </div>
 
-                        <div class="flex justify-center mt-6">
+                        <div class="flex justify-center mt-6 gap-4">
+                            <a href="javascript:void(0)" onclick="previewReport()" id="btnPreview" class="flex items-center justify-center px-6 py-3 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl transition-all shadow-md font-bold text-sm w-full sm:w-auto">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                Lihat Laporan
+                            </a>
                             <a href="javascript:void(0)" onclick="exportReport()" class="flex items-center justify-center px-6 py-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl transition-all shadow-md font-bold text-sm w-full sm:w-auto">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                                 Download Laporan
@@ -168,6 +172,23 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- PREVIEW CONTAINER -->
+                <div id="previewContainerWrapper" class="hidden mt-6 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center">
+                            <svg class="w-5 h-5 text-emerald-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            Preview Laporan
+                        </h3>
+                        <button type="button" onclick="document.getElementById('previewContainerWrapper').classList.add('hidden')" class="text-slate-400 hover:text-red-500 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <div class="p-6 overflow-x-auto" id="previewContent">
+                        <!-- Table will be injected here -->
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -205,6 +226,58 @@
                 const wigId = document.getElementById('selectWigId').value;
                 window.location.href = `{{ route('laporan.exportLengkap') ?? '#' }}?bulan=${bulan}&tahun=${tahun}&wig_id=${wigId}`;
             }
+        }
+        function previewReport() {
+            const bulan = document.getElementById('selectBulan').value;
+            const tahun = document.getElementById('selectTahun').value;
+            const jenis = document.getElementById('selectJenisLaporan').value;
+
+            if (jenis === 'lengkap') {
+                alert('Preview untuk Laporan Lengkap (PDF) tidak tersedia. Silakan gunakan tombol Download.');
+                return;
+            }
+
+            const btnPreview = document.getElementById('btnPreview');
+            const originalText = btnPreview.innerHTML;
+            btnPreview.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Memuat...';
+            btnPreview.disabled = true;
+
+            fetch(`{{ route('laporan.preview') }}?bulan=${bulan}&tahun=${tahun}&jenis=${jenis}`)
+                .then(response => response.json())
+                .then(data => {
+                    const wrapper = document.getElementById('previewContainerWrapper');
+                    const content = document.getElementById('previewContent');
+                    
+                    content.innerHTML = data.html;
+                    
+                    // Add tailwind classes to the table generated by Excel export views
+                    const table = content.querySelector('table');
+                    if(table) {
+                        table.classList.add('min-w-full', 'divide-y', 'divide-gray-200', 'text-sm');
+                        table.style.border = 'none';
+                        const ths = table.querySelectorAll('th');
+                        ths.forEach(th => {
+                            th.classList.add('px-4', 'py-3', 'bg-slate-100', 'text-left', 'font-semibold', 'text-slate-700', 'uppercase', 'tracking-wider', 'border', 'border-slate-200');
+                            th.style.border = '';
+                            th.style.backgroundColor = '';
+                        });
+                        const tds = table.querySelectorAll('td');
+                        tds.forEach(td => {
+                            td.classList.add('px-4', 'py-2', 'whitespace-nowrap', 'border', 'border-slate-200');
+                            td.style.border = '';
+                        });
+                    }
+                    
+                    wrapper.classList.remove('hidden');
+                })
+                .catch(error => {
+                    console.error('Error fetching preview:', error);
+                    alert('Gagal memuat preview laporan.');
+                })
+                .finally(() => {
+                    btnPreview.innerHTML = originalText;
+                    btnPreview.disabled = false;
+                });
         }
     </script>
 </x-app-layout>

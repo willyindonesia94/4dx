@@ -99,6 +99,21 @@ class LaporanBulananController extends Controller
     }
 
 
+    public function previewReport(Request $request)
+    {
+        $bulan = $request->input('bulan', date('n'));
+        $tahun = $request->input('tahun', date('Y'));
+        $jenis = $request->input('jenis', 'lm');
+
+        if ($jenis === 'wig') {
+            $export = new \App\Exports\WigReportExport($tahun, $bulan);
+            return response()->json(['html' => $export->view()->render()]);
+        }
+
+        $export = new \App\Exports\MonthlyReportExport($tahun, $bulan);
+        return response()->json(['html' => $export->view()->render()]);
+    }
+
     public function exportLengkap(Request $request)
     {
         $bulan = $request->input('bulan', date('n'));
