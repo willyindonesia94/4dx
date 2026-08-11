@@ -6,11 +6,20 @@ use Illuminate\Http\Request;
 
 class MasterUnitController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $units = MasterUnit::with('parent')->get();
+        $search = $request->query('search');
+        
+        $query = MasterUnit::with('parent');
+        
+        if ($search) {
+            $query->where('name', 'like', "%{$search}%")
+                  ->orWhere('type', 'like', "%{$search}%");
+        }
+        
+        $units = $query->get();
         $parentUnits = MasterUnit::whereIn('type', ['UID', 'UP3'])->get();
-        return view('master-units.index', compact('units', 'parentUnits'));
+        return view('master-units.index', compact('units', 'parentUnits', 'search'));
     }
 
     public function store(Request $request)

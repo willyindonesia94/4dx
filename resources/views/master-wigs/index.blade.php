@@ -30,13 +30,23 @@
                     </a>
                 </div>
 
-                <button @click="openModal = true" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-lg shadow-sm transition-colors flex items-center text-sm">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    Tambah WIG
-                </button>
+                <div class="flex items-center space-x-3">
+                    <!-- Search Form -->
+                    <form action="{{ route('master-wigs.index') }}" method="GET" class="relative">
+                        @if(request('status'))
+                            <input type="hidden" name="status" value="{{ request('status') }}">
+                        @endif
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari WIG atau Sub Bidang..." class="w-64 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
+                    </form>
+
+                    <button @click="openModal = true" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-lg shadow-sm transition-colors flex items-center text-sm">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Tambah WIG
+                    </button>
+                </div>
             </div>
             
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl border border-slate-200 mt-2">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl border border-slate-200 mt-2" id="ajax-container">
                 <div class="p-0 bg-white overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-slate-50/80 border-b border-slate-200">
@@ -67,7 +77,7 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium flex justify-center items-center space-x-2">
-                                    @if(!$wig->is_approved && auth()->user()->hasRole('Super Admin'))
+                                    @if(!$wig->is_approved && auth()->user()->hasAnyRole(['Super Admin', 'Admin UID']))
                                         <form action="{{ route('master-wigs.approve', $wig->id) }}" method="POST" class="inline m-0">
                                             @csrf
                                             <button type="submit" class="text-green-600 hover:text-green-900 hover:bg-green-100 font-bold bg-green-50 px-3 py-1.5 rounded-md border border-green-200 transition-colors text-xs">Setujui</button>

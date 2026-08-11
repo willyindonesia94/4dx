@@ -7,13 +7,18 @@
 
     <div class="py-12" x-data="{ openModal: false, isEdit: false, formId: null, formName: '' }">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="flex justify-end mb-4">
-                <button @click="openModal = true; isEdit = false; formName = ''; formId = null;" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow">
-                    + Tambah Satuan
-                </button>
+            <div class="flex justify-between sm:justify-end mb-4">
+                <div class="flex items-center space-x-3 w-full sm:w-auto">
+                    <form action="{{ route('master-satuans.index') }}" method="GET" class="relative w-full sm:w-auto">
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari Satuan..." class="w-full sm:w-64 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
+                    </form>
+                    <button @click="openModal = true; isEdit = false; formName = ''; formId = null;" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow whitespace-nowrap">
+                        + Tambah Satuan
+                    </button>
+                </div>
             </div>
             
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg" id="ajax-container">
                 <div class="p-6 bg-white border-b border-gray-200">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -42,6 +47,7 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
                 </div>
             </div>
         </div>

@@ -10,7 +10,7 @@
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 px-2 sm:px-0">
                 <p class="text-gray-600 text-sm sm:text-base">Berikut adalah daftar realisasi pencapaian Lead Measures yang telah diinput.</p>
                 <div class="flex flex-wrap gap-2 w-full sm:w-auto mt-3 sm:mt-0">
-                    @if(auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin'))
+                    @if(auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin') || auth()->user()->role_name === 'Admin UID' || auth()->user()->hasRole('Admin UID'))
                         <a href="{{ route('realisasis.template') }}" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2 px-4 rounded-lg shadow-sm border border-indigo-200 transition-colors text-sm flex items-center">
                             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                             Template
@@ -142,8 +142,8 @@
                             @if(!$isUp3User)
                             <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
                                 @php
-                                    $canEdit = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin']) || \Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now());
-                                    $canDelete = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin']);
+                                    $canEdit = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID']) || \Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now());
+                                    $canDelete = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
                                 @endphp
 
                                 @if($canEdit)

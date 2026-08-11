@@ -22,14 +22,21 @@
                     </nav>
                 </div>
 
-                <div class="flex-shrink-0">
+                <div class="flex-shrink-0 flex items-center space-x-3">
+                    <!-- Search Form -->
+                    <form action="{{ route('users.index') }}" method="GET" class="relative">
+                        @if(request('level'))
+                            <input type="hidden" name="level" value="{{ request('level') }}">
+                        @endif
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari Nama atau Email..." class="w-64 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
+                    </form>
                     <a href="{{ route('users.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow whitespace-nowrap">
                         + Tambah Pengguna
                     </a>
                 </div>
             </div>
             
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6" id="ajax-container">
                 <div class="p-0 sm:p-6 bg-white border-b border-gray-200 overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">

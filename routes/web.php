@@ -80,8 +80,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('sesi-wigs', \App\Http\Controllers\SesiWigController::class);
     
 
-    Route::get('/realisasis/template', [\App\Http\Controllers\RealizationController::class, 'downloadTemplate'])->name('realisasis.template')->middleware('role:Super Admin');
-    Route::post('/realisasis/import', [\App\Http\Controllers\RealizationController::class, 'import'])->name('realisasis.import')->middleware('role:Super Admin');
+    Route::get('/realisasis/template', [\App\Http\Controllers\RealizationController::class, 'downloadTemplate'])->name('realisasis.template')->middleware('role:Super Admin|Admin UID');
+    Route::post('/realisasis/import', [\App\Http\Controllers\RealizationController::class, 'import'])->name('realisasis.import')->middleware('role:Super Admin|Admin UID');
     Route::resource('realisasis', \App\Http\Controllers\RealizationController::class)->except(['show']);
     
     // Realisasi WIG
@@ -89,8 +89,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/realisasi-wig', [\App\Http\Controllers\RealisasiWigController::class, 'store'])->name('realisasi-wig.store');
     Route::put('/realisasi-wig/{realisasi_wig}', [\App\Http\Controllers\RealisasiWigController::class, 'update'])->name('realisasi-wig.update');
     Route::delete('/realisasi-wig/{realisasi_wig}', [\App\Http\Controllers\RealisasiWigController::class, 'destroy'])->name('realisasi-wig.destroy');
-    Route::get('/realisasi-wig/template', [\App\Http\Controllers\RealisasiWigController::class, 'downloadTemplate'])->name('realisasi-wig.template')->middleware('role:Super Admin');
-    Route::post('/realisasi-wig/import', [\App\Http\Controllers\RealisasiWigController::class, 'import'])->name('realisasi-wig.import')->middleware('role:Super Admin');
+    Route::get('/realisasi-wig/template', [\App\Http\Controllers\RealisasiWigController::class, 'downloadTemplate'])->name('realisasi-wig.template')->middleware('role:Super Admin|Admin UID');
+    Route::post('/realisasi-wig/import', [\App\Http\Controllers\RealisasiWigController::class, 'import'])->name('realisasi-wig.import')->middleware('role:Super Admin|Admin UID');
     Route::get('/realisasi-wig/target', [\App\Http\Controllers\RealisasiWigController::class, 'getTargetBulanan'])->name('realisasi-wig.target');
 
     // Laporan Bulanan & Import Historis
@@ -103,7 +103,12 @@ Route::middleware('auth')->group(function () {
 
     // User Management (Superadmin Only)
     Route::resource('users', \App\Http\Controllers\UserController::class)
-        ->middleware(['role:Super Admin']);
+        ->middleware(['role:Super Admin|Admin UID']);
+        
+    // Audit Log
+    Route::get('/audit-logs', [\App\Http\Controllers\AuditLogController::class, 'index'])
+        ->middleware(['role:Super Admin|Admin UID|General Manager UID|Manager UP3|Manager ULP|Admin UP3|Admin ULP'])
+        ->name('audit-logs.index');
 });
 
 Route::get('/run-migrate-temp', function() {

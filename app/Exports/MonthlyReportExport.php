@@ -27,7 +27,7 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
     {
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin']);
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
         $isUlpLevel = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'ULP') || str_contains(strtoupper($user->role_name ?? ''), 'ULP'));
         $isUp3Level = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'UP3') || str_contains(strtoupper($user->role_name ?? ''), 'UP3'));
 

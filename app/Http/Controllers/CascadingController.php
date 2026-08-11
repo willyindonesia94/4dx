@@ -14,7 +14,7 @@ class CascadingController extends Controller
     {
         $user = Auth::user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasRole') && $user->hasRole('Super Admin')));
+        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin', 'admin uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Admin UID'])));
         
         $wigsQuery = MasterWig::where('is_approved', true)
             ->with(['breakdowns.unit', 'breakdowns.satuan']);
@@ -38,7 +38,7 @@ class CascadingController extends Controller
         $user = Auth::user();
         $userRole = strtolower(trim($user->role_name ?? ''));
         $unitType = $user->unit ? strtoupper(trim((string)$user->unit->type)) : '';
-        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin']) || (method_exists($user, 'hasRole') && $user->hasRole('Super Admin')));
+        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin', 'admin uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Admin UID'])));
         
         $isUid = !$isSuperAdmin && ($unitType === 'UID' || str_contains($userRole, 'uid') || (str_contains($userRole, 'bidang') && !str_contains($userRole, 'up3')));
         $isUp3 = !$isSuperAdmin && ($unitType === 'UP3' || str_contains($userRole, 'up3'));
@@ -95,7 +95,7 @@ class CascadingController extends Controller
         $user = Auth::user();
         $userRole = strtolower(trim($user->role_name ?? ''));
         $unitType = $user->unit ? strtoupper(trim((string)$user->unit->type)) : '';
-        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin']) || (method_exists($user, 'hasRole') && $user->hasRole('Super Admin')));
+        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin', 'admin uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Admin UID'])));
         $isUp3 = !$isSuperAdmin && ($unitType === 'UP3' || str_contains($userRole, 'up3'));
 
         if ($isUp3 && $user->unit_id) {

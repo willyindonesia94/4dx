@@ -47,13 +47,18 @@
                         </button>
                     </div>
 
-                    <button @click="openCreate()" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow transition-all duration-150 shrink-0">
-                        <svg class="w-4 h-4 text-indigo-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
-                        <span x-text="activeTab === 'UID_BIDANG' ? 'Tambah Bidang UID' : (activeTab === 'UID_SUBBIDANG' ? 'Tambah Sub-Bidang UID' : (activeTab === 'UP3_BIDANG' ? 'Tambah Bidang UP3' : 'Tambah Bidang ULP'))"></span>
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <form action="{{ route('master-bidangs.index') }}" method="GET" class="relative">
+                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari Bidang..." class="w-64 px-4 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
+                        </form>
+                        <button @click="openCreate()" class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:shadow transition-all duration-150 shrink-0">
+                            <svg class="w-4 h-4 text-indigo-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                            <span x-text="activeTab === 'UID_BIDANG' ? 'Tambah Bidang UID' : (activeTab === 'UID_SUBBIDANG' ? 'Tambah Sub-Bidang UID' : (activeTab === 'UP3_BIDANG' ? 'Tambah Bidang UP3' : 'Tambah Bidang ULP'))"></span>
+                        </button>
+                    </div>
                 </div>
                 
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-2xl border border-slate-200">
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-2xl border border-slate-200" id="ajax-container">
                     <div class="p-0 bg-white overflow-x-auto">
                         
                         <!-- TAB 1: BIDANG UID -->

@@ -19,7 +19,7 @@ class RealisasiWigController extends Controller
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin']);
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
 
         $query = RealisasiWig::with(['wig.satuan', 'unit', 'user'])
                              ->where('bulan', $bulanFilter)
@@ -42,7 +42,7 @@ class RealisasiWigController extends Controller
             $query->where('unit_id', $user->unit_id);
         }
 
-        $realisasis = $query->orderBy('unit_id', 'asc')->get();
+        $realisasis = $query->orderBy('unit_id', 'asc')->paginate(10)->withQueryString();
         
         // We only show WIGs that have breakdown for this user's unit (for the input modal)
         $unitId = $user->unit_id;
@@ -119,7 +119,7 @@ class RealisasiWigController extends Controller
         ]);
 
         // UP3 restriction: only current month
-        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin'])) {
+        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID'])) {
             $currentMonth = (int)date('n');
             $currentYear = (int)date('Y');
             if ((int)$request->bulan !== $currentMonth || (int)$request->tahun !== $currentYear) {
@@ -207,7 +207,7 @@ class RealisasiWigController extends Controller
 
     private function authorizeSuperadmin()
     {
-        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin'])) {
+        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID'])) {
             abort(403, 'Akses Ditolak: Hanya Superadmin yang dapat mengedit/menghapus Realisasi WIG.');
         }
     }

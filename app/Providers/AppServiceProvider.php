@@ -20,6 +20,22 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         \Carbon\Carbon::setLocale('id');
+
+        \Illuminate\Support\Facades\Event::listen(function (\Illuminate\Auth\Events\Login $event) {
+            activity()
+                ->causedBy($event->user)
+                ->event('login')
+                ->log('User logged in');
+        });
+
+        \Illuminate\Support\Facades\Event::listen(function (\Illuminate\Auth\Events\Logout $event) {
+            if ($event->user) {
+                activity()
+                    ->causedBy($event->user)
+                    ->event('logout')
+                    ->log('User logged out');
+            }
+        });
         
         try {
             if (!\Illuminate\Support\Facades\Schema::hasTable('sesi_wig_presenters')) {

@@ -6,10 +6,17 @@ use Illuminate\Http\Request;
 
 class MasterSatuanController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $satuans = MasterSatuan::all();
-        return view('master-satuans.index', compact('satuans'));
+        $search = $request->query('search');
+        $query = MasterSatuan::query();
+        
+        if ($search) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+        
+        $satuans = $query->get();
+        return view('master-satuans.index', compact('satuans', 'search'));
     }
 
     public function store(Request $request)

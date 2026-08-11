@@ -7,12 +7,20 @@ use Illuminate\Http\Request;
 
 class MasterBidangController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $bidangs = MasterBidang::with('parent')->orderBy('name', 'asc')->get();
+        $search = $request->query('search');
+        $query = MasterBidang::with('parent')->orderBy('name', 'asc');
+        
+        if ($search) {
+            $query->where('name', 'like', "%{$search}%")
+                  ->orWhere('level', 'like', "%{$search}%");
+        }
+        
+        $bidangs = $query->get();
         // Semua bidang bisa berpotensi menjadi parent untuk level di bawahnya
         $parentBidangs = MasterBidang::whereIn('level', ['UID_BIDANG', 'UID_SUBBIDANG', 'UP3_BIDANG'])->orderBy('name', 'asc')->get(['id', 'name', 'level']);
-        return view('master-bidangs.index', compact('bidangs', 'parentBidangs'));
+        return view('master-bidangs.index', compact('bidangs', 'parentBidangs', 'search'));
     }
 
     public function store(Request $request)

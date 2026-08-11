@@ -12,6 +12,7 @@ class LeadMeasureController extends Controller
     {
         $user = auth()->user();
         $status = $request->query('status', 'all'); // 'all' or 'draft'
+        $search = $request->query('search', '');
         
         // Matrix filtering logic:
         $query = MasterLm::with(['wig', 'satuan']);
@@ -20,25 +21,28 @@ class LeadMeasureController extends Controller
             $query->where('is_approved', false);
         }
         
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('judul_lm', 'like', "%{$search}%")
+                  ->orWhereHas('wig', function($w) use ($search) {
+                      $w->where('judul', 'like', "%{$search}%")
+                        ->orWhere('divisi', 'like', "%{$search}%");
+                  });
+            });
+        }
+        
         // If not superadmin and matrix_group_id is not ALL, optionally filter based on matrix_group_id
-        if ($user && !$user->hasRole('Super Admin') && $user->matrix_group_id !== 'ALL') {
+        if ($user && !$user->hasAnyRole(['Super Admin', 'Admin UID']) && $user->matrix_group_id !== 'ALL') {
             $query->whereHas('wig', function($q) use ($user) {
                 // Assuming we show LMs where the user's matrix_group_id matches the WIG's divisi
                 $q->where('divisi', $user->matrix_group_id);
             });
         }
         
-        $lms = $query->get()->sortBy([
-            fn($a, $b) => $a->wig_id <=> $b->wig_id,
-            function ($a, $b) {
-                preg_match('/LM-?(\d+)/i', $a->judul_lm, $mA);
-                preg_match('/LM-?(\d+)/i', $b->judul_lm, $mB);
-                return (int)($mA[1] ?? 999) <=> (int)($mB[1] ?? 999);
-            }
-        ])->values();
+        $lms = $query->orderBy('wig_id')->orderBy('judul_lm')->get();
         $wigs = MasterWig::all();
         $satuans = MasterSatuan::all();
-        return view('master-lms.index', compact('lms', 'status', 'wigs', 'satuans'));
+        return view('master-lms.index', compact('lms', 'status', 'search', 'wigs', 'satuans'));
     }
 
     public function create()

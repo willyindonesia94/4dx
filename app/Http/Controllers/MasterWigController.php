@@ -12,6 +12,7 @@ class MasterWigController extends Controller
     public function index(Request $request)
     {
         $status = $request->query('status', 'all'); // 'all' or 'draft'
+        $search = $request->query('search', '');
         
         $query = MasterWig::with(['unitPemilik', 'satuan']);
         
@@ -19,11 +20,18 @@ class MasterWigController extends Controller
             $query->where('is_approved', false);
         }
         
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('judul', 'like', "%{$search}%")
+                  ->orWhere('divisi', 'like', "%{$search}%");
+            });
+        }
+        
         $wigs = $query->get();
         $units = MasterUnit::all();
         $satuans = MasterSatuan::all();
         $bidangs = MasterBidang::where('level', 'UID_SUBBIDANG')->orderBy('name', 'asc')->get();
-        return view('master-wigs.index', compact('wigs', 'status', 'units', 'satuans', 'bidangs'));
+        return view('master-wigs.index', compact('wigs', 'status', 'search', 'units', 'satuans', 'bidangs'));
     }
 
     public function create()

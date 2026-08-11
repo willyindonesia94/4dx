@@ -14,6 +14,7 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $selectedLevel = $request->query('level');
+        $search = $request->query('search');
         $levels = ['Super Admin', 'UID', 'UP3', 'ULP'];
 
         $query = User::with('unit');
@@ -26,9 +27,16 @@ class UserController extends Controller
             }
         }
 
-        $users = $query->paginate(20)->appends($request->query());
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->paginate(20)->withQueryString();
         
-        return view('users.index', compact('users', 'levels', 'selectedLevel'));
+        return view('users.index', compact('users', 'levels', 'selectedLevel', 'search'));
     }
 
     public function create()

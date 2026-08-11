@@ -20,7 +20,7 @@ class RealizationController extends Controller
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin']);
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
         $isUlpLevel = !$isSuperAdmin && $user && $user->unit && strtoupper(trim((string)$user->unit->type)) === 'ULP';
 
         $query = Realisasi::with(['lm.wig', 'lm.satuan', 'user', 'unit'])
@@ -82,7 +82,7 @@ class RealizationController extends Controller
     {
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin']);
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
 
         $lmQuery = MasterLm::query();
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
@@ -122,7 +122,7 @@ class RealizationController extends Controller
         
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin']);
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
 
         $lmQuery = MasterLm::query();
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
@@ -169,7 +169,7 @@ class RealizationController extends Controller
      */
     private function checkEditRule(Realisasi $realisasi)
     {
-        if (in_array(auth()->user()->role_name, ['Super Admin', 'superadmin'])) {
+        if (in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID'])) {
             return; // Superadmin has full access
         }
 
@@ -180,7 +180,7 @@ class RealizationController extends Controller
 
     private function checkDeleteRule(Realisasi $realisasi)
     {
-        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin'])) {
+        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID'])) {
             abort(403, 'Akses Ditolak: Hanya Superadmin yang dapat menghapus data realisasi LM.');
         }
     }

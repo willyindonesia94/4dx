@@ -34,6 +34,14 @@
                 </div>
 
                 <div class="flex flex-wrap items-center gap-3">
+                    <!-- Search Form -->
+                    <form action="{{ route('master-lms.index') }}" method="GET" class="relative">
+                        @if(request('status'))
+                            <input type="hidden" name="status" value="{{ request('status') }}">
+                        @endif
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari LM, WIG, atau Sub Bidang..." class="w-64 sm:w-80 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
+                    </form>
+
                     <a href="{{ route('cascading.lm.template') }}" class="whitespace-nowrap justify-center inline-flex items-center px-4 py-2.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-lg shadow-sm text-sm font-semibold transition-colors">
                         <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                         Template LM
@@ -64,9 +72,9 @@
                 </form>
             </div>
             
-            <div class="mt-4 space-y-4">
+            <div class="mt-4 space-y-4" id="ajax-container">
                 @php
-                    $groupedLms = collect($lms)->groupBy('wig_id');
+                    $groupedLms = $lms->groupBy('wig_id');
                 @endphp
 
                 @forelse($wigs as $wig)
@@ -119,7 +127,7 @@
                                                 @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium flex justify-center items-center space-x-2">
-                                                @if(!$lm->is_approved && auth()->user()->hasRole('Super Admin'))
+                                                @if(!$lm->is_approved && auth()->user()->hasAnyRole(['Super Admin', 'Admin UID']))
                                                     <form action="{{ route('master-lms.approve', $lm->id) }}" method="POST" class="inline m-0">
                                                         @csrf
                                                         <button type="submit" class="text-green-600 hover:text-green-900 hover:bg-green-100 font-bold bg-green-50 px-3 py-1.5 rounded-md border border-green-200 transition-colors text-xs">Setujui</button>
@@ -155,6 +163,7 @@
                         </div>
                     </div>
                 @endif
+                
             </div>
 
             <!-- Create Modal -->
