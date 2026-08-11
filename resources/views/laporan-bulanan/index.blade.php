@@ -203,7 +203,7 @@
                 window.location.href = `{{ route('laporan.exportWig') ?? '#' }}?bulan=${bulan}&tahun=${tahun}`;
             } else if (jenis === 'lengkap') {
                 const wigId = document.getElementById('selectWigId').value;
-                window.open(`{{ route('laporan.exportLengkap') ?? '#' }}?bulan=${bulan}&tahun=${tahun}&wig_id=${wigId}`, '_blank');
+                window.location.href = `{{ route('laporan.exportLengkap') ?? '#' }}?bulan=${bulan}&tahun=${tahun}&wig_id=${wigId}`;
             }
         }
     </script>

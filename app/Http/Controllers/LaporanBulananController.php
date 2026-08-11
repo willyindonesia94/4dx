@@ -357,7 +357,14 @@ class LaporanBulananController extends Controller
             $reportData[$wig->id] = $wigData;
         }
         
-        return view('exports.lengkap_html', compact('bulan', 'tahun', 'wigs', 'units', 'isUlpLevel', 'isUp3Level', 'user', 'isAllBulan', 'bulanT', 'tahunT', 'reportData'));
+        ini_set('memory_limit', '-1');
+        ini_set('max_execution_time', '300');
+        
+        $pdf = Pdf::loadView('exports.lengkap_html', compact('bulan', 'tahun', 'wigs', 'units', 'isUlpLevel', 'isUp3Level', 'user', 'isAllBulan', 'bulanT', 'tahunT', 'reportData'))
+                  ->setPaper('a3', 'landscape');
+                  
+        $filename = "Laporan_Lengkap_WIG_{$tahunT}_{$bulanT}.pdf";
+        return $pdf->download($filename);
     }
 
 }
