@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             
             @if (session('success'))
                 <div class="mb-4 bg-green-50 border-l-4 border-green-400 p-4 rounded-md shadow-sm">
@@ -81,51 +81,53 @@
                         }">
                         
                             <div class="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Bulan</th>
-                                            <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Minggu 1</th>
-                                            <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Minggu 2</th>
-                                            <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Minggu 3</th>
-                                            <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Minggu 4</th>
-                                            <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Minggu 5</th>
-                                            <th class="px-5 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Opsi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200">
-                                        @php
-                                            $monthsIndo = [1=>'Januari', 2=>'Februari', 3=>'Maret', 4=>'April', 5=>'Mei', 6=>'Juni', 7=>'Juli', 8=>'Agustus', 9=>'September', 10=>'Oktober', 11=>'November', 12=>'Desember'];
-                                        @endphp
-                                        @foreach($periodes as $p)
-                                        <tr class="hover:bg-gray-50 transition-colors">
-                                            <td class="px-5 py-4 whitespace-nowrap text-sm font-bold text-indigo-900 bg-gray-50/50">
-                                                {{ $monthsIndo[$p->bulan] }}
-                                            </td>
-                                            <td class="px-3 py-4 whitespace-nowrap text-center text-xs text-gray-700">
-                                                @if($p->start_m1) <span class="font-medium">{{ \Carbon\Carbon::parse($p->start_m1)->locale('id')->translatedFormat('d M') }}</span> <br> <span class="text-gray-400 text-[10px]">s/d</span> <br> <span class="font-medium">{{ \Carbon\Carbon::parse($p->end_m1)->locale('id')->translatedFormat('d M') }}</span> @else - @endif
-                                            </td>
-                                            <td class="px-3 py-4 whitespace-nowrap text-center text-xs text-gray-700">
-                                                @if($p->start_m2) <span class="font-medium">{{ \Carbon\Carbon::parse($p->start_m2)->locale('id')->translatedFormat('d M') }}</span> <br> <span class="text-gray-400 text-[10px]">s/d</span> <br> <span class="font-medium">{{ \Carbon\Carbon::parse($p->end_m2)->locale('id')->translatedFormat('d M') }}</span> @else - @endif
-                                            </td>
-                                            <td class="px-3 py-4 whitespace-nowrap text-center text-xs text-gray-700">
-                                                @if($p->start_m3) <span class="font-medium">{{ \Carbon\Carbon::parse($p->start_m3)->locale('id')->translatedFormat('d M') }}</span> <br> <span class="text-gray-400 text-[10px]">s/d</span> <br> <span class="font-medium">{{ \Carbon\Carbon::parse($p->end_m3)->locale('id')->translatedFormat('d M') }}</span> @else - @endif
-                                            </td>
-                                            <td class="px-3 py-4 whitespace-nowrap text-center text-xs text-gray-700">
-                                                @if($p->start_m4) <span class="font-medium">{{ \Carbon\Carbon::parse($p->start_m4)->locale('id')->translatedFormat('d M') }}</span> <br> <span class="text-gray-400 text-[10px]">s/d</span> <br> <span class="font-medium">{{ \Carbon\Carbon::parse($p->end_m4)->locale('id')->translatedFormat('d M') }}</span> @else - @endif
-                                            </td>
-                                            <td class="px-3 py-4 whitespace-nowrap text-center text-xs text-gray-700">
-                                                @if($p->start_m5) <span class="font-medium">{{ \Carbon\Carbon::parse($p->start_m5)->locale('id')->translatedFormat('d M') }}</span> <br> <span class="text-gray-400 text-[10px]">s/d</span> <br> <span class="font-medium">{{ \Carbon\Carbon::parse($p->end_m5)->locale('id')->translatedFormat('d M') }}</span> @else - @endif
-                                            </td>
-                                            <td class="px-5 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                                <button @click="openEdit({{ json_encode($p) }})" class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150">
-                                                    Edit
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Bulan</th>
+                                                <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Minggu 1</th>
+                                                <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Minggu 2</th>
+                                                <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Minggu 3</th>
+                                                <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Minggu 4</th>
+                                                <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Minggu 5</th>
+                                                <th class="px-5 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Opsi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            @php
+                                                $monthsIndo = [1=>'Januari', 2=>'Februari', 3=>'Maret', 4=>'April', 5=>'Mei', 6=>'Juni', 7=>'Juli', 8=>'Agustus', 9=>'September', 10=>'Oktober', 11=>'November', 12=>'Desember'];
+                                            @endphp
+                                            @foreach($periodes as $p)
+                                            <tr class="hover:bg-gray-50 transition-colors">
+                                                <td class="px-5 py-4 whitespace-nowrap text-sm font-bold text-indigo-900 bg-gray-50/50">
+                                                    {{ $monthsIndo[$p->bulan] }}
+                                                </td>
+                                                <td class="px-3 py-4 whitespace-nowrap text-center text-xs text-gray-700">
+                                                    @if($p->start_m1) <span class="font-medium">{{ \Carbon\Carbon::parse($p->start_m1)->locale('id')->translatedFormat('d M') }}</span> <br> <span class="text-gray-400 text-[10px]">s/d</span> <br> <span class="font-medium">{{ \Carbon\Carbon::parse($p->end_m1)->locale('id')->translatedFormat('d M') }}</span> @else - @endif
+                                                </td>
+                                                <td class="px-3 py-4 whitespace-nowrap text-center text-xs text-gray-700">
+                                                    @if($p->start_m2) <span class="font-medium">{{ \Carbon\Carbon::parse($p->start_m2)->locale('id')->translatedFormat('d M') }}</span> <br> <span class="text-gray-400 text-[10px]">s/d</span> <br> <span class="font-medium">{{ \Carbon\Carbon::parse($p->end_m2)->locale('id')->translatedFormat('d M') }}</span> @else - @endif
+                                                </td>
+                                                <td class="px-3 py-4 whitespace-nowrap text-center text-xs text-gray-700">
+                                                    @if($p->start_m3) <span class="font-medium">{{ \Carbon\Carbon::parse($p->start_m3)->locale('id')->translatedFormat('d M') }}</span> <br> <span class="text-gray-400 text-[10px]">s/d</span> <br> <span class="font-medium">{{ \Carbon\Carbon::parse($p->end_m3)->locale('id')->translatedFormat('d M') }}</span> @else - @endif
+                                                </td>
+                                                <td class="px-3 py-4 whitespace-nowrap text-center text-xs text-gray-700">
+                                                    @if($p->start_m4) <span class="font-medium">{{ \Carbon\Carbon::parse($p->start_m4)->locale('id')->translatedFormat('d M') }}</span> <br> <span class="text-gray-400 text-[10px]">s/d</span> <br> <span class="font-medium">{{ \Carbon\Carbon::parse($p->end_m4)->locale('id')->translatedFormat('d M') }}</span> @else - @endif
+                                                </td>
+                                                <td class="px-3 py-4 whitespace-nowrap text-center text-xs text-gray-700">
+                                                    @if($p->start_m5) <span class="font-medium">{{ \Carbon\Carbon::parse($p->start_m5)->locale('id')->translatedFormat('d M') }}</span> <br> <span class="text-gray-400 text-[10px]">s/d</span> <br> <span class="font-medium">{{ \Carbon\Carbon::parse($p->end_m5)->locale('id')->translatedFormat('d M') }}</span> @else - @endif
+                                                </td>
+                                                <td class="px-5 py-4 whitespace-nowrap text-center text-sm font-medium">
+                                                    <button @click="openEdit({{ json_encode($p) }})" class="inline-flex items-center px-3 py-1.5 bg-white border border-gray-300 rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-25 transition ease-in-out duration-150">
+                                                        Edit
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                             
                             <!-- Edit Modal -->

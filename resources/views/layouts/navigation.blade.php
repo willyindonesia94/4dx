@@ -240,6 +240,9 @@
                 <x-responsive-nav-link :href="route('master-lms.index')" :active="request()->routeIs('master-lms.*')">
                     {{ __('Master LM') }}
                 </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('master-periodes.index')" :active="request()->routeIs('master-periodes.*')">
+                    {{ __('Master Periode') }}
+                </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
                     {{ __('Pengguna') }}
                 </x-responsive-nav-link>
@@ -254,12 +257,7 @@
                 </x-responsive-nav-link>
             </div>
             @endrole
-            
-            @hasanyrole('Super Admin|Admin UID|General Manager UID|Manager UP3|Manager ULP|Admin UP3|Admin ULP')
-            <x-responsive-nav-link :href="route('audit-logs.index')" :active="request()->routeIs('audit-logs.*')">
-                {{ __('Audit Log') }}
-            </x-responsive-nav-link>
-            @endhasanyrole
+
         </div>
 
         <!-- Responsive Settings Options (Bottom User Profile) -->
