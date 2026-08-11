@@ -169,24 +169,34 @@ class LaporanBulananController extends Controller
             $wigTargetTot = 0;
             $wigRealTot = 0;
             
+            $nonSummableSatuans = [1, 2, 6, 14];
+            $isNonSummableWig = in_array($wig->satuan_id, $nonSummableSatuans);
+            $targetBulan = $isAllBulan ? 12 : $bulanT;
+            $colBln = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][$targetBulan];
+
             $wigTargetQuery = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
                 ->where('wig_id', $wig->id)->where('tahun', $tahunT);
             $wigRealQuery = \Illuminate\Support\Facades\DB::table('realisasi_wigs')
                 ->where('wig_id', $wig->id)->where('tahun', $tahunT);
                 
             if (!$isSuperAdmin && $user && $user->unit_id) {
+                // If it's a specific user (UP3), they only see their own unit
                 $wigTargetQuery->where('unit_id', $user->unit_id);
                 $wigRealQuery->where('unit_id', $user->unit_id);
-            }
-
-            if ($isAllBulan) {
-                $wigTargetTot = $wigTargetQuery->sum(\Illuminate\Support\Facades\DB::raw('target_jan + target_feb + target_mar + target_apr + target_mei + target_jun + target_jul + target_agu + target_sep + target_okt + target_nov + target_des'));
-                $wigRealTot = $wigRealQuery->sum('angka_realisasi');
-            } else {
-                $colBln = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][$bulanT];
+                
                 $wigTargetTot = $wigTargetQuery->sum($colBln);
-                $wigRealQuery->where('bulan', $bulanT);
-                $wigRealTot = $wigRealQuery->sum('angka_realisasi');
+                $wigRealTot = $wigRealQuery->where('bulan', $targetBulan)->sum('angka_realisasi') ?? 0;
+            } else {
+                // UID Target Level (unit_id = 1)
+                $wigTargetQuery->where('unit_id', 1);
+                $wigTargetTot = $wigTargetQuery->sum($colBln);
+                
+                $wigRealQuery->where('bulan', $targetBulan)->where('unit_id', '!=', 1);
+                if ($isNonSummableWig) {
+                    $wigRealTot = $wigRealQuery->avg('angka_realisasi') ?? 0;
+                } else {
+                    $wigRealTot = $wigRealQuery->sum('angka_realisasi') ?? 0;
+                }
             }
 
             $pctUid = 0;
@@ -211,23 +221,12 @@ class LaporanBulananController extends Controller
             // Unit Data
             foreach ($units as $unit) {
                 // Unit WIG Target & Realisasi
-                $uT = 0; $uR = 0;
-                if ($isAllBulan) {
-                    $uT = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
-                        ->where('wig_id', $wig->id)->where('tahun', $tahunT)->where('unit_id', $unit->id)
-                        ->sum(\Illuminate\Support\Facades\DB::raw('target_jan + target_feb + target_mar + target_apr + target_mei + target_jun + target_jul + target_agu + target_sep + target_okt + target_nov + target_des'));
-                    $uR = \Illuminate\Support\Facades\DB::table('realisasi_wigs')
-                        ->where('wig_id', $wig->id)->where('tahun', $tahunT)->where('unit_id', $unit->id)
-                        ->sum('angka_realisasi');
-                } else {
-                    $colBln = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][$bulanT];
-                    $uT = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
-                        ->where('wig_id', $wig->id)->where('tahun', $tahunT)->where('unit_id', $unit->id)
-                        ->sum($colBln);
-                    $uR = \Illuminate\Support\Facades\DB::table('realisasi_wigs')
-                        ->where('wig_id', $wig->id)->where('tahun', $tahunT)->where('bulan', $bulanT)->where('unit_id', $unit->id)
-                        ->sum('angka_realisasi');
-                }
+                $uT = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
+                    ->where('wig_id', $wig->id)->where('tahun', $tahunT)->where('unit_id', $unit->id)
+                    ->sum($colBln);
+                $uR = \Illuminate\Support\Facades\DB::table('realisasi_wigs')
+                    ->where('wig_id', $wig->id)->where('tahun', $tahunT)->where('bulan', $targetBulan)->where('unit_id', $unit->id)
+                    ->sum('angka_realisasi') ?? 0;
 
                 $uPct = 0;
                 if ($uT > 0 || $uR > 0) {
@@ -255,11 +254,13 @@ class LaporanBulananController extends Controller
             // LM Data
             foreach ($wig->masterLms->take(3) as $lm) {
                 $lmPolaritas = strtolower(trim($lm->polaritas ?? 'positif'));
+                $isNonSummableLm = in_array($lm->satuan_id, $nonSummableSatuans);
                 
                 $lmTotalTarget = 0;
                 $lmTotalReal = 0;
                 $lmMenang = 0;
                 $lmKalah = 0;
+                $unitCount = count($units);
 
                 // Calculate LM per Unit per Week
                 foreach ($units as $unit) {
@@ -285,7 +286,7 @@ class LaporanBulananController extends Controller
                                 })
                                 ->where('tanggal_input', '>=', $wStart . ' 00:00:00')
                                 ->where('tanggal_input', '<=', $wEnd . ' 23:59:59')
-                                ->sum('angka_realisasi');
+                                ->sum('angka_realisasi') ?? 0;
                         }
                         
                         if ($wT > 0 || $wR > 0) {
@@ -307,7 +308,7 @@ class LaporanBulananController extends Controller
                     
                     $allTargets = \App\Models\BreakdownLm::where('lm_id', $lm->id)
                         ->where('unit_id', $unit->id)
-                        ->where('bulan', $bulanT)
+                        ->where('bulan', $targetBulan)
                         ->where('tahun', $tahunT)
                         ->get();
                     
@@ -332,10 +333,35 @@ class LaporanBulananController extends Controller
                         $lmKalah++;
                     }
 
-                    $lmTotalTarget += $unitLmTotalT;
                     $lmTotalReal += $unitLmTotalR;
+                    
+                    if (!$isSuperAdmin && $user && $user->unit_id && $user->unit_id == $unit->id) {
+                        $lmTotalTarget = $unitLmTotalT;
+                        $lmTotalReal = $unitLmTotalR;
+                    }
 
                     $wigData['units'][$unit->id]['lms'][$lm->id] = $unitLmWeeks;
+                }
+
+                if (!$isSuperAdmin && $user && $user->unit_id) {
+                    // Already set in loop
+                } else {
+                    // UID Target Level (unit_id = 1)
+                    $allUidTargets = \App\Models\BreakdownLm::where('lm_id', $lm->id)
+                        ->where('unit_id', 1)
+                        ->where('bulan', $targetBulan)
+                        ->where('tahun', $tahunT)
+                        ->get();
+                        
+                    $monthlyUidTargetRecord = $allUidTargets->sortByDesc(function ($t) {
+                        return \Carbon\Carbon::parse($t->periode_start)->diffInDays(\Carbon\Carbon::parse($t->periode_end));
+                    })->first();
+                    
+                    $lmTotalTarget = $monthlyUidTargetRecord ? $monthlyUidTargetRecord->angka_target : 0;
+                    
+                    if ($isNonSummableLm && $unitCount > 0) {
+                        $lmTotalReal = $lmTotalReal / $unitCount;
+                    }
                 }
 
                 $lmOverallPct = 0;

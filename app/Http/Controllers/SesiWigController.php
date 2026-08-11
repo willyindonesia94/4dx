@@ -156,32 +156,32 @@ class SesiWigController extends Controller
             }
         }
 
+        $nonSummableSatuans = [1, 2, 6, 14];
+
         // Calculate WIG Realization
         foreach ($wigs as $wig) {
-            $realisasiQuery = \App\Models\RealisasiWig::where('wig_id', $wig->id);
+            $isNonSummable = in_array($wig->satuan_id, $nonSummableSatuans);
+            $targetBulan = $wig_bulan ? (int)$wig_bulan : $endDate->month;
+            
             $targetQuery = \Illuminate\Support\Facades\DB::table('breakdown_wigs')->where('wig_id', $wig->id);
+            $realisasiQuery = \App\Models\RealisasiWig::where('wig_id', $wig->id);
             
-            if ($wig_bulan) {
-                // If filtered by specific month
-                $realisasiQuery->where('tahun', $endDate->year)->where('bulan', $wig_bulan);
-                $targetQuery->where('tahun', $endDate->year);
-                $colBln = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][(int)$wig_bulan];
-                $target = $targetQuery->sum($colBln);
+            // UID Target: Ambil dari unit_id = 1 untuk bulan yang sesuai
+            $targetQuery->where('tahun', $endDate->year)->where('unit_id', 1);
+            $colBln = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][$targetBulan];
+            $target = $targetQuery->sum($colBln);
+            
+            // Realisasi: Tarik data bulan terakhir (karena YTD)
+            $realisasiQuery->where('tahun', $endDate->year)->where('bulan', $targetBulan)->where('unit_id', '!=', 1);
+            
+            if ($isNonSummable) {
+                // Untuk metrik seperti % atau Menit, gunakan Average antar UP3
+                $realisasi = $realisasiQuery->avg('angka_realisasi') ?? 0;
             } else {
-                // Up to session date
-                $realisasiQuery->where(function($query) use ($endDate) {
-                    $query->where('tahun', '<', $endDate->year)
-                          ->orWhere(function($q) use ($endDate) {
-                              $q->where('tahun', $endDate->year)
-                                ->where('bulan', '<=', $endDate->month);
-                          });
-                });
-                $targetQuery->where('tahun', $endDate->year);
-                $target = $targetQuery->sum(\Illuminate\Support\Facades\DB::raw('target_jan + target_feb + target_mar + target_apr + target_mei + target_jun + target_jul + target_agu + target_sep + target_okt + target_nov + target_des'));
+                // Untuk metrik seperti GWh, gunakan Sum antar UP3
+                $realisasi = $realisasiQuery->sum('angka_realisasi') ?? 0;
             }
-            $realisasi = $realisasiQuery->sum('angka_realisasi');
             
-            // Laporan uses breakdown_wigs instead of master_wigs.angka_target
             $wig->total_target = $target;
             $wig->total_realisasi = $realisasi;
             
@@ -198,6 +198,8 @@ class SesiWigController extends Controller
 
         // Calculate LM Realization
         foreach ($lms as $lm) {
+            $isNonSummable = in_array($lm->satuan_id, $nonSummableSatuans);
+            
             $realisasiQuery = \App\Models\Realisasi::where('lm_id', $lm->id)
                 ->where('tanggal_input', '>=', $targetStartDate . ' 00:00:00')
                 ->where('tanggal_input', '<=', $targetEndDate . ' 23:59:59');
@@ -211,10 +213,23 @@ class SesiWigController extends Controller
                     $q->where('unit_id', $lm_unit);
                 });
                 $targetQuery->where('unit_id', $lm_unit);
+                
+                $realisasi = $realisasiQuery->sum('angka_realisasi') ?? 0;
+            } else {
+                // UID Level
+                $targetQuery->where('unit_id', 1);
+                $realisasiQuery->whereHas('user', function($q) {
+                    $q->where('unit_id', '!=', 1);
+                });
+                
+                if ($isNonSummable) {
+                    $realisasi = $realisasiQuery->avg('angka_realisasi') ?? 0;
+                } else {
+                    $realisasi = $realisasiQuery->sum('angka_realisasi') ?? 0;
+                }
             }
 
-            $realisasi = $realisasiQuery->sum('angka_realisasi');
-            $target = $targetQuery->sum('angka_target');
+            $target = $targetQuery->sum('angka_target') ?? 0;
 
             $lm->total_target = $target;
             $lm->total_realisasi = $realisasi;
