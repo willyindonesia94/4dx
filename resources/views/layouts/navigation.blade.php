@@ -94,8 +94,50 @@
                 </div>
             </div>
 
-            <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <!-- Settings Dropdown & Notifications -->
+            <div class="hidden sm:flex sm:items-center sm:ms-6 space-x-4">
+                
+                <!-- Notification Bell -->
+                <x-dropdown align="right" width="80">
+                    <x-slot name="trigger">
+                        <button class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full focus:outline-none transition-all">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                            <!-- Badge Unread -->
+                            @php
+                                $unreadCount = Auth::user()->unreadNotifications->count() ?? 0;
+                            @endphp
+                            <span id="notification-counter" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full {{ $unreadCount > 0 ? '' : 'hidden' }}">
+                                {{ $unreadCount }}
+                            </span>
+                        </button>
+                    </x-slot>
+
+                    <x-slot name="content">
+                        <div class="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                            <span class="text-sm font-bold text-gray-900">Notifikasi</span>
+                        </div>
+                        <div class="max-h-64 overflow-y-auto">
+                            @forelse(Auth::user()->notifications as $notification)
+                                <div class="px-4 py-3 border-b border-gray-100 {{ $notification->read_at ? 'bg-white' : 'bg-blue-50' }}">
+                                    <p class="text-sm text-gray-800 font-semibold">{{ $notification->data['title'] ?? 'Notifikasi' }}</p>
+                                    <p class="text-xs text-gray-600 mt-1">{{ $notification->data['message'] ?? '' }}</p>
+                                    <div class="mt-2 flex justify-between items-center">
+                                        <span class="text-[10px] text-gray-400">{{ $notification->created_at->diffForHumans() }}</span>
+                                        @if(!$notification->read_at)
+                                            <form method="POST" action="{{ route('notifications.read', $notification->id) }}">
+                                                @csrf
+                                                <button type="submit" class="text-xs text-blue-600 hover:text-blue-800 font-semibold">Tandai Dibaca</button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="px-4 py-4 text-center text-sm text-gray-500">Belum ada notifikasi.</div>
+                            @endforelse
+                        </div>
+                    </x-slot>
+                </x-dropdown>
+
                 <x-dropdown align="right" width="60">
                     <x-slot name="trigger">
                         <button class="inline-flex items-center gap-2 p-1.5 border border-transparent font-medium rounded-full text-gray-500 bg-white hover:bg-gray-50 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200" title="{{ Auth::user()->name }}">

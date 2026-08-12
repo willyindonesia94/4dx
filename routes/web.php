@@ -106,6 +106,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/audit-logs', [\App\Http\Controllers\AuditLogController::class, 'index'])
         ->middleware(['role:Super Admin|Admin UID|General Manager UID|Manager UP3|Manager ULP|Admin UP3|Admin ULP'])
         ->name('audit-logs.index');
+
+    // Notifications
+    Route::get('/notifications/check', [\App\Http\Controllers\NotificationController::class, 'getUnread'])->name('notifications.check');
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');
 });
 
 Route::get('/run-migrate-temp', function() {

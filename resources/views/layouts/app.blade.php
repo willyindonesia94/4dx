@@ -52,7 +52,58 @@
         </div>
 
         <!-- PWA Service Worker Registration -->
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
+            // Notification Polling Logic
+            let lastNotificationCount = 0;
+            let notifiedIds = new Set();
+            
+            function checkNotifications() {
+                fetch('{{ route("notifications.check") }}', {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.notifications && data.notifications.length > 0) {
+                        // Update bell counter if exists
+                        const bellCounter = document.getElementById('notification-counter');
+                        if (bellCounter) {
+                            bellCounter.innerText = data.notifications.length;
+                            bellCounter.classList.remove('hidden');
+                        }
+
+                        // Show SweetAlert popup for newly arrived notifications
+                        data.notifications.forEach(notif => {
+                            if (!notifiedIds.has(notif.id)) {
+                                notifiedIds.add(notif.id);
+                                
+                                Swal.fire({
+                                    title: notif.data.title || 'Pemberitahuan Baru',
+                                    text: notif.data.message,
+                                    icon: notif.data.type || 'info',
+                                    toast: true,
+                                    position: 'top-end',
+                                    showConfirmButton: false,
+                                    timer: 5000,
+                                    timerProgressBar: true,
+                                    didOpen: (toast) => {
+                                        toast.addEventListener('mouseenter', Swal.stopTimer)
+                                        toast.addEventListener('mouseleave', Swal.resumeTimer)
+                                    }
+                                });
+                            }
+                        });
+                    }
+                })
+                .catch(err => console.error('Error fetching notifications:', err));
+            }
+
+            @auth
+            // Check notifications on page load
+            checkNotifications();
+            // Polling every 1 minute
+            setInterval(checkNotifications, 60000);
+            @endauth
 
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
