@@ -36,7 +36,7 @@
                         {{ __('Realisasi WIG') }}
                     </x-nav-link>
                     @endif
-                    @if($isUlp || (auth()->user() && in_array(auth()->user()->role_name, ['Super Admin', 'Admin UID'])))
+                    @if($isUlp || (auth()->user() && in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID'])))
                     <x-nav-link :href="route('realisasis.index')" :active="request()->routeIs('realisasis.*')">
                         {{ __('Realisasi LM') }}
                     </x-nav-link>
@@ -46,7 +46,7 @@
                         {{ __('Sesi WIG') }}
                     </x-nav-link>
 
-                    @hasanyrole('Super Admin|Admin UID')
+                    @hasanyrole('Super Admin|Perencanaan UID')
                     <div class="hidden sm:flex sm:items-center">
                         <x-dropdown align="right" width="48">
                             <x-slot name="trigger">
@@ -174,7 +174,7 @@
                                 </div>
                             </x-dropdown-link>
 
-                            @hasanyrole('Super Admin|Admin UID|General Manager UID|Manager UP3|Manager ULP|Admin UP3|Admin ULP')
+                            @hasanyrole('Super Admin|Perencanaan UID|General Manager UID|Manager UP3|Manager ULP|Perencanaan UP3|Staff ULP')
                             <x-dropdown-link :href="route('audit-logs.index')">
                                 <div class="flex items-center text-gray-700">
                                     <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
@@ -257,7 +257,7 @@
             </x-responsive-nav-link>
             @endif
 
-            @if($isUlp || (auth()->user() && in_array(auth()->user()->role_name, ['Super Admin', 'Admin UID'])))
+            @if($isUlp || (auth()->user() && in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID'])))
             <x-responsive-nav-link :href="route('realisasis.index')" :active="request()->routeIs('realisasis.*')">
                 {{ __('Realisasi LM') }}
             </x-responsive-nav-link>
@@ -271,7 +271,7 @@
                 {{ __('Laporan') }}
             </x-responsive-nav-link>
 
-            @hasanyrole('Super Admin|Admin UID')
+            @hasanyrole('Super Admin|Perencanaan UID')
             <div class="border-t border-gray-100 mt-2 pt-2">
                 <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                     Master Data
@@ -366,7 +366,7 @@
                      </div>
 
                      <div class="space-y-3 pb-2">
-                         @hasanyrole('Super Admin|Admin UID|General Manager UID|Manager UP3|Manager ULP|Admin UP3|Admin ULP')
+                         @hasanyrole('Super Admin|Perencanaan UID|General Manager UID|Manager UP3|Manager ULP|Perencanaan UP3|Staff ULP')
                          <a href="{{ route('audit-logs.index') }}" class="flex items-center justify-center w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all shadow-sm">
                             <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                             Audit Log

@@ -6,16 +6,17 @@
     </x-slot>
 
         <!-- Modals using Alpine.js -->
-        <div x-data="{ 
-                openModal: false, 
-                openUpload: false,
-                editModal: false, 
-                editData: { id: '', wig_id: '', judul_lm: '', satuan_id: '' },
-                openEdit(lm) {
+        <div x-data="{                  
+                  openModal: false, 
+                  openUpload: false,
+                  editModal: false, 
+                  editData: { id: '', wig_id: '', judul_lm: '', satuan_id: '', polaritas: 'positif' },
+                  openEdit(lm) {
                     this.editData = { ...lm };
                     this.editModal = true;
                 }
-            }">
+            }"
+            @open-edit.window="openEdit($event.detail)">
                <div class="py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0 gap-4 w-full">
@@ -106,9 +107,10 @@
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead class="bg-slate-50/50">
                                         <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-1/2">Judul LM</th>
-                                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Satuan</th>
-                                            <th class="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                                              <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-1/2">Judul LM</th>
+                                              <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Satuan</th>
+                                              <th class="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Polaritas</th>
+                                              <th class="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                                             <th class="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Aksi</th>
                                         </tr>
                                     </thead>
@@ -121,12 +123,17 @@
                                                     <span>{{ $lm->judul_lm }}</span>
                                                 </div>
                                             </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                                                    {{ $lm->satuan->name ?? '-' }}
-                                                </span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                                                      {{ $lm->satuan->name ?? '-' }}
+                                                  </span>
+                                              </td>
+                                              <td class="px-6 py-4 whitespace-nowrap text-center">
+                                                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ ($lm->polaritas ?? 'positif') == 'positif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                                      {{ ucfirst($lm->polaritas ?? 'positif') }}
+                                                  </span>
+                                              </td>
+                                              <td class="px-6 py-4 whitespace-nowrap text-center">
                                                 @if($lm->is_approved)
                                                     <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Aktif</span>
                                                 @else
@@ -134,13 +141,13 @@
                                                 @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium flex justify-center items-center space-x-2">
-                                                @if(!$lm->is_approved && auth()->user()->hasAnyRole(['Super Admin', 'Admin UID']))
+                                                @if(!$lm->is_approved && auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID']))
                                                     <form action="{{ route('master-lms.approve', $lm->id) }}" method="POST" class="inline m-0">
                                                         @csrf
                                                         <button type="submit" class="text-green-600 hover:text-green-900 hover:bg-green-100 font-bold bg-green-50 px-3 py-1.5 rounded-md border border-green-200 transition-colors text-xs">Setujui</button>
                                                     </form>
                                                 @endif
-                                                <button @click="openEdit({{ $lm->toJson() }})" class="text-indigo-600 hover:text-white hover:bg-indigo-600 font-bold px-3 py-1.5 rounded-md border border-indigo-200 hover:border-transparent transition-all duration-200 text-xs">Edit</button>
+                                                <button @click="$dispatch('open-edit', {{ $lm }})" class="text-indigo-600 hover:text-white hover:bg-indigo-600 font-bold px-3 py-1.5 rounded-md border border-indigo-200 hover:border-transparent transition-all duration-200 text-xs">Edit</button>
                                                 
                                                 <form action="{{ route('master-lms.destroy', $lm->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus Master LM ini?');">
                                                     @csrf
@@ -207,14 +214,21 @@
                                         <input type="text" name="judul_lm" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700" required>
                                     </div>
 
-                                    <div>
-                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Satuan</label>
-                                        <select name="satuan_id" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700" required>
-                                            @foreach($satuans as $s)
-                                                <option value="{{ $s->id }}">{{ $s->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
+                                      <div>
+                                          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Satuan</label>
+                                          <select name="satuan_id" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700" required>
+                                              @foreach($satuans as $s)
+                                                  <option value="{{ $s->id }}">{{ $s->name }}</option>
+                                              @endforeach
+                                          </select>
+                                      </div>
+                                      <div>
+                                          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Polaritas</label>
+                                          <select name="polaritas" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700" required>
+                                              <option value="positif">Positif (Makin Besar Makin Baik)</option>
+                                              <option value="negatif">Negatif (Makin Kecil Makin Baik)</option>
+                                          </select>
+                                      </div>
                                 </div>
                             </div>
                             <div class="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 rounded-b-lg flex-shrink-0">
@@ -265,14 +279,21 @@
                                         <input type="text" name="judul_lm" x-model="editData.judul_lm" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700" required>
                                     </div>
 
-                                    <div>
-                                        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Satuan</label>
-                                        <select name="satuan_id" x-model="editData.satuan_id" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700" required>
-                                            @foreach($satuans as $s)
-                                                <option value="{{ $s->id }}">{{ $s->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
+                                      <div>
+                                          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Satuan</label>
+                                          <select name="satuan_id" x-model="editData.satuan_id" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700" required>
+                                              @foreach($satuans as $s)
+                                                  <option value="{{ $s->id }}">{{ $s->name }}</option>
+                                              @endforeach
+                                          </select>
+                                      </div>
+                                      <div>
+                                          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Polaritas</label>
+                                          <select name="polaritas" x-model="editData.polaritas" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700" required>
+                                              <option value="positif">Positif (Makin Besar Makin Baik)</option>
+                                              <option value="negatif">Negatif (Makin Kecil Makin Baik)</option>
+                                          </select>
+                                      </div>
                                 </div>
                             </div>
                             <div class="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 rounded-b-lg flex-shrink-0">

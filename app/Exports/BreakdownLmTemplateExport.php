@@ -19,7 +19,7 @@ class BreakdownLmTemplateExport implements FromCollection, WithHeadings, ShouldA
         $user = Auth::user();
         $userRole = $user ? strtolower(trim($user->role_name ?? '')) : '';
         $unitType = ($user && $user->unit) ? strtoupper(trim((string)$user->unit->type)) : '';
-        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin', 'admin uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Admin UID'])));
+        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin', 'perencanaan uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Perencanaan UID'])));
         $isUid = !$isSuperAdmin && ($unitType === 'UID' || str_contains($userRole, 'uid') || str_contains($userRole, 'bidang'));
         $isUp3 = !$isSuperAdmin && ($unitType === 'UP3' || str_contains($userRole, 'up3'));
 

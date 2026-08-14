@@ -181,16 +181,33 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
                     continue;
                 }
 
-                $unit = null;
                 $cleanUnit = str_replace(' ', '', strtolower(trim($namaUnit)));
                 if (str_contains($cleanUnit, "uidjabar") || str_contains($cleanUnit, "uidjawabarat")) {
                     $unit = MasterUnit::where("type", "UID")->first();
                 } else {
-                    // Coba cari persis
-                    $unit = MasterUnit::where("name", "like", "%" . trim($namaUnit) . "%")->first();
-                    // Jika tidak ketemu, coba hapus "UP3" atau "ULP" dari awal/akhir jika user tidak menyertakan
+                    $cleanUnit = trim($namaUnit);
+                    
+                    // 1. Coba cari nama persis
+                    $unit = MasterUnit::where("name", $cleanUnit)->first();
+                    
+                    // 2. Coba cari dengan prefix UP3
                     if (!$unit) {
-                        $shortName = trim(str_ireplace(['UP3', 'ULP'], '', $namaUnit));
+                        $unit = MasterUnit::where("name", "UP3 " . ucwords(strtolower($cleanUnit)))->first();
+                    }
+                    
+                    // 3. Coba cari dengan prefix ULP
+                    if (!$unit) {
+                        $unit = MasterUnit::where("name", "ULP " . ucwords(strtolower($cleanUnit)))->first();
+                    }
+                    
+                    // 4. Fallback dengan LIKE
+                    if (!$unit) {
+                        $unit = MasterUnit::where("name", "like", "%" . $cleanUnit . "%")->first();
+                    }
+                    
+                    // 5. Fallback tanpa UP3/ULP
+                    if (!$unit) {
+                        $shortName = trim(str_ireplace(['UP3', 'ULP'], '', $cleanUnit));
                         $unit = MasterUnit::where("name", "like", "%" . $shortName . "%")->first();
                     }
                 }

@@ -14,7 +14,7 @@ class CascadingController extends Controller
     {
         $user = Auth::user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin', 'admin uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Admin UID'])));
+        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin', 'perencanaan uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Perencanaan UID'])));
         
         $wigsQuery = MasterWig::where('is_approved', true)
             ->with(['breakdowns.unit', 'breakdowns.satuan']);
@@ -24,8 +24,12 @@ class CascadingController extends Controller
             $wigsQuery->whereIn('divisi', $allowedDivisis);
         }
         
-        $wigs = $wigsQuery->get();
-        
+        $wigs = $wigsQuery->get()->each(function ($wig) {
+            $wig->setRelation('breakdowns', $wig->breakdowns->sortBy(function ($bd) {
+                return $bd->unit ? strtolower($bd->unit->name) : '';
+            })->values());
+        });
+
         $satuans = MasterSatuan::all();
         $uidUnits = MasterUnit::where('type', 'UID')->get();
         $up3Units = MasterUnit::where('type', 'UP3')->get();
@@ -38,12 +42,12 @@ class CascadingController extends Controller
         $user = Auth::user();
         $userRole = strtolower(trim($user->role_name ?? ''));
         $unitType = $user->unit ? strtoupper(trim((string)$user->unit->type)) : '';
-        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin', 'admin uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Admin UID'])));
+        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin', 'perencanaan uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Perencanaan UID'])));
         
         $isUid = !$isSuperAdmin && ($unitType === 'UID' || str_contains($userRole, 'uid') || (str_contains($userRole, 'bidang') && !str_contains($userRole, 'up3')));
         $isUp3 = !$isSuperAdmin && ($unitType === 'UP3' || str_contains($userRole, 'up3'));
         
-        $canBreakdownToUid = $isSuperAdmin || str_contains($userRole, 'admin uid');
+        $canBreakdownToUid = $isSuperAdmin || str_contains($userRole, 'perencanaan uid');
         $canBreakdownToUp3 = $isSuperAdmin || $isUid;
         $canBreakdownToUlp = $isSuperAdmin || $isUp3;
         
@@ -51,6 +55,10 @@ class CascadingController extends Controller
         $wigsQuery = MasterWig::where('is_approved', true)
             ->with(['masterLms' => function($q) {
                 $q->where('is_approved', true);
+            }, 'masterLms.breakdowns' => function($q) {
+                $q->join('master_units', 'breakdown_lms.unit_id', '=', 'master_units.id')
+                  ->orderBy('master_units.name', 'asc')
+                  ->select('breakdown_lms.*');
             }, 'masterLms.breakdowns.unit', 'masterLms.breakdowns.satuan']);
 
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
@@ -95,7 +103,7 @@ class CascadingController extends Controller
         $user = Auth::user();
         $userRole = strtolower(trim($user->role_name ?? ''));
         $unitType = $user->unit ? strtoupper(trim((string)$user->unit->type)) : '';
-        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin', 'admin uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Admin UID'])));
+        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin', 'perencanaan uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Perencanaan UID'])));
         $isUp3 = !$isSuperAdmin && ($unitType === 'UP3' || str_contains($userRole, 'up3'));
 
         if ($isUp3 && $user->unit_id) {
@@ -298,6 +306,8 @@ class CascadingController extends Controller
         ]);
 
         try {
+            \Illuminate\Support\Facades\Log::info("Starting WIG Import...");
+            $request->file('file_excel')->storeAs('logs', 'uploaded_wig.xlsx', 'local');
             \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\WigMassImport, $request->file('file_excel'));
             return redirect()->back()->with('success', 'WIG berhasil diimport secara massal!');
         } catch (\Exception $e) {
@@ -338,6 +348,8 @@ class CascadingController extends Controller
         ]);
 
         try {
+            \Illuminate\Support\Facades\Log::info("Starting LM Breakdown Import...");
+            $request->file("file_excel")->storeAs('logs', 'uploaded_lm.xlsx', 'local');
             \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\BreakdownLmMassImport($request->bulan, $request->tahun), $request->file("file_excel"));
             return redirect()->back()->with("success", "Breakdown Target LM berhasil di-upload secara massal.");
         } catch (\Exception $e) {

@@ -34,10 +34,34 @@
                 <!-- Scoreboard WIGs -->
                 <div class="w-full space-y-4">
                     <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                        <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            Progress Bar Pencapaian WIG dan LM
-                        </h3>
+                        <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+                            <h3 class="text-lg font-bold text-gray-900 flex items-center mb-4 md:mb-0">
+                                <svg class="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                Progress Bar Pencapaian WIG dan LM
+                            </h3>
+                            
+                            <!-- Filter Form -->
+                            <form method="GET" action="{{ route('dashboard') }}" class="flex items-center gap-3">
+                                <div class="flex bg-gray-100 p-1 rounded-md">
+                                    <button type="submit" name="periode_wig" value="bulanan" class="{{ ($periodeWig ?? 'bulanan') === 'bulanan' ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700' }} px-4 py-1.5 rounded transition-all">Bulanan</button>
+                                    <button type="submit" name="periode_wig" value="tahunan" class="{{ ($periodeWig ?? 'bulanan') === 'tahunan' ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700' }} px-4 py-1.5 rounded transition-all">Tahunan</button>
+                                </div>
+                                
+                                <div class="flex gap-2">
+                                    <select name="bulan" onchange="this.form.submit()" class="text-sm border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm">
+                                        @foreach(['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'] as $idx => $namaBulan)
+                                            <option value="{{ $idx + 1 }}" {{ $bulan == ($idx + 1) ? 'selected' : '' }}>{{ $namaBulan }}</option>
+                                        @endforeach
+                                    </select>
+                                    
+                                    <select name="tahun" onchange="this.form.submit()" class="text-sm border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm">
+                                        @for($y = 2024; $y <= 2030; $y++)
+                                            <option value="{{ $y }}" {{ $tahun == $y ? 'selected' : '' }}>{{ $y }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+                            </form>
+                        </div>
                         
                         <div class="space-y-4">
                             @forelse($wigProgresses ?? [] as $wig)
@@ -431,23 +455,40 @@
                                             </div>
                                         </div>
                                     </div>
+                                </div> <!-- Close x-show div -->
                                 @endforeach
-                            </div>
                         @endif
                     @endforeach
                 </div>
                 @endif
             </div>
+
+            <!-- WIG Heatmap Container -->
+            <div x-show="selectedWig !== null" class="mt-6 border-t border-gray-200 bg-white p-6" x-cloak>
+                <div x-html="heatmapHtml"></div>
+                <div x-show="loadingHeatmap" class="py-12 text-center text-gray-500">
+                    <svg class="animate-spin h-8 w-8 mx-auto text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Memuat Heatmap WIG...
+                </div>
+            </div>
+
             <!-- End of Combined Map & Matrix Widget -->
             
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Setup Trend Chart
             const trendData = @json($trendData);
             const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            // Register datalabels plugin
+            Chart.register(ChartDataLabels);
             
             // Generate datasets
             const wigDatasets = [];
@@ -470,8 +511,6 @@
                 colorIndex++;
             });
 
-
-
             const chart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -481,6 +520,11 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: 20
+                        }
+                    },
                     plugins: {
                         legend: {
                             position: 'bottom',
@@ -495,6 +539,23 @@
                                     return context.dataset.label + ': ' + context.parsed.y + '%';
                                 }
                             }
+                        },
+                        datalabels: {
+                            align: 'top',
+                            anchor: 'end',
+                            formatter: function(value) {
+                                return value + '%';
+                            },
+                            font: {
+                                weight: 'bold',
+                                size: 10
+                            },
+                            color: function(context) {
+                                return context.dataset.borderColor;
+                            },
+                            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                            borderRadius: 4,
+                            padding: 2
                         }
                     },
                     scales: {
@@ -555,6 +616,26 @@
                         this.selectedLm = null;
                         this.updateMap();
                     }
+
+                    this.fetchHeatmap();
+                },
+
+                loadingHeatmap: false,
+                heatmapHtml: '',
+                fetchHeatmap() {
+                    if (!this.selectedWig) return;
+                    this.loadingHeatmap = true;
+                    this.heatmapHtml = '<div class="text-center py-4"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div></div>';
+                    fetch(`/laporan-bulanan/preview?jenis=dashboard_heatmap&tahun={{ $tahun }}&bulan={{ $bulan }}&wig_id=${this.selectedWig}&_t=${new Date().getTime()}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            this.heatmapHtml = data.html;
+                            this.loadingHeatmap = false;
+                        })
+                        .catch(err => {
+                            console.error('Error fetching heatmap:', err);
+                            this.loadingHeatmap = false;
+                        });
                 },
 
                 selectLm(lmId) {

@@ -19,12 +19,12 @@ Sistem ini menggunakan alur *Cascading* (penurunan berjenjang) yang ketat, yang 
 
 ```mermaid
 graph TD
-    A[Admin UID] -->|Menetapkan| B(WIG Utama)
-    B -->|Di-breakdown oleh| C[Admin UP3]
+    A[Perencanaan UID] -->|Menetapkan| B(WIG Utama)
+    B -->|Di-breakdown oleh| C[Perencanaan UP3]
     C -->|Menetapkan| D(Sub-WIG)
-    D -->|Di-breakdown oleh| E[Admin ULP]
+    D -->|Di-breakdown oleh| E[Staff ULP]
     E -->|Menetapkan| F(Lead Measure)
-    F -->|Diisi harian oleh| G[Staf/Admin ULP]
+    F -->|Diisi harian oleh| G[Staf/Staff ULP]
     G -->|Menginput| H(Realisasi Harian)
     H -.->|Agregasi Data| I((Dashboard & Peta))
 ```
@@ -40,9 +40,9 @@ graph TD
 ## 4. Hak Akses dan Peran (Roles)
 Aplikasi ini memiliki 4 tingkatan otorisasi yang sangat spesifik:
 - **Superadmin:** Memiliki kendali penuh terhadap seluruh sistem, master data, dan semua entitas WIG.
-- **Admin UID:** Memiliki hak untuk mengelola WIG Utama dan memantau seluruh UP3/ULP di bawah naungan UID.
-- **Admin UP3:** Hanya dapat melihat WIG Utama, mem-breakdown target menjadi Sub-WIG khusus untuk UP3-nya, dan memantau ULP di wilayahnya.
-- **Admin ULP:** Hanya dapat melihat Sub-WIG, membuat Lead Measure untuk ULP-nya, dan mengisi Realisasi Harian.
+- **Perencanaan UID:** Memiliki hak untuk mengelola WIG Utama dan memantau seluruh UP3/ULP di bawah naungan UID.
+- **Perencanaan UP3:** Hanya dapat melihat WIG Utama, mem-breakdown target menjadi Sub-WIG khusus untuk UP3-nya, dan memantau ULP di wilayahnya.
+- **Staff ULP:** Hanya dapat melihat Sub-WIG, membuat Lead Measure untuk ULP-nya, dan mengisi Realisasi Harian.
 
 ---
 

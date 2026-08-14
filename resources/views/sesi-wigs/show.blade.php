@@ -244,83 +244,157 @@ $formatLmValue = function($value, $satuan) {
             <div class="mb-6">
                 <div class="flex flex-col md:flex-row justify-between items-center mb-4 px-2">
                     <h3 class="text-xl font-bold text-gray-800">Capaian WIG s.d Tanggal {{ \Carbon\Carbon::parse($sesi_wig->tanggal_pelaksanaan)->format('d/m/Y') }}</h3>
-                    <form method="GET" action="{{ route('sesi-wigs.show', $sesi_wig->id) }}" class="flex items-center gap-2 mt-2 md:mt-0">
-                        <input type="hidden" name="lm_unit" value="{{ $lm_unit ?? '' }}">
-                        <label class="text-sm font-semibold text-gray-600">Filter Bulan WIG:</label>
-                        <select name="wig_bulan" onchange="this.form.submit()" class="border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-1.5">
-                            <option value="">-- Hingga Tgl Sesi --</option>
-                            @foreach(['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'] as $index => $b)
-                                <option value="{{ $index + 1 }}" {{ request('wig_bulan') == ($index + 1) ? 'selected' : '' }}>{{ $b }}</option>
-                            @endforeach
-                        </select>
-                    </form>
                 </div>
                 <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
                     <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center">
                         <svg class="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                         Scoreboard WIG {{ $isUlpLevel ? 'ULP' : ($isUp3Level ? 'UP3' : 'UID') }} (Matrix)
                     </h3>
-                    <div class="space-y-4">
-                        @forelse($wigs as $wig)
-                            <div x-data="{ expanded: false }" class="bg-gray-50/50 rounded-lg p-4 border border-gray-100 transition-all">
-                                <div @click="expanded = !expanded" class="cursor-pointer group flex justify-between items-center mb-2">
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-2">
-                                            <h4 class="text-sm font-bold text-gray-800 group-hover:text-blue-600 transition-colors">{{ $wig->judul }}</h4>
-                                            <svg :class="expanded ? 'rotate-180' : ''" class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                        </div>
-                                        @php
-                                            $wigLms = $lms->where('wig_id', $wig->id);
-                                            $lmCount = $wigLms->count();
-                                        @endphp
-                                        <span class="text-[11px] text-gray-500">
-                                            {{ $wig->deskripsi ?? '-' }}
-                                        </span>
-                                    </div>
-                                    <div class="text-right ml-4">
-                                        @php
-                                            $progressColor = $wig->capaian >= 80 ? 'text-green-600' : ($wig->capaian >= 50 ? 'text-yellow-500' : 'text-red-500');
-                                            $bgColor = $wig->capaian >= 80 ? 'bg-green-500' : ($wig->capaian >= 50 ? 'bg-yellow-400' : 'bg-red-500');
-                                        @endphp
-                                        <span class="text-xl font-black {{ $progressColor }}">{{ $wig->capaian }}%</span>
-                                    </div>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2 mb-1">
-                                    <div class="{{ $bgColor }} h-2 rounded-full transition-all duration-700 ease-out" style="width: {{ min(100, $wig->capaian) }}%"></div>
-                                </div>
+                    <div class="space-y-4" x-data="{ activeTab: {{ $wigs->first()->id ?? 'null' }} }">
+                        <!-- TABS -->
+                        @if($wigs->count() > 0)
+                            <div class="flex overflow-x-auto whitespace-nowrap gap-2 mb-2 border-b border-gray-200 pb-3 custom-scrollbar" style="-webkit-overflow-scrolling: touch;">
+                                @foreach($wigs as $wig)
+                                    <button @click="activeTab = {{ $wig->id }}"
+                                            :style="activeTab === {{ $wig->id }} ? 'background-color: #0b2256; color: white; border-color: #0b2256; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);' : 'background-color: #f3f4f6; color: #4b5563; border-color: #d1d5db;'"
+                                            class="px-4 py-2 rounded-md text-xs font-bold transition-all border outline-none hover:bg-gray-200 flex-shrink-0">
+                                        {{ $wig->judul }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        @endif
 
-                                <!-- LM Drill-down List -->
-                                <div x-show="expanded" x-collapse x-cloak class="mt-4 pt-3 border-t border-gray-200/60 space-y-3">
-                                    @if($lmCount > 0)
-                                        @foreach($wigLms as $lm)
-                                            @php
-                                                $lmColor = $lm->capaian >= 80 ? 'text-green-600' : ($lm->capaian >= 50 ? 'text-yellow-500' : 'text-red-500');
-                                                $lmBg = $lm->capaian >= 80 ? 'bg-green-500' : ($lm->capaian >= 50 ? 'bg-yellow-400' : 'bg-red-500');
-                                            @endphp
-                                            <div class="pl-4 border-l-2 border-blue-200">
-                                                <div class="flex justify-between items-end mb-1">
-                                                    <div class="flex-1 pr-4">
-                                                        <span class="text-xs font-semibold text-gray-700">{{ $lm->judul_lm }}</span>
-                                                        <div class="text-[10px] text-gray-500 mt-0.5">
-                                                            Target: {{ $formatLmValue($lm->total_target, $lm->satuan->name ?? '') }} | Realisasi: {{ $formatLmValue($lm->total_realisasi, $lm->satuan->name ?? '') }} {{ trim($lm->satuan->name ?? '') !== '%' ? ($lm->satuan->name ?? '') : '' }} ({{ ucfirst($lm->polaritas) }})
-                                                        </div>
-                                                    </div>
-                                                    <div class="text-right">
-                                                        <span class="text-sm font-bold {{ $lmColor }}">{{ $lm->capaian }}%</span>
-                                                    </div>
+                        @forelse($wigs as $wig)
+                            @php
+                                $pctUid = $wig->capaian;
+                                $isExceed = $pctUid >= 100;
+                                $wigLms = $lms->where('wig_id', $wig->id);
+                                $bulanT = \Carbon\Carbon::parse($sesi_wig->tanggal_pelaksanaan)->month;
+                                
+                                $namaBulanTarget = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][$targetBulan - 1] ?? '';
+                                $namaBulanPrev = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][$prevBulan - 1] ?? '';
+                            @endphp
+                            
+                            <div x-show="activeTab === {{ $wig->id }}" x-cloak class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm transition-all duration-300">
+                                <!-- Infografis WIG & LM -->
+                                <div class="flex flex-col xl:flex-row items-start gap-5 mb-6">
+                                    <!-- KIRI: WIG Card & Tabel WIG -->
+                                    <div class="w-full xl:w-[55%] flex flex-col gap-4">
+                                        <!-- WIG Card -->
+                                        <div class="w-full bg-white rounded-lg shadow-sm border border-[#0b2256] overflow-hidden flex flex-col">
+                                            <div class="bg-[#0b2256] text-white px-3 py-2 text-[10px] font-bold uppercase truncate">
+                                                WIG PERFORMANCE | {{ $isExceed ? 'EXCEEDED TARGET' : 'PERFORMANCE WATCH' }}
+                                            </div>
+                                            <div class="p-3 flex-1 flex flex-col sm:flex-row">
+                                                <div class="w-full sm:w-1/2 text-center flex flex-col justify-center items-center px-2 py-2">
+                                                    <div class="text-2xl font-bold {{ $isExceed ? 'text-green-600' : 'text-red-600' }}">{{ number_format($pctUid, 2) }} %</div>
+                                                    <div class="text-[10px] font-bold text-gray-700 mt-1">Capaian WIG {{ $isUlpLevel ? 'ULP' : ($isUp3Level ? 'UP3' : 'UID Jabar') }}</div>
+                                                    <div class="text-[9px] text-gray-500 mt-1">Target: {{ number_format($wig->total_target ?? 0, 2) }}</div>
+                                                    <div class="text-[9px] text-gray-500">Realisasi: {{ number_format($wig->total_realisasi ?? 0, 2) }}</div>
                                                 </div>
-                                                <div class="w-full bg-gray-200 rounded-full h-1.5">
-                                                    <div class="{{ $lmBg }} h-1.5 rounded-full transition-all duration-700" style="width: {{ min(100, $lm->capaian) }}%"></div>
+                                                <div class="w-full sm:w-1/2 border-t sm:border-t-0 sm:border-l border-gray-200 mt-2 sm:mt-0 pt-2 sm:pt-0 sm:pl-3 flex flex-col justify-end">
+                                                    <div class="text-[9px] font-bold text-gray-600 text-center mb-1.5">TREND CAPAIAN WIG (%)</div>
+                                                    <div class="flex items-end justify-between h-10 gap-[1px] mt-auto">
+                                                        @for($i=1; $i<=$bulanT; $i++)
+                                                            <div class="bg-blue-500 flex-1 rounded-t-sm" style="height: {{ max(4, min(100, $pctUid)) / 2.5 }}px;"></div>
+                                                        @endfor
+                                                    </div>
+                                                    <div class="flex justify-between text-[8px] text-gray-400 font-bold mt-1">
+                                                        <span>JAN</span>
+                                                        <span>..</span>
+                                                        <span>{{ strtoupper(substr(\Carbon\Carbon::parse($sesi_wig->tanggal_pelaksanaan)->translatedFormat('F'),0,3)) }}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        @endforeach
-                                    @else
-                                        <div class="text-xs text-gray-400 italic py-1">Tidak ada data LM yang aktif.</div>
-                                    @endif
+                                        </div>
+                                        
+                                        <!-- Tabel WIG per UP3 -->
+                                        <div class="overflow-x-auto border border-gray-300 rounded-md bg-white shadow-sm">
+                                            <table class="w-full text-xs text-left">
+                                                <thead class="bg-[#d9edf7] text-gray-800 uppercase font-bold text-[10px] border-b border-gray-300">
+                                                    <tr>
+                                                        <th rowspan="2" class="px-2 py-1.5 border-r border-gray-300 text-center align-middle">UNIT</th>
+                                                        <th colspan="3" class="px-2 py-1.5 border-r border-gray-300 text-center border-b">{{ strtoupper($namaBulanPrev) }}</th>
+                                                        <th colspan="3" class="px-2 py-1.5 text-center border-b">{{ strtoupper($namaBulanTarget) }}</th>
+                                                    </tr>
+                                                    <tr>
+                                                        <th class="px-2 py-1 border-r border-gray-300 text-center bg-[#eef7fc]">Target</th>
+                                                        <th class="px-2 py-1 border-r border-gray-300 text-center bg-[#eef7fc]">Realisasi</th>
+                                                        <th class="px-2 py-1 border-r border-gray-300 text-center bg-[#eef7fc]">Capaian (%)</th>
+                                                        <th class="px-2 py-1 border-r border-gray-300 text-center">Target</th>
+                                                        <th class="px-2 py-1 border-r border-gray-300 text-center">Realisasi</th>
+                                                        <th class="px-2 py-1 text-center">Capaian (%)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-gray-200">
+                                                    <!-- UID Row -->
+                                                    <tr class="bg-[#fcf8e3]">
+                                                        <td class="px-2 py-1.5 border-r border-gray-300 font-bold whitespace-nowrap">UID Jawa Barat</td>
+                                                        <!-- prev -->
+                                                        <td class="px-2 py-1.5 border-r border-gray-300 text-right font-bold text-gray-500">-</td>
+                                                        <td class="px-2 py-1.5 border-r border-gray-300 text-right font-bold text-gray-500">-</td>
+                                                        <td class="px-2 py-1.5 border-r border-gray-300 text-right font-bold text-gray-500">-</td>
+                                                        <!-- current -->
+                                                        <td class="px-2 py-1.5 border-r border-gray-300 text-right font-bold">{{ number_format($wig->total_target ?? 0, 2) }}</td>
+                                                        <td class="px-2 py-1.5 border-r border-gray-300 text-right font-bold">{{ number_format($wig->total_realisasi ?? 0, 2) }}</td>
+                                                        <td class="px-2 py-1.5 text-right font-bold">{{ number_format($pctUid, 2) }}%</td>
+                                                    </tr>
+                                                    <!-- UP3 Rows -->
+                                                    @foreach($up3s as $up3)
+                                                        @php
+                                                            $uData = $wigUnitData[$wig->id][$up3->id] ?? null;
+                                                        @endphp
+                                                        <tr class="hover:bg-gray-50">
+                                                            <td class="px-2 py-1.5 border-r border-gray-300 whitespace-nowrap">{{ $up3->name }}</td>
+                                                            <td class="px-2 py-1.5 border-r border-gray-300 text-right bg-[#eef7fc]/30">{{ number_format($uData['prev']['t'] ?? 0, 2) }}</td>
+                                                            <td class="px-2 py-1.5 border-r border-gray-300 text-right bg-[#eef7fc]/30">{{ number_format($uData['prev']['r'] ?? 0, 2) }}</td>
+                                                            <td class="px-2 py-1.5 border-r border-gray-300 text-right font-semibold bg-[#eef7fc]/30 {{ ($uData['prev']['pct'] ?? 0) >= 100 ? 'text-green-600' : '' }}">{{ number_format($uData['prev']['pct'] ?? 0, 2) }}%</td>
+                                                            <td class="px-2 py-1.5 border-r border-gray-300 text-right">{{ number_format($uData['cur']['t'] ?? 0, 2) }}</td>
+                                                            <td class="px-2 py-1.5 border-r border-gray-300 text-right">{{ number_format($uData['cur']['r'] ?? 0, 2) }}</td>
+                                                            <td class="px-2 py-1.5 text-right font-semibold {{ ($uData['cur']['pct'] ?? 0) >= 100 ? 'text-green-600' : '' }}">{{ number_format($uData['cur']['pct'] ?? 0, 2) }}%</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- KANAN: LM Cards Container -->
+                                    <div class="w-full xl:w-[45%] bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                                        <div class="text-[10px] font-bold text-[#0b2256] uppercase mb-3 border-b border-gray-200 pb-2">PERFORMA LEAD MEASURE</div>
+                                        @if($wigLms->count() > 0)
+                                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.75rem;">
+                                                @foreach($wigLms as $idx => $lm)
+                                                    @php
+                                                        $lmPct = $lm->capaian;
+                                                        $lmColor = $lmPct >= 100 ? 'text-green-600' : 'text-red-600';
+                                                        $lmBadge = $lmPct >= 100 ? 'bg-green-500' : 'bg-red-500';
+                                                        $lmStatus = $lmPct >= 100 ? 'EXCEEDED TARGET' : 'PERFORMANCE WATCH';
+                                                        
+                                                        // Fetch LM menang kalah data which was built in controller
+                                                        $mkLevel = $isUlpLevel || $isUp3Level ? 'ulp' : 'up3';
+                                                        $menang = count($lmMenangKalah[$lm->id][$mkLevel]['menang'] ?? []);
+                                                        $kalah = count($lmMenangKalah[$lm->id][$mkLevel]['kalah'] ?? []);
+                                                    @endphp
+                                                    <div class="bg-gray-50 border border-gray-300 rounded-lg flex flex-col items-center justify-center p-3 text-center border-t-4 {{ $lmPct >= 100 ? 'border-t-green-500' : 'border-t-red-500' }} shadow-sm hover:shadow-md transition-shadow">
+                                                        <div class="text-[10px] font-bold text-gray-700 leading-tight mb-2 h-[26px] overflow-hidden line-clamp-2" title="{{ $lm->judul_lm }}">LM {{ $loop->iteration }} - {{ preg_replace('/^LM\s*-?\s*\d+\s*/i', '', $lm->judul_lm) }}</div>
+                                                        <div class="text-xl font-bold {{ $lmColor }} mb-1">{{ number_format($lmPct, 2) }} %</div>
+                                                        <div class="text-[9px] font-bold text-gray-500 mb-2">Target: {{ $formatLmValue($lm->total_target, $lm->satuan->name ?? '') }} | Real: {{ $formatLmValue($lm->total_realisasi, $lm->satuan->name ?? '') }}</div>
+                                                        <div class="{{ $lmBadge }} text-white text-[9px] font-bold px-3 py-0.5 rounded-full mb-2">{{ $lmStatus }}</div>
+                                                        <div class="text-[9px] font-bold text-gray-800">{{ strtoupper($mkLevel) }} Menang: {{ $menang }} | {{ strtoupper($mkLevel) }} Kalah: {{ $kalah }}</div>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            <div class="flex flex-col items-center justify-center bg-gray-50 border border-gray-200 rounded-lg text-gray-400 italic text-xs py-8">
+                                                Tidak ada data Lead Measure yang terkait dengan WIG ini.
+                                            </div>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                         @empty
-                            <div class="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-100">Belum ada WIG yang didefinisikan.</div>
+                            <div class="col-span-full text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-100">Belum ada WIG yang didefinisikan.</div>
                         @endforelse
                     </div>
                 </div>
@@ -337,9 +411,9 @@ $formatLmValue = function($value, $satuan) {
                     @foreach($wigs as $wig)
                         @php $wigLms = $lms->where('wig_id', $wig->id); @endphp
                         @if($wigLms->count() > 0)
-                            <div class="cursor-pointer group flex items-center justify-between border-b pb-2 mt-4 mb-4" @click="selectedWig = selectedWig === {{ $wig->id }} ? null : {{ $wig->id }}">
-                                <h4 class="text-xl font-bold text-indigo-900">{{ $wig->judul }}</h4>
-                                <svg class="w-6 h-6 text-gray-400 group-hover:text-indigo-600 transform transition-transform duration-300" :class="selectedWig === {{ $wig->id }} ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            <div class="cursor-pointer group flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3 md:p-4 mb-3 shadow-sm hover:shadow-md transition-all" @click="selectedWig = selectedWig === {{ $wig->id }} ? null : {{ $wig->id }}">
+                                <h4 class="text-base md:text-lg font-bold text-indigo-900">{{ $wig->judul }}</h4>
+                                <svg class="w-5 h-5 md:w-6 md:h-6 text-gray-400 group-hover:text-indigo-600 transform transition-transform duration-300" :class="selectedWig === {{ $wig->id }} ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                             
                             <!-- Container Tabel LM -->
@@ -384,14 +458,31 @@ $formatLmValue = function($value, $satuan) {
                                                 </td>
                                                 @foreach($sesi_wigs_matrix as $sw)
                                                     @php
-                                                        $uidTarget = 0;
-                                                        foreach($up3s as $up3Unit) {
-                                                            $uidTarget += $matrixTargets[$lm->id][$up3Unit->id][$sw->id] ?? 0;
+                                                        // Pull UID target and realisasi from unit_id = 1 instead of summing UP3
+                                                        $uidTarget = $matrixTargets[$lm->id][1][$sw->id] ?? 0;
+                                                        $uidRealisasi = $matrixRealisasi[$lm->id][1][$sw->id] ?? 0;
+                                                        
+                                                        $up3Count = count($up3s);
+                                                        $isPercent = trim($lm->satuan->name ?? '') === '%';
+                                                        
+                                                        // Fallback target jika kosong
+                                                        if ($uidTarget == 0) {
+                                                            foreach($up3s as $up3Unit) {
+                                                                $uidTarget += $matrixTargets[$lm->id][$up3Unit->id][$sw->id] ?? 0;
+                                                            }
+                                                            if ($isPercent && $up3Count > 0) {
+                                                                $uidTarget = $uidTarget / $up3Count;
+                                                            }
                                                         }
                                                         
-                                                        $uidRealisasi = 0;
-                                                        foreach($up3s as $up3Unit) {
-                                                            $uidRealisasi += $matrixRealisasi[$lm->id][$up3Unit->id][$sw->id] ?? 0;
+                                                        // Fallback realisasi jika kosong (biasanya UP3 mengisi masing-masing sehingga unit 1 kosong)
+                                                        if ($uidRealisasi == 0) {
+                                                            foreach($up3s as $up3Unit) {
+                                                                $uidRealisasi += $matrixRealisasi[$lm->id][$up3Unit->id][$sw->id] ?? 0;
+                                                            }
+                                                            if ($isPercent && $up3Count > 0) {
+                                                                $uidRealisasi = $uidRealisasi / $up3Count;
+                                                            }
                                                         }
                                                         
                                                         $uidPencapaian = 0;
@@ -412,20 +503,32 @@ $formatLmValue = function($value, $satuan) {
                                                         $prevUidTarget = 0;
                                                         $prevUidRealisasi = 0;
                                                         if ($prevSw) {
-                                                            foreach($up3s as $up3Unit) {
-                                                                $prevUidTarget += $matrixTargets[$lm->id][$up3Unit->id][$prevSw->id] ?? 0;
-                                                                $prevUidRealisasi += $matrixRealisasi[$lm->id][$up3Unit->id][$prevSw->id] ?? 0;
+                                                            $prevUidTarget = $matrixTargets[$lm->id][1][$prevSw->id] ?? 0;
+                                                            $prevUidRealisasi = $matrixRealisasi[$lm->id][1][$prevSw->id] ?? 0;
+                                                            
+                                                            if ($prevUidTarget == 0) {
+                                                                foreach($up3s as $up3Unit) {
+                                                                    $prevUidTarget += $matrixTargets[$lm->id][$up3Unit->id][$prevSw->id] ?? 0;
+                                                                }
+                                                                if ($isPercent && $up3Count > 0) {
+                                                                    $prevUidTarget = $prevUidTarget / $up3Count;
+                                                                }
+                                                            }
+                                                            
+                                                            if ($prevUidRealisasi == 0) {
+                                                                foreach($up3s as $up3Unit) {
+                                                                    $prevUidRealisasi += $matrixRealisasi[$lm->id][$up3Unit->id][$prevSw->id] ?? 0;
+                                                                }
+                                                                if ($isPercent && $up3Count > 0) {
+                                                                    $prevUidRealisasi = $prevUidRealisasi / $up3Count;
+                                                                }
                                                             }
                                                         }
                                                         $prevUidCarryOver = max(0, $prevUidTarget - $prevUidRealisasi);
                                                         $uidTargetPlusCarryOver = $uidTarget + $prevUidCarryOver;
                                                         
-                                                        $prevUidRealisasi = 0;
                                                         $uidTrendIcon = '<span class="text-gray-400">-</span>';
                                                         if ($prevSw) {
-                                                            foreach($up3s as $up3Unit) {
-                                                                $prevUidRealisasi += $matrixRealisasi[$lm->id][$up3Unit->id][$prevSw->id] ?? 0;
-                                                            }
                                                             if ($uidRealisasi > $prevUidRealisasi) {
                                                                 $uidTrendIcon = '<svg class="w-5 h-5 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>';
                                                             } else if ($uidRealisasi < $prevUidRealisasi) {
@@ -450,7 +553,7 @@ $formatLmValue = function($value, $satuan) {
                                                     $ulps = $allUlps->where('parent_id', $up3->id);
                                                     $isExpanded = false;
                                                     $user = auth()->user();
-                                                    if ($user && ($isUlpLevel || $user->hasRole('Admin ULP') || $ulps->contains('id', $user->unit_id))) {
+                                                    if ($user && ($isUlpLevel || $user->hasRole('Staff ULP') || $ulps->contains('id', $user->unit_id))) {
                                                         $isExpanded = true;
                                                     }
                                                 @endphp
@@ -512,14 +615,33 @@ $formatLmValue = function($value, $satuan) {
                                                         @endphp
                                                         <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ $formatLmValue($up3Target, $lm->satuan->name ?? '') }}</td>
                                                         <td class="px-2 py-2 border border-gray-300 text-right font-semibold text-purple-900 bg-purple-50">{{ $formatLmValue($up3TargetPlusCarryOver, $lm->satuan->name ?? '') }}</td>
-                                                        <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">
-                                                            @php 
-                                                                $komData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
-                                                                $hasKom = $komData !== null;
-                                                                $komitmenVal = $hasKom ? $komData['komitmen'] : '';
-                                                            @endphp
-                                                            <span class="text-xs font-semibold text-gray-700">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
-                                                            </td>
+                                                                @php 
+                                                                    $komData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
+                                                                    $hasKom = $komData !== null;
+                                                                    $komitmenVal = $hasKom ? $komData['komitmen'] : '';
+                                                                    
+                                                                    // Calculate Target + Carry Over of NEXT week for UP3
+                                                                    $nextSwObj = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke + 1)->first();
+                                                                    $nextUp3Target = 0;
+                                                                    if ($nextSwObj) {
+                                                                        $nextUp3Target = $matrixTargets[$lm->id][$up3->id][$nextSwObj->id] ?? 0;
+                                                                    }
+                                                                    $carryOverFromThisWeek = max(0, $up3Target - $up3Realisasi);
+                                                                    $targetCarryOverMingguDepan = $nextUp3Target + $carryOverFromThisWeek;
+                                                                    
+                                                                    $komBg = 'bg-slate-50';
+                                                                    $komText = 'text-gray-700';
+                                                                    
+                                                                    if ($hasKom && $komitmenVal !== '' && $komitmenVal !== null) {
+                                                                        if ((float)$komitmenVal < (float)$targetCarryOverMingguDepan) {
+                                                                            $komBg = 'bg-red-500';
+                                                                            $komText = 'text-white';
+                                                                        }
+                                                                    }
+                                                                @endphp
+                                                            <td class="px-2 py-2 border border-gray-300 text-center {{ $komBg }}">
+                                                                <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
+                                                                </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
                                                                 @if($canEditSesiWig)
                                                                 <button type="button" 
@@ -577,7 +699,7 @@ $formatLmValue = function($value, $satuan) {
                                                                 $canEdit = false;
                                                                 $user = auth()->user();
                                                                 if ($user && $canEditSesiWig) {
-                                                                    if ($user->hasRole('Super Admin') || ($user->hasRole('Admin ULP') && $user->unit_id == $u->id)) {
+                                                                    if ($user->hasRole('Super Admin') || ($user->hasRole('Staff ULP') && $user->unit_id == $u->id)) {
                                                                         $canEdit = true;
                                                                     }
                                                                 }
@@ -610,18 +732,39 @@ $formatLmValue = function($value, $satuan) {
                                                             @endphp
                                                             <td class="px-2 py-2 border border-gray-300 text-right">{{ $formatLmValue($target, $lm->satuan->name ?? '') }}</td>
                                                                 <td class="px-2 py-2 border border-gray-300 text-right text-purple-900 bg-purple-50">{{ $formatLmValue($ulpTargetPlusCarryOver, $lm->satuan->name ?? '') }}</td>
-                                                            <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">
                                                                 @php 
                                                                     $komData = $matrixKomitmen[$lm->id][$u->id][$sw->id] ?? null;
                                                                     $hasKom = $komData !== null;
                                                                     $komitmenVal = $hasKom ? $komData['komitmen'] : '';
+                                                                    
+                                                                    $komBg = 'bg-slate-50';
+                                                                    $komText = 'text-gray-700';
+                                                                    $komInputClass = 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500';
+                                                                    
+                                                                    // Calculate Target + Carry Over of NEXT week
+                                                                    $nextSwObj = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke + 1)->first();
+                                                                    $nextTarget = 0;
+                                                                    if ($nextSwObj) {
+                                                                        $nextTarget = $matrixTargets[$lm->id][$u->id][$nextSwObj->id] ?? 0;
+                                                                    }
+                                                                    $carryOverFromThisWeek = max(0, $target - $realisasi);
+                                                                    $targetCarryOverMingguDepan = $nextTarget + $carryOverFromThisWeek;
+                                                                    
+                                                                    if ($hasKom && $komitmenVal !== '' && $komitmenVal !== null) {
+                                                                        if ((float)$komitmenVal < (float)$targetCarryOverMingguDepan) {
+                                                                            $komBg = 'bg-red-500';
+                                                                            $komText = 'text-white';
+                                                                            $komInputClass = 'bg-red-50 text-red-900 border-red-300 focus:ring-red-500 focus:border-red-500';
+                                                                        }
+                                                                    }
                                                                 @endphp
+                                                            <td class="px-2 py-2 border border-gray-300 text-center {{ $komBg }}">
                                                                 @if($canEdit)
-                                                                        <input type="number" step="any" class="w-16 text-xs p-1 border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500 komitmen-input" 
+                                                                        <input type="number" step="any" class="w-16 text-xs p-1 border rounded komitmen-input {{ $komInputClass }}" 
                                                                             data-lm="{{ $lm->id }}" data-unit="{{ $u->id }}" data-sesi="{{ $sw->id }}" data-type="komitmen"
                                                                             value="{{ $komitmenVal }}" placeholder="-">
                                                                     @else
-                                                                        <span class="text-xs font-semibold text-gray-700">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
+                                                                        <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
                                                                     @endif
                                                                 </td>
                                                                 <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">

@@ -32,7 +32,7 @@ class LeadMeasureController extends Controller
         }
         
         // If not superadmin and matrix_group_id is not ALL, optionally filter based on matrix_group_id
-        if ($user && !$user->hasAnyRole(['Super Admin', 'Admin UID']) && $user->matrix_group_id !== 'ALL') {
+        if ($user && !$user->hasAnyRole(['Super Admin', 'Perencanaan UID']) && $user->matrix_group_id !== 'ALL') {
             $query->whereHas('wig', function($q) use ($user) {
                 // Assuming we show LMs where the user's matrix_group_id matches the WIG's divisi
                 $q->where('divisi', $user->matrix_group_id);
@@ -60,6 +60,7 @@ class LeadMeasureController extends Controller
             'periode_start' => 'required|date',
             'periode_end' => 'required|date|after_or_equal:periode_start',
             'satuan_id' => 'required|exists:master_satuans,id',
+            'polaritas' => 'required|in:positif,negatif',
         ]);
 
         $data = $request->all();
@@ -89,6 +90,7 @@ class LeadMeasureController extends Controller
             'periode_start' => 'required|date',
             'periode_end' => 'required|date|after_or_equal:periode_start',
             'satuan_id' => 'required|exists:master_satuans,id',
+            'polaritas' => 'required|in:positif,negatif',
         ]);
 
         $data = $request->all();

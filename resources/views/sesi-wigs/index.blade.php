@@ -8,7 +8,7 @@
     <div class="py-12" x-data="sesiWigForm()">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="flex justify-end mb-4 px-2 sm:px-0">
-                @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID']))
+                @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
                 <button @click="openModal = true;" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow">
                     + Generate Sesi WIG 1 Bulan
                 </button>
@@ -68,7 +68,7 @@
                                                     <a href="{{ route('sesi-wigs.show', $sesi->id) }}" class="flex-1 sm:flex-none text-center inline-flex justify-center items-center px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-md transition-colors shadow-sm font-bold text-xs">
                                                         Masuk Sesi &rarr;
                                                     </a>
-                                                    @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID']))
+                                                    @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
                                                     <form action="{{ route('sesi-wigs.destroy', $sesi->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus sesi ini?');">
                                                         @csrf
                                                         @method('DELETE')

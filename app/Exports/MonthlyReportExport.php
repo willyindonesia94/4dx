@@ -27,7 +27,7 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
     {
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
         $isUlpLevel = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'ULP') || str_contains(strtoupper($user->role_name ?? ''), 'ULP'));
         $isUp3Level = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'UP3') || str_contains(strtoupper($user->role_name ?? ''), 'UP3'));
 
@@ -121,7 +121,7 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
                 $totalRealisasi = $r1 + $r2 + $r3 + $r4 + $r5;
                 $capaian = 0;
                 if ($angkaTarget > 0) {
-                    if (($lm->wig->polaritas ?? 'positif') === 'negatif') {
+                    if (($lm->polaritas ?? 'positif') === 'negatif') {
                         $diff = $angkaTarget - $totalRealisasi;
                         $percentage = 100 + (($diff / $angkaTarget) * 100);
                         $capaian = max(0, $percentage);
@@ -134,7 +134,7 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
                     'wig' => $lm->wig->judul ?? '-',
                     'lm' => $lm->judul_lm,
                     'satuan' => $lm->satuan->name ?? '',
-                    'polaritas' => $lm->wig->polaritas ?? 'positif',
+                    'polaritas' => $lm->polaritas ?? 'positif',
                     'unit' => $unit->name,
                     'target' => $angkaTarget,
                     'r1' => $r1, 'r2' => $r2, 'r3' => $r3, 'r4' => $r4, 'r5' => $r5,
@@ -165,7 +165,7 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
                 // Calculate UID Capaian
                 $uidCapaian = 0;
                 if ($uidTotal['target'] > 0) {
-                    if (($lm->wig->polaritas ?? 'positif') === 'negatif') {
+                    if (($lm->polaritas ?? 'positif') === 'negatif') {
                         $diff = $uidTotal['target'] - $uidTotal['total'];
                         $percentage = 100 + (($diff / $uidTotal['target']) * 100);
                         $uidCapaian = max(0, $percentage);
@@ -180,7 +180,7 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
                         'wig' => $lm->wig->judul ?? '-',
                         'lm' => $lm->judul_lm,
                         'satuan' => $lm->satuan->name ?? '',
-                        'polaritas' => $lm->wig->polaritas ?? 'positif',
+                        'polaritas' => $lm->polaritas ?? 'positif',
                         'unit' => 'UID Jawa Barat',
                         'target' => $uidTotal['target'],
                         'r1' => $uidTotal['r1'], 'r2' => $uidTotal['r2'], 'r3' => $uidTotal['r3'], 'r4' => $uidTotal['r4'], 'r5' => $uidTotal['r5'],

@@ -19,13 +19,11 @@ class LaporanBulananController extends Controller
         $bulan = $request->input('bulan', date('n'));
         $tahun = $request->input('tahun', date('Y'));
         
-        $export = new \App\Exports\MonthlyReportExport($tahun, $bulan);
-        $previewView = $export->view();
-        $previewData = $previewView->getData();
+        $previewData = [];
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
         $isUlpLevel = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'ULP') || str_contains(strtoupper($user->role_name ?? ''), 'ULP'));
         $isUp3Level = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'UP3') || str_contains(strtoupper($user->role_name ?? ''), 'UP3'));
 
@@ -109,6 +107,24 @@ class LaporanBulananController extends Controller
             $export = new \App\Exports\WigReportExport($tahun, $bulan);
             return response()->json(['html' => $export->view()->render()]);
         }
+        
+        if ($jenis === 'lengkap') {
+            $data = $this->getLengkapData($request);
+            if (!$data) {
+                return response()->json(['html' => '<div class="p-4 text-red-500 font-bold">Pilih WIG Induk terlebih dahulu.</div>']);
+            }
+            $html = view('exports.lengkap_html', $data)->render();
+            return response()->json(['html' => $html]);
+        }
+
+        if ($jenis === 'dashboard_heatmap') {
+            $data = $this->getLengkapData($request);
+            if (!$data) {
+                return response()->json(['html' => '<div class="p-4 text-gray-500">Pilih WIG terlebih dahulu.</div>']);
+            }
+            $html = view('dashboard.partials.heatmap', $data)->render();
+            return response()->json(['html' => $html]);
+        }
 
         $export = new \App\Exports\MonthlyReportExport($tahun, $bulan);
         return response()->json(['html' => $export->view()->render()]);
@@ -116,17 +132,35 @@ class LaporanBulananController extends Controller
 
     public function exportLengkap(Request $request)
     {
+        $data = $this->getLengkapData($request);
+        
+        if (!$data) {
+            return back()->with('error', 'Pilih WIG terlebih dahulu.');
+        }
+
+        ini_set('memory_limit', '-1');
+        ini_set('max_execution_time', '300');
+        
+        $pdf = Pdf::loadView('exports.lengkap_html', $data)
+                  ->setPaper('a3', 'landscape');
+                  
+        $filename = "Laporan_Lengkap_WIG_{$data['tahunT']}_{$data['bulanT']}.pdf";
+        return $pdf->download($filename);
+    }
+
+    public function getLengkapData(Request $request)
+    {
         $bulan = $request->input('bulan', date('n'));
         $tahun = $request->input('tahun', date('Y'));
         $wigId = $request->input('wig_id');
         
         if (!$wigId) {
-            return back()->with('error', 'Pilih WIG terlebih dahulu.');
+            return false;
         }
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
         $isUlpLevel = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'ULP') || str_contains(strtoupper($user->role_name ?? ''), 'ULP'));
         $isUp3Level = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'UP3') || str_contains(strtoupper($user->role_name ?? ''), 'UP3'));
 
@@ -226,10 +260,51 @@ class LaporanBulananController extends Controller
                 }
             }
 
+            $prevBulan = $targetBulan > 1 ? $targetBulan - 1 : 12;
+            $prevTahun = $targetBulan > 1 ? $tahunT : $tahunT - 1;
+            $colPrevBln = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][$prevBulan];
+            
+            // Previous month overall
+            $wigPrevTargetQuery = \Illuminate\Support\Facades\DB::table('breakdown_wigs')->where('wig_id', $wig->id);
+            $wigPrevRealQuery = \Illuminate\Support\Facades\DB::table('realisasi_wigs')->where('wig_id', $wig->id);
+            
+            $wigPrevTargetTot = 0;
+            $wigPrevRealTot = 0;
+            
+            if (!$isSuperAdmin && $user && $user->unit_id) {
+                $wigPrevTargetQuery->where('unit_id', $user->unit_id);
+                $wigPrevRealQuery->where('unit_id', $user->unit_id);
+                
+                $wigPrevTargetTot = $wigPrevTargetQuery->where('tahun', $prevTahun)->sum($colPrevBln);
+                $wigPrevRealTot = $wigPrevRealQuery->where('tahun', $prevTahun)->where('bulan', $prevBulan)->sum('angka_realisasi') ?? 0;
+            } else {
+                $wigPrevTargetQuery->where('unit_id', 1);
+                $wigPrevTargetTot = $wigPrevTargetQuery->where('tahun', $prevTahun)->sum($colPrevBln);
+                
+                $wigPrevRealQuery->where('tahun', $prevTahun)->where('bulan', $prevBulan)->where('unit_id', '!=', 1);
+                if ($isNonSummableWig) {
+                    $wigPrevRealTot = $wigPrevRealQuery->avg('angka_realisasi') ?? 0;
+                } else {
+                    $wigPrevRealTot = $wigPrevRealQuery->sum('angka_realisasi') ?? 0;
+                }
+            }
+
+            $prevPctUid = 0;
+            if ($wigPrevTargetTot > 0) {
+                if ($polaritasWig === 'negatif' || $polaritasWig === '3') {
+                    $prevPctUid = ($wigPrevTargetTot / max(0.0001, $wigPrevRealTot)) * 100;
+                } else {
+                    $prevPctUid = ($wigPrevRealTot / $wigPrevTargetTot) * 100;
+                }
+            }
+
             $wigData = [
                 'target' => $wigTargetTot,
                 'realisasi' => $wigRealTot,
                 'pct' => $pctUid,
+                'prev_target' => $wigPrevTargetTot,
+                'prev_realisasi' => $wigPrevRealTot,
+                'prev_pct' => $prevPctUid,
                 'lms' => [],
                 'units' => [],
                 'status_menang' => 0,
@@ -255,6 +330,23 @@ class LaporanBulananController extends Controller
                     }
                 }
                 
+                // Prev Month
+                $pT = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
+                    ->where('wig_id', $wig->id)->where('tahun', $prevTahun)->where('unit_id', $unit->id)
+                    ->sum($colPrevBln);
+                $pR = \Illuminate\Support\Facades\DB::table('realisasi_wigs')
+                    ->where('wig_id', $wig->id)->where('tahun', $prevTahun)->where('bulan', $prevBulan)->where('unit_id', $unit->id)
+                    ->sum('angka_realisasi') ?? 0;
+                    
+                $pPct = 0;
+                if ($pT > 0 || $pR > 0) {
+                    if ($polaritasWig === 'negatif' || $polaritasWig === '3') {
+                        $pPct = $pT > 0 ? ($pT / max(0.0001, $pR)) * 100 : 0;
+                    } else {
+                        $pPct = $pT > 0 ? ($pR / $pT) * 100 : 0;
+                    }
+                }
+                
                 if ($uPct >= 100) {
                     $wigData['status_menang']++;
                 } else {
@@ -265,12 +357,15 @@ class LaporanBulananController extends Controller
                     't' => $uT,
                     'r' => $uR,
                     'pct' => $uPct,
+                    'pt' => $pT,
+                    'pr' => $pR,
+                    'ppct' => $pPct,
                     'lms' => []
                 ];
             }
 
             // LM Data
-            foreach ($wig->masterLms->take(3) as $lm) {
+            foreach ($wig->masterLms as $lm) {
                 $lmPolaritas = strtolower(trim($lm->polaritas ?? 'positif'));
                 $isNonSummableLm = in_array($lm->satuan_id, $nonSummableSatuans);
                 
@@ -299,9 +394,7 @@ class LaporanBulananController extends Controller
                                 ->sum('angka_target');
                             
                             $wR = \App\Models\Realisasi::where('lm_id', $lm->id)
-                                ->whereHas('user', function($q) use ($unit) {
-                                    $q->where('unit_id', $unit->id);
-                                })
+                                ->where('unit_id', $unit->id)
                                 ->where('tanggal_input', '>=', $wStart . ' 00:00:00')
                                 ->where('tanggal_input', '<=', $wEnd . ' 23:59:59')
                                 ->sum('angka_realisasi') ?? 0;
@@ -392,6 +485,8 @@ class LaporanBulananController extends Controller
                 }
 
                 $wigData['lms'][$lm->id] = [
+                    'target' => $lmTotalTarget,
+                    'real' => $lmTotalReal,
                     'pct' => $lmOverallPct,
                     'menang' => $lmMenang,
                     'kalah' => $lmKalah
@@ -401,14 +496,7 @@ class LaporanBulananController extends Controller
             $reportData[$wig->id] = $wigData;
         }
         
-        ini_set('memory_limit', '-1');
-        ini_set('max_execution_time', '300');
-        
-        $pdf = Pdf::loadView('exports.lengkap_html', compact('bulan', 'tahun', 'wigs', 'units', 'isUlpLevel', 'isUp3Level', 'user', 'isAllBulan', 'bulanT', 'tahunT', 'reportData'))
-                  ->setPaper('a3', 'landscape');
-                  
-        $filename = "Laporan_Lengkap_WIG_{$tahunT}_{$bulanT}.pdf";
-        return $pdf->download($filename);
+        return compact('bulan', 'tahun', 'wigs', 'units', 'isUlpLevel', 'isUp3Level', 'user', 'isAllBulan', 'bulanT', 'tahunT', 'reportData');
     }
 
 }

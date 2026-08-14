@@ -11,8 +11,8 @@ class AuditLogController extends Controller
     {
         $user = auth()->user();
         $isSuperOrAdminUID = $user && (
-            in_array(trim($user->role_name ?? ''), ['Super Admin', 'Admin UID', 'super admin', 'superadmin']) || 
-            (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Admin UID']))
+            in_array(trim($user->role_name ?? ''), ['Super Admin', 'Perencanaan UID', 'super admin', 'superadmin']) || 
+            (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Perencanaan UID']))
         );
 
         $query = Activity::with('causer')->latest();
@@ -21,7 +21,7 @@ class AuditLogController extends Controller
             $query->where(function ($q) {
                 $q->whereNull('causer_id')
                   ->orWhereHasMorph('causer', [\App\Models\User::class], function ($q2) {
-                      $q2->whereNotIn('role_name', ['Super Admin', 'Admin UID', 'super admin', 'superadmin']);
+                      $q2->whereNotIn('role_name', ['Super Admin', 'Perencanaan UID', 'super admin', 'superadmin']);
                   });
             });
         }

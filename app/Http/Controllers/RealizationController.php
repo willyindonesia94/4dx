@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\RealisasiLmMassImport;
+use App\Imports\RealisasiLmFormatBidangImport;
 
 class RealizationController extends Controller
 {
@@ -20,7 +21,7 @@ class RealizationController extends Controller
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
         $isUlpLevel = !$isSuperAdmin && $user && $user->unit && strtoupper(trim((string)$user->unit->type)) === 'ULP';
 
         $query = Realisasi::with(['lm.wig', 'lm.satuan', 'user', 'unit'])
@@ -82,7 +83,7 @@ class RealizationController extends Controller
     {
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
 
         $lmQuery = MasterLm::query();
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
@@ -122,7 +123,7 @@ class RealizationController extends Controller
         
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
 
         $lmQuery = MasterLm::query();
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
@@ -169,7 +170,7 @@ class RealizationController extends Controller
      */
     private function checkEditRule(Realisasi $realisasi)
     {
-        if (in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID'])) {
+        if (in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID'])) {
             return; // Superadmin has full access
         }
 
@@ -180,7 +181,7 @@ class RealizationController extends Controller
 
     private function checkDeleteRule(Realisasi $realisasi)
     {
-        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID'])) {
+        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID'])) {
             abort(403, 'Akses Ditolak: Hanya Superadmin yang dapat menghapus data realisasi LM.');
         }
     }
@@ -203,8 +204,15 @@ class RealizationController extends Controller
             $isProrata = $request->input('is_prorata', false);
             $tanggalMulai = $request->input('tanggal_mulai');
             $tanggalSelesai = $request->input('tanggal_selesai');
+            $bulanImport = (int) $request->input('bulan_import', date('n'));
+            $tahunImport = (int) $request->input('tahun_import', date('Y'));
+            $formatImport = $request->input('format_import', 'standar');
 
-            Excel::import(new RealisasiLmMassImport($isProrata, $tanggalMulai, $tanggalSelesai), $request->file($fileKey));
+            if ($formatImport === 'bidang') {
+                Excel::import(new RealisasiLmFormatBidangImport($bulanImport, $tahunImport), $request->file($fileKey));
+            } else {
+                Excel::import(new RealisasiLmMassImport($isProrata, $tanggalMulai, $tanggalSelesai, $bulanImport, $tahunImport), $request->file($fileKey));
+            }
             return redirect()->route('realisasis.index')->with('success', 'Data realisasi LM berhasil di-upload dari Excel.');
         } catch (\Exception $e) {
             return redirect()->route('realisasis.index')->with('error', 'Gagal upload: ' . $e->getMessage());

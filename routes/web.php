@@ -76,8 +76,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('sesi-wigs', \App\Http\Controllers\SesiWigController::class);
     
 
-    Route::get('/realisasis/template', [\App\Http\Controllers\RealizationController::class, 'downloadTemplate'])->name('realisasis.template')->middleware('role:Super Admin|Admin UID');
-    Route::post('/realisasis/import', [\App\Http\Controllers\RealizationController::class, 'import'])->name('realisasis.import')->middleware('role:Super Admin|Admin UID');
+    Route::get('/realisasis/template', [\App\Http\Controllers\RealizationController::class, 'downloadTemplate'])->name('realisasis.template')->middleware('role:Super Admin|Perencanaan UID');
+    Route::post('/realisasis/import', [\App\Http\Controllers\RealizationController::class, 'import'])->name('realisasis.import')->middleware('role:Super Admin|Perencanaan UID');
     Route::resource('realisasis', \App\Http\Controllers\RealizationController::class)->except(['show']);
     
     // Realisasi WIG
@@ -85,8 +85,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/realisasi-wig', [\App\Http\Controllers\RealisasiWigController::class, 'store'])->name('realisasi-wig.store');
     Route::put('/realisasi-wig/{realisasi_wig}', [\App\Http\Controllers\RealisasiWigController::class, 'update'])->name('realisasi-wig.update');
     Route::delete('/realisasi-wig/{realisasi_wig}', [\App\Http\Controllers\RealisasiWigController::class, 'destroy'])->name('realisasi-wig.destroy');
-    Route::get('/realisasi-wig/template', [\App\Http\Controllers\RealisasiWigController::class, 'downloadTemplate'])->name('realisasi-wig.template')->middleware('role:Super Admin|Admin UID');
-    Route::post('/realisasi-wig/import', [\App\Http\Controllers\RealisasiWigController::class, 'import'])->name('realisasi-wig.import')->middleware('role:Super Admin|Admin UID');
+    Route::get('/realisasi-wig/template', [\App\Http\Controllers\RealisasiWigController::class, 'downloadTemplate'])->name('realisasi-wig.template')->middleware('role:Super Admin|Perencanaan UID');
+    Route::post('/realisasi-wig/import', [\App\Http\Controllers\RealisasiWigController::class, 'import'])->name('realisasi-wig.import')->middleware('role:Super Admin|Perencanaan UID');
     Route::get('/realisasi-wig/target', [\App\Http\Controllers\RealisasiWigController::class, 'getTargetBulanan'])->name('realisasi-wig.target');
 
     // Laporan Bulanan & Import Historis
@@ -100,11 +100,11 @@ Route::middleware('auth')->group(function () {
 
     // User Management (Superadmin Only)
     Route::resource('users', \App\Http\Controllers\UserController::class)
-        ->middleware(['role:Super Admin|Admin UID']);
+        ->middleware(['role:Super Admin|Perencanaan UID']);
         
     // Audit Log
     Route::get('/audit-logs', [\App\Http\Controllers\AuditLogController::class, 'index'])
-        ->middleware(['role:Super Admin|Admin UID|General Manager UID|Manager UP3|Manager ULP|Admin UP3|Admin ULP'])
+        ->middleware(['role:Super Admin|Perencanaan UID|General Manager UID|Manager UP3|Manager ULP|Perencanaan UP3|Staff ULP'])
         ->name('audit-logs.index');
 
     // Notifications
@@ -117,3 +117,67 @@ Route::get('/run-migrate-temp', function() {
 });
 
 require __DIR__.'/auth.php';
+
+Route::get('/debug-bw', function() {
+    $bw = \App\Models\BreakdownWig::where('wig_id', 1)->whereHas('unit', function($q){ $q->where('type', 'UID'); })->first();
+    if ($bw) {
+        $bw->target_jan = 286.97;
+        $bw->target_feb = 554.84;
+        $bw->target_mar = 844.69;
+        $bw->target_apr = 1105.02;
+        $bw->target_mei = 1409.64;
+        $bw->target_jun = 1701.43;
+        $bw->target_jul = 2004.17;
+        $bw->target_agu = 2308.39;
+        $bw->target_sep = 2604.30;
+        $bw->target_okt = 2917.82;
+        $bw->target_nov = 3215.11;
+        $bw->target_des = 3512.28;
+        $bw->target_tahunan = 3512.00;
+        $bw->save();
+        \Illuminate\Support\Facades\Log::info("WIG-1 targets updated manually.");
+    }
+    return response()->json($bw);
+});
+
+Route::get('/run-migration', function () {
+    \Illuminate\Support\Facades\Artisan::call('migrate');
+    return 'Migration run successfully.';
+});
+
+Route::get('/run-migration-specific', function () {
+    \Illuminate\Support\Facades\Artisan::call('migrate', ['--path' => 'database/migrations/2026_08_14_000000_add_polaritas_to_master_lms.php']);
+    return 'Specific migration run successfully.';
+});
+
+Route::get('/check-migration', function () {
+    return \Illuminate\Support\Facades\Schema::hasColumn('master_lms', 'polaritas') ? 'yes' : 'no';
+});
+
+Route::get('/add-column', function () {
+    \Illuminate\Support\Facades\DB::statement('ALTER TABLE master_lms ADD COLUMN polaritas ENUM("positif", "negatif") DEFAULT "positif"');
+    return 'Column added.';
+});
+
+Route::get('/list-columns', function () {
+    return implode(', ', \Illuminate\Support\Facades\Schema::getColumnListing('master_lms'));
+});
+
+Route::get('/test-lm', function () {
+    return \App\Models\MasterLm::first()->polaritas ?? 'null';
+});
+
+Route::get('/check-syntax', function () {
+    $file = base_path('app/Http/Controllers/DashboardController.php');
+    exec('php -l ' . escapeshellarg($file) . ' 2>&1', $output, $return_var);
+    return implode("
+", $output);
+});
+
+Route::get('/run-test', function () {
+    require base_path('test_syntax.php');
+});
+
+Route::get('/check-wig4', function () {
+    return \App\Models\MasterWig::find(4)->polaritas ?? 'null';
+});

@@ -8,7 +8,7 @@
     @php
         $role = auth()->user()->role_name ?? '';
         $isUid = auth()->user()->unit && auth()->user()->unit->type === 'UID';
-        $canCreateUp3Breakdown = in_array($role, ['Super Admin', 'superadmin', 'Admin UID', 'admin_uid']) || $isUid;
+        $canCreateUp3Breakdown = in_array($role, ['Super Admin', 'superadmin', 'Perencanaan UID', 'perencanaan_uid']) || $isUid;
         $canEditDelete = !in_array(strtoupper($role), ['BIDANG UID', 'SUB BIDANG UID', 'MANAGER UP3', 'MANAGER ULP', 'GENERAL MANAGER UID']);
     @endphp
 

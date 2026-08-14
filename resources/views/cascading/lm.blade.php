@@ -148,8 +148,8 @@
                                                         <h4 class="text-md font-semibold text-gray-800">{{ $lm->judul_lm }}</h4>
                                                     </div>
                                                     <div class="mt-2 sm:mt-0 flex items-center space-x-3">
-                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium {{ ($wig->polaritas ?? 'positif') == 'positif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                                            Polaritas {{ ucfirst($wig->polaritas ?? 'positif') }}
+                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium {{ ($lm->polaritas ?? 'positif') == 'positif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                                            Polaritas {{ ucfirst($lm->polaritas ?? 'positif') }}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -242,9 +242,9 @@
                                                                             });
                                                                         @endphp
                                                                         @foreach($groupedUid as $month => $items)
-                                                                        <tbody x-data="{ openMonth: true }" class="divide-y divide-indigo-50 bg-white border-b border-indigo-100/50">
-                                                                            <tr class="bg-indigo-100/50 cursor-pointer hover:bg-indigo-200/50 transition-colors" @click="openMonth = !openMonth">
-                                                                                <td colspan="{{ !empty($canBreakdownToUid) ? '5' : '4' }}" class="px-4 py-2 font-bold text-indigo-800 text-xs uppercase tracking-wider">
+                                                                        <tbody x-data="{ openMonth: false }" class="divide-y divide-indigo-50 bg-white border-b border-indigo-100/50">
+                                                                            <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
+                                                                                <td colspan="{{ !empty($canBreakdownToUid) ? '5' : '4' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
                                                                                     <div class="flex justify-between items-center">
                                                                                         <span>Target {{ $month }}</span>
                                                                                         <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': openMonth}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -329,9 +329,9 @@
                                                                             });
                                                                         @endphp
                                                                         @foreach($groupedUp3 as $month => $items)
-                                                                        <tbody x-data="{ openMonth: true }" class="divide-y divide-emerald-50 bg-white border-b border-emerald-100/50">
-                                                                            <tr class="bg-emerald-100/50 cursor-pointer hover:bg-emerald-200/50 transition-colors" @click="openMonth = !openMonth">
-                                                                                <td colspan="{{ !empty($canBreakdownToUp3) ? '5' : '4' }}" class="px-4 py-2 font-bold text-emerald-800 text-xs uppercase tracking-wider">
+                                                                        <tbody x-data="{ openMonth: false }" class="divide-y divide-emerald-50 bg-white border-b border-emerald-100/50">
+                                                                            <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
+                                                                                <td colspan="{{ !empty($canBreakdownToUp3) ? '5' : '4' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
                                                                                     <div class="flex justify-between items-center">
                                                                                         <span>Target {{ $month }}</span>
                                                                                         <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': openMonth}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -410,9 +410,9 @@
                                                                             });
                                                                         @endphp
                                                                         @foreach($groupedUlp as $month => $items)
-                                                                        <tbody x-data="{ openMonth: true }" class="divide-y divide-amber-50 bg-white border-b border-amber-100/50">
-                                                                            <tr class="bg-amber-100/50 cursor-pointer hover:bg-amber-200/50 transition-colors" @click="openMonth = !openMonth">
-                                                                                <td colspan="{{ !empty($canBreakdownToUlp) ? '5' : '4' }}" class="px-4 py-2 font-bold text-amber-800 text-xs uppercase tracking-wider">
+                                                                        <tbody x-data="{ openMonth: false }" class="divide-y divide-amber-50 bg-white border-b border-amber-100/50">
+                                                                            <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
+                                                                                <td colspan="{{ !empty($canBreakdownToUlp) ? '5' : '4' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
                                                                                     <div class="flex justify-between items-center">
                                                                                         <span>Target {{ $month }}</span>
                                                                                         <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': openMonth}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>

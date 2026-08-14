@@ -10,7 +10,7 @@
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <p class="text-gray-600 text-sm sm:text-base">Berikut adalah daftar realisasi pencapaian WIG secara bulanan.</p>
                 <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                    @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID']))
+                    @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
                     <button @click="openUploadModal = true" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-5 rounded-lg shadow transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
                         Upload Massal WIG
@@ -138,7 +138,7 @@
                                 </td>
                                 <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
                                     @php
-                                        $canEditDelete = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
+                                        $canEditDelete = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
                                     @endphp
 
                                     @if($canEditDelete)
@@ -180,7 +180,7 @@
                             </button>
                         </div>
                         <div class="bg-white px-6 pt-5 pb-6 overflow-y-auto flex-1">
-                            @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID']))
+                            @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
                             <div class="mb-5">
                                 <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Pilih Unit</label>
                                 <select name="unit_id" x-model="form.unit_id" @change="fetchTarget()" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm transition-colors">
@@ -208,7 +208,7 @@
                                         <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Bulan</label>
                                         <select name="bulan" x-model="form.bulan" @change="fetchTarget()" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm">
                                             @php $curMonth = (int)date('n'); @endphp
-                                            @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID']))
+                                            @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
                                                 @foreach(range(1, 12) as $m)
                                                     <option value="{{ $m }}">{{ date('F', mktime(0, 0, 0, $m, 10)) }}</option>
                                                 @endforeach
@@ -221,7 +221,7 @@
                                         <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Tahun</label>
                                         <select name="tahun" x-model="form.tahun" @change="fetchTarget()" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm">
                                             @php $curYear = (int)date('Y'); @endphp
-                                            @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID']))
+                                            @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
                                                 @foreach(range($curYear-1, $curYear+1) as $y)
                                                     <option value="{{ $y }}">{{ $y }}</option>
                                                 @endforeach
@@ -438,14 +438,14 @@
                 },
                 fetchTarget() {
                     if (!this.form.wig_id || !this.form.bulan || !this.form.tahun) return;
-                    @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID']))
+                    @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
                         if (!this.form.unit_id) return;
                     @endif
 
                     this.isLoadingTarget = true;
                     
                     let url = `{{ route('realisasi-wig.target') }}?wig_id=${this.form.wig_id}&bulan=${this.form.bulan}&tahun=${this.form.tahun}`;
-                    @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID']))
+                    @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
                         url += `&unit_id=${this.form.unit_id}`;
                     @endif
                     

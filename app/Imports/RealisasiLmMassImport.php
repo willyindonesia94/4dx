@@ -16,12 +16,16 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
     protected $isProrata;
     protected $tanggalMulai;
     protected $tanggalSelesai;
+    protected $bulanImport;
+    protected $tahunImport;
 
-    public function __construct($isProrata = false, $tanggalMulai = null, $tanggalSelesai = null)
+    public function __construct($isProrata = false, $tanggalMulai = null, $tanggalSelesai = null, $bulanImport = null, $tahunImport = null)
     {
         $this->isProrata = $isProrata;
         $this->tanggalMulai = $tanggalMulai ? Carbon::parse($tanggalMulai) : null;
         $this->tanggalSelesai = $tanggalSelesai ? Carbon::parse($tanggalSelesai) : null;
+        $this->bulanImport = $bulanImport ?? (int) date('n');
+        $this->tahunImport = $tahunImport ?? (int) date('Y');
     }
 
     public function collection(Collection $rows)
@@ -121,7 +125,7 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                         );
                     }
                 } else {
-                    // Logic Normal Harian
+                    // Jika ada bulanImport/tahunImport, ganti bulan & tahun tanggal sesuai pilihan
                     $parsedDate = now()->format("Y-m-d");
                     if ($tanggal) {
                         try {
@@ -134,6 +138,11 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                             $parsedDate = now()->format("Y-m-d");
                         }
                     }
+                    // Override bulan & tahun dengan pilihan user
+                    $parsedCarbon = Carbon::parse($parsedDate);
+                    $parsedCarbon->year = $this->tahunImport;
+                    $parsedCarbon->month = $this->bulanImport;
+                    $parsedDate = $parsedCarbon->format('Y-m-d');
 
                     Realisasi::updateOrCreate(
                         [

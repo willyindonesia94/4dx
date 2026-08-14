@@ -17,14 +17,14 @@ class DatabaseSeeder extends Seeder
         // 1. Create Roles
         $roles = [
             'Super Admin',
-            'Admin UID',
+            'Perencanaan UID',
             'General Manager UID',
             'Divisi UID',
-            'Admin UP3',
+            'Perencanaan UP3',
             'Manager UP3',
             'Divisi UP3',
             'Manager ULP',
-            'Admin ULP',
+            'Staff ULP',
             'Team Leader ULP'
         ];
 

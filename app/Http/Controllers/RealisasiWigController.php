@@ -19,7 +19,7 @@ class RealisasiWigController extends Controller
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Admin UID']);
+        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
 
         $query = RealisasiWig::with(['wig.satuan', 'unit', 'user'])
                              ->where('bulan', $bulanFilter)
@@ -69,7 +69,7 @@ class RealisasiWigController extends Controller
         $wigId = $request->wig_id;
         $bulan = $request->bulan;
         $tahun = $request->tahun;
-        $unitId = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID', 'Admin Unit']) 
+        $unitId = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID', 'Admin Unit']) 
                   ? $request->unit_id 
                   : auth()->user()->unit_id;
 
@@ -119,7 +119,7 @@ class RealisasiWigController extends Controller
         ]);
 
         // UP3 restriction: only current month
-        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID'])) {
+        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID'])) {
             $currentMonth = (int)date('n');
             $currentYear = (int)date('Y');
             if ((int)$request->bulan !== $currentMonth || (int)$request->tahun !== $currentYear) {
@@ -127,7 +127,7 @@ class RealisasiWigController extends Controller
             }
         }
 
-        $unitId = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID']) 
+        $unitId = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']) 
                   ? $request->unit_id 
                   : auth()->user()->unit_id;
         
@@ -207,7 +207,7 @@ class RealisasiWigController extends Controller
 
     private function authorizeSuperadmin()
     {
-        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Admin UID'])) {
+        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID'])) {
             abort(403, 'Akses Ditolak: Hanya Superadmin yang dapat mengedit/menghapus Realisasi WIG.');
         }
     }

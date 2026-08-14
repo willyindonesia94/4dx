@@ -45,17 +45,21 @@
     @endphp
 
     <!-- HEADER -->
-    <table style="width: 100%; background: #0b2256; color: white; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+    <table style="width: 100%; background: #0b2256; color: white; border-radius: 4px; margin-bottom: 15px; border-collapse: collapse;">
         <tr>
-            <td style="width: 25%; text-align: left; font-weight: bold; font-size: 14px; vertical-align: middle;">
+            <td style="width: 25%; text-align: left; font-weight: bold; font-size: 14px; vertical-align: middle; padding: 10px 10px 10px 15px;">
                 {{ !empty($isUlpLevel) && $user && $user->unit ? strtoupper($user->unit->name) : (!empty($isUp3Level) && $user && $user->unit ? strtoupper($user->unit->name) : 'UID JAWA BARAT') }}
             </td>
-            <td style="width: 50%; text-align: center; font-weight: bold; font-size: 20px; letter-spacing: 1px; vertical-align: middle;">
+            <td style="width: 50%; text-align: center; font-weight: bold; font-size: 20px; letter-spacing: 1px; vertical-align: middle; padding: 10px;">
                 {{ strtoupper($wig->judul) }}<br>
                 <span style="font-size: 12px; font-weight: normal; color: #d1d5db;">Periode: {{ $isAllBulan ? 'Semua Bulan (Tahunan)' : \Carbon\Carbon::create()->month($bulanT)->translatedFormat('F') }} {{ $tahun }}</span>
             </td>
-            <td style="width: 25%; text-align: right; font-weight: bold; color: #facc15; font-size: 18px; vertical-align: middle;">
-                PLN
+            <td style="width: 25%; text-align: right; vertical-align: middle; padding: 10px 15px 10px 10px;">
+                @php
+                    $logoData = base64_encode(file_get_contents(public_path('icon-192x192.png')));
+                    $logoSrc = 'data:image/png;base64,' . $logoData;
+                @endphp
+                <img src="{{ $logoSrc }}" style="height: 35px; width: auto; float: right;" alt="PLN">
             </td>
         </tr>
     </table>
@@ -64,58 +68,66 @@
     <table class="layout-table" style="margin-bottom: 15px;">
         <tr>
             <!-- WIG PERFORMANCE -->
-            <td style="width: 30%; padding-right: 10px;">
-                <div class="box-title" style="text-transform: uppercase;">WIG PERFORMANCE | {{ $pctUid >= 100 ? 'EXCEEDED TARGET' : 'PERFORMANCE WATCH' }}</div>
-                <div class="box-content" style="height: 90px;">
-                    <table style="width: 100%; height: 100%;">
-                        <tr>
-                            <td style="width: 50%; text-align: center; vertical-align: middle;">
-                                <div style="font-size: 24px; font-weight: bold; color: {{ $pctUid >= 100 ? '#16a34a' : '#dc2626' }};">{{ number_format($pctUid, 2) }} %</div>
-                                <div style="font-size: 11px; font-weight: bold; color: #374151; margin-top: 5px;">Capaian WIG {{ !empty($isUlpLevel) ? 'ULP' : (!empty($isUp3Level) ? 'UP3' : 'UID Jabar') }}</div>
-                                <div style="font-size: 10px; color: #6b7280; margin-top: 3px;">Target: {{ number_format($wigTargetTot, 2) }}</div>
-                                <div style="font-size: 10px; color: #6b7280;">Realisasi: {{ number_format($wigRealTot, 2) }}</div>
-                            </td>
-                            <td style="width: 50%; border-left: 1px solid #e5e7eb; vertical-align: bottom; padding-left: 5px; text-align: center;">
-                                <div style="font-size: 10px; font-weight: bold; color: #4b5563; margin-bottom: 5px;">TREND CAPAIAN WIG (%)</div>
-                                <table style="width: 100%; height: 40px; border-collapse: separate; border-spacing: 2px;">
-                                    <tr style="vertical-align: bottom;">
-                                        @for($i=1; $i<=$bulanT; $i++)
-                                            <td style="background: #3b82f6; width: 16%; padding: 0;">
-                                                <div style="height: {{ max(1, min(100, $pctUid)) / 2.5 }}px;"></div>
-                                            </td>
-                                        @endfor
-                                    </tr>
-                                </table>
-                                <div style="font-size: 8px; color: #9ca3af; font-weight: bold; margin-top: 2px;">
-                                    <span style="float: left;">JAN</span>
-                                    <span>..</span>
-                                    <span style="float: right;">{{ $isAllBulan ? 'DES' : strtoupper(substr(\Carbon\Carbon::create()->month($bulanT)->translatedFormat('F'),0,3)) }}</span>
-                                </div>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
+            <td style="width: 29%; height: 100%; vertical-align: top;">
+                <table style="width: 100%; height: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td class="box-title" style="text-transform: uppercase; height: 1px; padding: 5px 10px;">WIG PERFORMANCE | {{ $pctUid >= 100 ? 'EXCEEDED TARGET' : 'PERFORMANCE WATCH' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="box-content" style="padding: 10px; vertical-align: middle; height: 100%;">
+                            <table style="width: 100%; height: 100%;">
+                                <tr>
+                                    <td style="width: 50%; text-align: center; vertical-align: middle;">
+                                        <div style="font-size: 24px; font-weight: bold; color: {{ $pctUid >= 100 ? '#16a34a' : '#dc2626' }};">{{ number_format($pctUid, 2) }} %</div>
+                                        <div style="font-size: 11px; font-weight: bold; color: #374151; margin-top: 5px;">Capaian WIG {{ !empty($isUlpLevel) ? 'ULP' : (!empty($isUp3Level) ? 'UP3' : 'UID Jabar') }}</div>
+                                        <div style="font-size: 10px; color: #6b7280; margin-top: 3px;">Target: {{ number_format($wigTargetTot, 2) }}</div>
+                                        <div style="font-size: 10px; color: #6b7280;">Realisasi: {{ number_format($wigRealTot, 2) }}</div>
+                                    </td>
+                                    <td style="width: 50%; border-left: 1px solid #e5e7eb; vertical-align: bottom; padding-left: 5px; text-align: center;">
+                                        <div style="font-size: 10px; font-weight: bold; color: #4b5563; margin-bottom: 5px;">TREND CAPAIAN WIG (%)</div>
+                                        <table style="width: 100%; height: 40px; border-collapse: separate; border-spacing: 2px;">
+                                            <tr style="vertical-align: bottom;">
+                                                @for($i=1; $i<=$bulanT; $i++)
+                                                    <td style="background: #3b82f6; width: 16%; padding: 0;">
+                                                        <div style="height: {{ max(1, min(100, $pctUid)) / 2.5 }}px;"></div>
+                                                    </td>
+                                                @endfor
+                                            </tr>
+                                        </table>
+                                        <div style="font-size: 8px; color: #9ca3af; font-weight: bold; margin-top: 2px;">
+                                            <span style="float: left;">JAN</span>
+                                            <span>..</span>
+                                            <span style="float: right;">{{ $isAllBulan ? 'DES' : strtoupper(substr(\Carbon\Carbon::create()->month($bulanT)->translatedFormat('F'),0,3)) }}</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
             </td>
             
+            <td style="width: 1%;"></td> <!-- Spacer -->
+
             <!-- LM CARDS -->
             <td style="width: 70%;">
-                <table style="width: 100%; table-layout: fixed;">
+                <table style="width: 100%; height: 100%; table-layout: fixed;">
                     <tr>
-                        @foreach($wig->masterLms->take(3) as $idx => $lm)
+                        @foreach($wig->masterLms as $idx => $lm)
                         @php
                             $lmData = $wData['lms'][$lm->id] ?? ['pct' => 0, 'menang' => 0, 'kalah' => 0];
                             $lmPct = $lmData['pct'];
                             $menang = $lmData['menang'];
                             $kalah = $lmData['kalah'];
                         @endphp
-                        <td style="padding-left: {{ $idx == 0 ? '0' : '10px' }}; vertical-align: top;">
-                            <div style="background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; padding: 10px; text-align: center; position: relative; height: 90px;">
-                                <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background-color: {{ $lmPct >= 100 ? '#22c55e' : '#ef4444' }}; border-radius: 4px 4px 0 0;"></div>
-                                <div style="font-size: 11px; font-weight: bold; color: #374151; margin-bottom: 2px; margin-top: 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">LM {{ $idx+1 }} {{ $lm->judul_lm }}</div>
-                                <div style="font-size: 22px; font-weight: bold; color: {{ $lmPct >= 100 ? '#16a34a' : '#dc2626' }}; margin: 2px 0;">{{ number_format($lmPct, 2) }} %</div>
-                                <div><span class="status-badge {{ $lmPct >= 100 ? 'bg-exceed' : 'bg-watch' }}">{{ $lmPct >= 100 ? 'EXCEEDED TARGET' : 'PERFORMANCE WATCH' }}</span></div>
-                                <div style="font-size: 9px; font-weight: bold; color: #1f2937; margin-top: 5px;">{{ !empty($isUlpLevel) || !empty($isUp3Level) ? 'ULP' : 'UP3' }} Menang: {{ $menang }} | {{ !empty($isUlpLevel) || !empty($isUp3Level) ? 'ULP' : 'UP3' }} Kalah: {{ $kalah }}</div>
-                            </div>
+                        @if($idx > 0)
+                            <td style="width: 10px;"></td>
+                        @endif
+                        <td style="background: #f3f4f6; border: 1px solid #d1d5db; border-top: 4px solid {{ $lmPct >= 100 ? '#22c55e' : '#ef4444' }}; border-radius: 4px; padding: 10px; text-align: center; vertical-align: middle; height: 100%;">
+                            <div style="font-size: 11px; font-weight: bold; color: #374151; margin-bottom: 2px; margin-top: 0px; min-height: 26px;">LM {{ $idx+1 }} - {{ preg_replace('/^LM\s*-?\s*\d+\s*/i', '', $lm->judul_lm) }}</div>
+                            <div style="font-size: 22px; font-weight: bold; color: {{ $lmPct >= 100 ? '#16a34a' : '#dc2626' }}; margin: 2px 0;">{{ number_format($lmPct, 2) }} %</div>
+                            <div><span class="status-badge {{ $lmPct >= 100 ? 'bg-exceed' : 'bg-watch' }}">{{ $lmPct >= 100 ? 'EXCEEDED TARGET' : 'PERFORMANCE WATCH' }}</span></div>
+                            <div style="font-size: 9px; font-weight: bold; color: #1f2937; margin-top: 5px;">{{ !empty($isUlpLevel) || !empty($isUp3Level) ? 'ULP' : 'UP3' }} Menang: {{ $menang }} | {{ !empty($isUlpLevel) || !empty($isUp3Level) ? 'ULP' : 'UP3' }} Kalah: {{ $kalah }}</div>
                         </td>
                         @endforeach
                     </tr>
@@ -134,7 +146,7 @@
                         <tr>
                             <th rowspan="2" style="width: 15%;">UNIT</th>
                             <th colspan="3">WIG</th>
-                            @foreach($wig->masterLms->take(3) as $idx => $lm)
+                            @foreach($wig->masterLms as $idx => $lm)
                                 <th colspan="5">LM-{{ $idx+1 }}</th>
                             @endforeach
                         </tr>
@@ -142,7 +154,7 @@
                             <th style="width: 4%;">T</th>
                             <th style="width: 4%;">R</th>
                             <th style="width: 5%;">%</th>
-                            @foreach($wig->masterLms->take(3) as $lm)
+                            @foreach($wig->masterLms as $lm)
                                 <th style="width: 3.5%;">M1</th>
                                 <th style="width: 3.5%;">M2</th>
                                 <th style="width: 3.5%;">M3</th>
@@ -168,7 +180,7 @@
                             <td>{{ number_format($uR, 2) }}</td>
                             <td class="{{ $uWigBg }}" style="font-weight: bold;">{{ number_format($uPct, 2) }}%</td>
                             
-                            @foreach($wig->masterLms->take(3) as $lm)
+                            @foreach($wig->masterLms as $lm)
                             @php
                                 $lmWeeks = $uData['lms'][$lm->id] ?? [];
                             @endphp
@@ -224,16 +236,7 @@
                     </div>
                 </div>
                 
-                <div>
-                    <div class="box-title">FOCUS AREA NEXT WEEK</div>
-                    <div style="border: 1px solid #d1d5db; border-top: none; padding: 10px; background: white; font-size: 11px; color: #374151;">
-                        <ul style="margin: 0; padding-left: 15px;">
-                            <li style="margin-bottom: 5px;">Perkuatan Eksekusi LM di unit berkinerja merah.</li>
-                            <li style="margin-bottom: 5px;">Monitoring Penyelesaian Target Bulanan.</li>
-                            <li>Evaluasi Kendala Eksekusi Lapangan.</li>
-                        </ul>
-                    </div>
-                </div>
+
             </td>
         </tr>
     </table>

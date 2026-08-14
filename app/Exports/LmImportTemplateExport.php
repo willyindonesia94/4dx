@@ -75,7 +75,7 @@ class LmImportTemplateExport implements FromCollection, WithHeadings, WithMappin
                     // or just leave it empty for them to fill if it's 0
                     $calculateCapaian = function($val) use ($angkaTarget, $lm) {
                         if ($val === '') return '';
-                        if (($lm->wig->polaritas ?? 'positif') === 'negatif') {
+                        if (($lm->polaritas ?? 'positif') === 'negatif') {
                             $diff = $angkaTarget - $val;
                             $percentage = 100 + (($diff / $angkaTarget) * 100);
                             return round(max(0, $percentage), 2) . '%';
