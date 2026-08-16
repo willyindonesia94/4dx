@@ -32,7 +32,7 @@ class MasterWigController extends Controller
         $wigs = $query->get();
         $units = MasterUnit::all();
         $satuans = MasterSatuan::all();
-        $bidangs = MasterBidang::where('level', 'UID_SUBBIDANG')->orderBy('name', 'asc')->get();
+        $bidangs = MasterBidang::whereIn('level', ['UID_SUBBIDANG', 'UID_BIDANG'])->orderBy('name', 'asc')->get();
         return view('master-wigs.index', compact('wigs', 'status', 'search', 'units', 'satuans', 'bidangs'));
     }
 
@@ -40,7 +40,7 @@ class MasterWigController extends Controller
     {
         $units = MasterUnit::all();
         $satuans = MasterSatuan::all();
-        $bidangs = MasterBidang::where('level', 'UID_SUBBIDANG')->orderBy('name', 'asc')->get();
+        $bidangs = MasterBidang::whereIn('level', ['UID_SUBBIDANG', 'UID_BIDANG'])->orderBy('name', 'asc')->get();
         return view('master-wigs.create', compact('units', 'satuans', 'bidangs'));
     }
 
@@ -105,7 +105,7 @@ class MasterWigController extends Controller
         ]);
 
         $data = $request->all();
-        $user = Auth::user();
+        $user = auth()->user();
         $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
         $isMsb = $user && (strtolower(trim($user->role_name ?? '')) === 'sub bidang uid');
 

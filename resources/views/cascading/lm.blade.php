@@ -15,6 +15,79 @@
         formLmId: null, formLmTitle: "", formType: "uid", formUp3Target: "", availableUnitsData: @json($availableUnits),
         formUnitId: "", formBidang: "", formAngkaTarget: null, formSatuanId: "", formBulan: "", formTahun: "",
         targetM1: null, targetM2: null, targetM3: null, targetM4: null, targetM5: null, isAutoFill: true,
+        selectedBreakdowns: [],
+        selectAll(items) {
+            let strItems = items.map(String);
+            let allSelected = strItems.every(id => this.selectedBreakdowns.includes(id));
+            if (allSelected) {
+                this.selectedBreakdowns = this.selectedBreakdowns.filter(id => !strItems.includes(id));
+            } else {
+                let newSelection = [...new Set([...this.selectedBreakdowns, ...strItems])];
+                this.selectedBreakdowns = newSelection;
+            }
+        },
+        bulkDelete() {
+            if (this.selectedBreakdowns.length === 0) return;
+            this.openConfirm(
+                this.selectedBreakdowns,
+                "Konfirmasi Hapus Data",
+                `Anda akan menghapus <strong>${this.selectedBreakdowns.length} target</strong> terpilih secara permanen. Tindakan ini tidak dapat dibatalkan. Lanjutkan?`,
+                "delete"
+            );
+        },
+        bulkApprove() {
+            if (this.selectedBreakdowns.length === 0) return;
+            this.openConfirm(
+                this.selectedBreakdowns,
+                "Konfirmasi Persetujuan Data",
+                `Anda akan menyetujui <strong>${this.selectedBreakdowns.length} target</strong> terpilih. Lanjutkan?`,
+                "approve"
+            );
+        },
+        showConfirmModal: false,
+        confirmTitle: "",
+        confirmMessage: "",
+        confirmActionType: "delete",
+        confirmIds: [],
+        openConfirm(ids, title, message, actionType = "delete") {
+            if (ids.length === 0) return;
+            this.confirmIds = ids;
+            this.confirmTitle = title;
+            this.confirmMessage = message;
+            this.confirmActionType = actionType;
+            this.showConfirmModal = true;
+        },
+        doConfirmedAction() {
+            if (this.confirmActionType === "delete") {
+                document.getElementById("bulkDeleteInput").value = JSON.stringify(this.confirmIds);
+                document.getElementById("bulkDeleteForm").submit();
+            } else if (this.confirmActionType === "approve") {
+                document.getElementById("bulkApproveInput").value = JSON.stringify(this.confirmIds);
+                document.getElementById("bulkApproveForm").submit();
+            }
+        },
+        deleteMonth(allMonthIds, monthName) {
+            let strIds = allMonthIds.map(String);
+            let toDelete = strIds.filter(id => this.selectedBreakdowns.includes(id));
+            if (toDelete.length === 0) return;
+            this.openConfirm(
+                toDelete,
+                "Konfirmasi Hapus Data",
+                `Anda akan menghapus <strong>${toDelete.length} target</strong> pada bulan <strong>${monthName}</strong> yang telah Anda pilih. Tindakan ini tidak dapat dibatalkan. Lanjutkan?`,
+                "delete"
+            );
+        },
+        approveMonth(allMonthIds, monthName) {
+            let strIds = allMonthIds.map(String);
+            let toApprove = strIds.filter(id => this.selectedBreakdowns.includes(id));
+            if (toApprove.length === 0) return;
+            this.openConfirm(
+                toApprove,
+                "Konfirmasi Persetujuan Data",
+                `Anda akan menyetujui <strong>${toApprove.length} target</strong> pada bulan <strong>${monthName}</strong> yang telah Anda pilih. Lanjutkan?`,
+                "approve"
+            );
+        },
         openEditModal(bw, title, type, up3Target = "") {
             this.editMode = true; this.editBreakdownId = bw.id; this.formLmId = bw.lm_id; this.formLmTitle = title;
             this.formType = type; this.formUp3Target = up3Target; this.formUnitId = bw.unit_id; this.formBidang = bw.bidang || ""; 
@@ -224,6 +297,7 @@
                                                                 <table class="min-w-full text-xs text-left">
                                                                     <thead class="text-indigo-900 border-b border-indigo-100 bg-indigo-50/50">
                                                                         <tr>
+                                                                            <th class="px-4 py-2 font-medium w-10 text-center">Pilih</th>
                                                                             <th class="px-4 py-2 font-medium">Unit</th>
                                                                             <th class="px-4 py-2 font-medium">Bidang</th>
                                                                             <th class="px-4 py-2 font-medium text-right">Target</th>
@@ -244,10 +318,33 @@
                                                                         @foreach($groupedUid as $month => $items)
                                                                         <tbody x-data="{ openMonth: false }" class="divide-y divide-indigo-50 bg-white border-b border-indigo-100/50">
                                                                             <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
-                                                                                <td colspan="{{ !empty($canBreakdownToUid) ? '5' : '4' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
+                                                                                <td colspan="{{ !empty($canBreakdownToUid) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
                                                                                     <div class="flex justify-between items-center">
-                                                                                        <span>Target {{ $month }}</span>
-                                                                                        <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': openMonth}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                                                        <div class="flex items-center gap-3">
+                                                                                            <input type="checkbox" @click.stop="selectAll({{ $items->pluck('id')->toJson() }})" :checked="[...{{ $items->pluck('id')->toJson() }}].every(id => selectedBreakdowns.includes(String(id)))" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                                                                                            <span>Target {{ $month }}</span>
+                                                                                        </div>
+                                                                                        <div class="flex items-center gap-4">
+                                                                                            @if(isset($canApproveLm) && $canApproveLm)
+                                                                                            <button 
+                                                                                                @click.stop="approveMonth({{ $items->pluck('id')->toJson() }}, '{{ $month }}')"
+                                                                                                x-show="{{ $items->pluck('id')->toJson() }}.some(id => selectedBreakdowns.includes(String(id)))"
+                                                                                                x-cloak
+                                                                                                class="text-emerald-500 hover:text-emerald-700 text-[11px] font-bold flex items-center gap-1 transition-colors">
+                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                                                                                Setujui (<span x-text="{{ $items->pluck('id')->toJson() }}.filter(id => selectedBreakdowns.includes(String(id))).length"></span>)
+                                                                                            </button>
+                                                                                            @endif
+                                                                                            <button 
+                                                                                                @click.stop="deleteMonth({{ $items->pluck('id')->toJson() }}, '{{ $month }}')"
+                                                                                                x-show="{{ $items->pluck('id')->toJson() }}.some(id => selectedBreakdowns.includes(String(id)))"
+                                                                                                x-cloak
+                                                                                                class="text-red-500 hover:text-red-700 text-[11px] font-bold flex items-center gap-1 transition-colors">
+                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                                                                Hapus (<span x-text="{{ $items->pluck('id')->toJson() }}.filter(id => selectedBreakdowns.includes(String(id))).length"></span>)
+                                                                                            </button>
+                                                                                            <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': openMonth}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                                                        </div>
                                                                                     </div>
                                                                                 </td>
                                                                             </tr>
@@ -256,6 +353,9 @@
     return ($b->unit->name ?? '') . '_' . $isMonthly . '_' . $b->periode_start; 
 }) as $breakdown)
                                                                             <tr x-show="openMonth">
+                                                                                <td class="px-4 py-2 text-center" @click.stop>
+                                                                                    <input type="checkbox" value="{{ $breakdown->id }}" x-model="selectedBreakdowns" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                                                                                </td>
                                                                                 <td class="px-4 py-2 font-semibold text-gray-700">
                                                                                     {{ $breakdown->unit->name ?? '-' }}
                                                                                     @if(!$breakdown->is_approved)
@@ -263,7 +363,7 @@
                                                                                     @endif
                                                                                 </td>
                                                                                 <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
-                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ number_format($breakdown->angka_target, 2) }} {{ $breakdown->satuan->name ?? '' }}</td>
+                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ number_format($breakdown->angka_target, 2) }} {{ $lm->satuan->name ?? '' }}</td>
                                                                                 <td class="px-4 py-2 text-gray-500">
                                                                                     @if (\Carbon\Carbon::parse($breakdown->periode_start)->diffInDays(\Carbon\Carbon::parse($breakdown->periode_end)) >= 20)
                                                                                         <span class="font-bold text-indigo-700">Target Total Bulanan</span>
@@ -324,6 +424,7 @@
                                                                 <table class="min-w-full text-xs text-left">
                                                                     <thead class="text-emerald-900 border-b border-emerald-100 bg-emerald-50/50">
                                                                         <tr>
+                                                                            <th class="px-4 py-2 font-medium w-10 text-center">Pilih</th>
                                                                             <th class="px-4 py-2 font-medium">Unit</th>
                                                                             <th class="px-4 py-2 font-medium">Bidang</th>
                                                                             <th class="px-4 py-2 font-medium text-right">Target</th>
@@ -344,10 +445,33 @@
                                                                         @foreach($groupedUp3 as $month => $items)
                                                                         <tbody x-data="{ openMonth: false }" class="divide-y divide-emerald-50 bg-white border-b border-emerald-100/50">
                                                                             <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
-                                                                                <td colspan="{{ !empty($canBreakdownToUp3) ? '5' : '4' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
+                                                                                <td colspan="{{ !empty($canBreakdownToUp3) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
                                                                                     <div class="flex justify-between items-center">
-                                                                                        <span>Target {{ $month }}</span>
-                                                                                        <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': openMonth}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                                                        <div class="flex items-center gap-3">
+                                                                                            <input type="checkbox" @click.stop="selectAll({{ $items->pluck('id')->toJson() }})" :checked="[...{{ $items->pluck('id')->toJson() }}].every(id => selectedBreakdowns.includes(String(id)))" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                                                                                            <span>Target {{ $month }}</span>
+                                                                                        </div>
+                                                                                        <div class="flex items-center gap-4">
+                                                                                            @if(isset($canApproveLm) && $canApproveLm)
+                                                                                            <button 
+                                                                                                @click.stop="approveMonth({{ $items->pluck('id')->toJson() }}, '{{ $month }}')"
+                                                                                                x-show="{{ $items->pluck('id')->toJson() }}.some(id => selectedBreakdowns.includes(String(id)))"
+                                                                                                x-cloak
+                                                                                                class="text-emerald-500 hover:text-emerald-700 text-[11px] font-bold flex items-center gap-1 transition-colors">
+                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                                                                                Setujui (<span x-text="{{ $items->pluck('id')->toJson() }}.filter(id => selectedBreakdowns.includes(String(id))).length"></span>)
+                                                                                            </button>
+                                                                                            @endif
+                                                                                            <button 
+                                                                                                @click.stop="deleteMonth({{ $items->pluck('id')->toJson() }}, '{{ $month }}')"
+                                                                                                x-show="{{ $items->pluck('id')->toJson() }}.some(id => selectedBreakdowns.includes(String(id)))"
+                                                                                                x-cloak
+                                                                                                class="text-red-500 hover:text-red-700 text-[11px] font-bold flex items-center gap-1 transition-colors">
+                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                                                                Hapus (<span x-text="{{ $items->pluck('id')->toJson() }}.filter(id => selectedBreakdowns.includes(String(id))).length"></span>)
+                                                                                            </button>
+                                                                                            <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': openMonth}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                                                        </div>
                                                                                     </div>
                                                                                 </td>
                                                                             </tr>
@@ -356,6 +480,9 @@
     return ($b->unit->name ?? '') . '_' . $isMonthly . '_' . $b->periode_start; 
 }) as $breakdown)
                                                                             <tr x-show="openMonth">
+                                                                                <td class="px-4 py-2 text-center" @click.stop>
+                                                                                    <input type="checkbox" value="{{ $breakdown->id }}" x-model="selectedBreakdowns" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                                                                                </td>
                                                                                 <td class="px-4 py-2 font-semibold text-gray-700">
                                                                                     {{ $breakdown->unit->name ?? '-' }}
                                                                                     @if(!$breakdown->is_approved)
@@ -363,7 +490,7 @@
                                                                                     @endif
                                                                                 </td>
                                                                                 <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
-                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ number_format($breakdown->angka_target, 2) }} {{ $breakdown->satuan->name ?? '' }}</td>
+                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ number_format($breakdown->angka_target, 2) }} {{ $lm->satuan->name ?? '' }}</td>
                                                                                 <td class="px-4 py-2 text-gray-500">{{ \Carbon\Carbon::parse($breakdown->periode_start)->locale('id')->translatedFormat('d M Y') }} - {{ \Carbon\Carbon::parse($breakdown->periode_end)->locale('id')->translatedFormat('d M Y') }}</td>
                                                                                 @if(!empty($canBreakdownToUp3))
                                                                                 <td class="px-4 py-2 text-center whitespace-nowrap">
@@ -418,6 +545,7 @@
                                                                 <table class="min-w-full text-xs text-left">
                                                                     <thead class="text-amber-900 border-b border-amber-100 bg-amber-50/50">
                                                                         <tr>
+                                                                            <th class="px-4 py-2 font-medium w-10 text-center">Pilih</th>
                                                                             <th class="px-4 py-2 font-medium">Unit</th>
                                                                             <th class="px-4 py-2 font-medium">Bidang</th>
                                                                             <th class="px-4 py-2 font-medium text-right">Target</th>
@@ -438,10 +566,33 @@
                                                                         @foreach($groupedUlp as $month => $items)
                                                                         <tbody x-data="{ openMonth: false }" class="divide-y divide-amber-50 bg-white border-b border-amber-100/50">
                                                                             <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
-                                                                                <td colspan="{{ !empty($canBreakdownToUlp) ? '5' : '4' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
+                                                                                <td colspan="{{ !empty($canBreakdownToUlp) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
                                                                                     <div class="flex justify-between items-center">
-                                                                                        <span>Target {{ $month }}</span>
-                                                                                        <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': openMonth}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                                                        <div class="flex items-center gap-3">
+                                                                                            <input type="checkbox" @click.stop="selectAll({{ $items->pluck('id')->toJson() }})" :checked="[...{{ $items->pluck('id')->toJson() }}].every(id => selectedBreakdowns.includes(String(id)))" class="rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer">
+                                                                                            <span>Target {{ $month }}</span>
+                                                                                        </div>
+                                                                                        <div class="flex items-center gap-4">
+                                                                                            @if(isset($canApproveLm) && $canApproveLm)
+                                                                                            <button 
+                                                                                                @click.stop="approveMonth({{ $items->pluck('id')->toJson() }}, '{{ $month }}')"
+                                                                                                x-show="{{ $items->pluck('id')->toJson() }}.some(id => selectedBreakdowns.includes(String(id)))"
+                                                                                                x-cloak
+                                                                                                class="text-emerald-500 hover:text-emerald-700 text-[11px] font-bold flex items-center gap-1 transition-colors">
+                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                                                                                Setujui (<span x-text="{{ $items->pluck('id')->toJson() }}.filter(id => selectedBreakdowns.includes(String(id))).length"></span>)
+                                                                                            </button>
+                                                                                            @endif
+                                                                                            <button 
+                                                                                                @click.stop="deleteMonth({{ $items->pluck('id')->toJson() }}, '{{ $month }}')"
+                                                                                                x-show="{{ $items->pluck('id')->toJson() }}.some(id => selectedBreakdowns.includes(String(id)))"
+                                                                                                x-cloak
+                                                                                                class="text-red-500 hover:text-red-700 text-[11px] font-bold flex items-center gap-1 transition-colors">
+                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                                                                Hapus (<span x-text="{{ $items->pluck('id')->toJson() }}.filter(id => selectedBreakdowns.includes(String(id))).length"></span>)
+                                                                                            </button>
+                                                                                            <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': openMonth}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                                                        </div>
                                                                                     </div>
                                                                                 </td>
                                                                             </tr>
@@ -450,6 +601,9 @@
     return ($b->unit->name ?? '') . '_' . $isMonthly . '_' . $b->periode_start; 
 }) as $breakdown)
                                                                             <tr x-show="openMonth">
+                                                                                <td class="px-4 py-2 text-center" @click.stop>
+                                                                                    <input type="checkbox" value="{{ $breakdown->id }}" x-model="selectedBreakdowns" class="rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer">
+                                                                                </td>
                                                                                 <td class="px-4 py-2 font-semibold text-gray-700">
                                                                                     {{ $breakdown->unit->name ?? '-' }}
                                                                                     @if(!$breakdown->is_approved)
@@ -457,7 +611,7 @@
                                                                                     @endif
                                                                                 </td>
                                                                                 <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
-                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ number_format($breakdown->angka_target, 2) }} {{ $breakdown->satuan->name ?? '' }}</td>
+                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ number_format($breakdown->angka_target, 2) }} {{ $lm->satuan->name ?? '' }}</td>
                                                                                 <td class="px-4 py-2 text-gray-500">{{ \Carbon\Carbon::parse($breakdown->periode_start)->locale('id')->translatedFormat('d M Y') }} - {{ \Carbon\Carbon::parse($breakdown->periode_end)->locale('id')->translatedFormat('d M Y') }}</td>
                                                                                 @if(!empty($canBreakdownToUlp))
                                                                                 <td class="px-4 py-2 text-center whitespace-nowrap">
@@ -665,7 +819,101 @@
             </div>
         </div>
 
+    
+    <!-- Floating Action Button for Bulk Delete -->
+    <div x-show="selectedBreakdowns.length > 0" 
+         x-transition:enter="transition ease-out duration-300 transform"
+         x-transition:enter-start="opacity-0 translate-y-10"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200 transform"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-10"
+         class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-red-600 shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 z-50 border border-red-500" style="display: none;">
+        <span class="font-bold text-white text-sm"><span x-text="selectedBreakdowns.length"></span> Terpilih</span>
+        <div class="h-5 w-px bg-red-400"></div>
+        <button @click="bulkDelete" class="text-white hover:text-red-100 font-bold text-sm flex items-center transition-colors">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            Hapus Sekaligus
+        </button>
+        @if(isset($canApproveLm) && $canApproveLm)
+        <div class="h-5 w-px bg-red-400"></div>
+        <button @click="bulkApprove" class="text-white hover:text-emerald-100 font-bold text-sm flex items-center transition-colors">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Setujui Sekaligus
+        </button>
+        @endif
+    </div>
 
+    <!-- Hidden Bulk Delete Form -->
+    <form id="bulkDeleteForm" action="{{ route('cascading.breakdown.bulk-destroy') }}" method="POST" class="hidden">
+        @csrf
+        @method('DELETE')
+        <input type="hidden" name="ids" id="bulkDeleteInput">
+    </form>
+
+    <!-- Hidden Bulk Approve Form -->
+    <form id="bulkApproveForm" action="{{ route('cascading.breakdown.bulk-approve') }}" method="POST" class="hidden">
+        @csrf
+        <input type="hidden" name="ids" id="bulkApproveInput">
+    </form>
+
+    <!-- Custom Confirm Delete Modal -->
+    <div x-show="showConfirmModal"
+         x-cloak
+         class="fixed inset-0 z-[9999] flex items-center justify-center"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         style="display: none;">
+        <!-- Overlay -->
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="showConfirmModal = false"></div>
+        <!-- Modal Box -->
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+             x-transition:enter="transition ease-out duration-200 transform"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            <!-- Header -->
+            <div :class="confirmActionType === 'delete' ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'" class="border-b px-6 py-4 flex items-center gap-3">
+                <div :class="confirmActionType === 'delete' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'" class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center">
+                    <svg x-show="confirmActionType === 'delete'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <svg x-show="confirmActionType === 'approve'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-800 text-base" x-text="confirmTitle"></h3>
+                    <p class="text-xs text-slate-500">Perhatian — tindakan tidak dapat dibatalkan</p>
+                </div>
+            </div>
+            <!-- Body -->
+            <div class="px-6 py-5">
+                <p class="text-sm text-slate-600 leading-relaxed" x-html="confirmMessage"></p>
+            </div>
+            <!-- Footer -->
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <button @click="showConfirmModal = false"
+                        class="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-100 transition-colors">
+                    Batal
+                </button>
+                <button @click="doConfirmedAction()"
+                        :class="confirmActionType === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'"
+                        class="px-4 py-2 rounded-lg text-white text-sm font-bold flex items-center gap-2 transition-colors shadow-sm">
+                    <svg x-show="confirmActionType === 'delete'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                    <svg x-show="confirmActionType === 'approve'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span x-text="confirmActionType === 'delete' ? 'Ya, Hapus' : 'Ya, Setujui'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
     </div>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">

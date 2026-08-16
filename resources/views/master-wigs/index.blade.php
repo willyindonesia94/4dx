@@ -8,9 +8,19 @@
     <div class="py-8" x-data="{ 
             openModal: false, 
             editModal: false, 
-            editData: { id: '', judul: '', deskripsi: '', divisi: '', unit_pemilik_id: '', angka_target: '', satuan_id: '', polaritas: 'positif' },
+            editData: { id: '', judul: '', deskripsi: '', divisi: [], unit_pemilik_id: '', angka_target: '', satuan_id: '', polaritas: 'positif' },
             openEdit(wig) {
                 this.editData = { ...wig };
+                if (typeof this.editData.divisi === 'string') {
+                    try {
+                        this.editData.divisi = JSON.parse(this.editData.divisi);
+                    } catch(e) {
+                        this.editData.divisi = [this.editData.divisi];
+                    }
+                }
+                if (!Array.isArray(this.editData.divisi)) {
+                    this.editData.divisi = this.editData.divisi ? [this.editData.divisi] : [];
+                }
                 this.editModal = true;
             }
         }">
@@ -88,7 +98,7 @@
                                         $isSuperAdmin = auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin');
                                         $isSubBidang = auth()->user()->role_name === 'Sub Bidang UID' || auth()->user()->hasRole('Sub Bidang UID');
                                     @endphp
-                                    @if(!$wig->is_approved && ($isSuperAdmin || ($isSubBidang && auth()->user()->matrix_group_id === $wig->divisi)))
+                                    @if(!$wig->is_approved && ($isSuperAdmin || ($isSubBidang && in_array((string)auth()->user()->matrix_group_id, is_array($wig->divisi) ? $wig->divisi : json_decode($wig->divisi ?? '[]', true) ?? []))))
                                         <form action="{{ route('master-wigs.approve', $wig->id) }}" method="POST" class="inline m-0">
                                             @csrf
                                             <button type="submit" class="text-green-600 hover:text-green-900 hover:bg-green-100 font-bold bg-green-50 px-3 py-1.5 rounded-md border border-green-200 transition-colors text-xs">Setujui</button>
@@ -145,12 +155,14 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Sub Bidang</label>
-                                    <select name="divisi[]" multiple required class="block w-full py-2 px-3 rounded-md border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 sm:text-sm" style="min-height: 100px;">
-                                        <option value="">-- Pilih Sub Bidang --</option>
+                                    <div class="block w-full py-2 px-3 rounded-md border border-slate-300 bg-white overflow-y-auto" style="max-height: 150px;">
                                         @foreach($bidangs as $bidang)
-                                            <option value="{{ $bidang->name }}">{{ $bidang->name }} ({{ $bidang->level == 'UID_BIDANG' ? 'UID' : ($bidang->level == 'UID_SUBBIDANG' ? 'Sub UID' : ($bidang->level == 'UP3_BIDANG' ? 'UP3' : 'ULP')) }})</option>
+                                            <label class="flex items-center space-x-2 mb-2 cursor-pointer">
+                                                <input type="checkbox" name="divisi[]" value="{{ $bidang->name }}" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                                <span class="text-sm text-slate-700">{{ $bidang->name }} ({{ $bidang->level == 'UID_BIDANG' ? 'UID' : ($bidang->level == 'UID_SUBBIDANG' ? 'Sub UID' : ($bidang->level == 'UP3_BIDANG' ? 'UP3' : 'ULP')) }})</span>
+                                            </label>
                                         @endforeach
-                                    </select>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Unit Pemilik</label>
@@ -219,12 +231,14 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Sub Bidang</label>
-                                    <select name="divisi[]" x-model="editData.divisi" multiple required class="block w-full py-2 px-3 rounded-md border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 sm:text-sm" style="min-height: 100px;">
-                                        <option value="">-- Pilih Sub Bidang --</option>
+                                    <div class="block w-full py-2 px-3 rounded-md border border-slate-300 bg-white overflow-y-auto" style="max-height: 150px;">
                                         @foreach($bidangs as $bidang)
-                                            <option value="{{ $bidang->name }}">{{ $bidang->name }} ({{ $bidang->level == 'UID_BIDANG' ? 'UID' : ($bidang->level == 'UID_SUBBIDANG' ? 'Sub UID' : ($bidang->level == 'UP3_BIDANG' ? 'UP3' : 'ULP')) }})</option>
+                                            <label class="flex items-center space-x-2 mb-2 cursor-pointer">
+                                                <input type="checkbox" name="divisi[]" value="{{ $bidang->name }}" x-model="editData.divisi" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                                <span class="text-sm text-slate-700">{{ $bidang->name }} ({{ $bidang->level == 'UID_BIDANG' ? 'UID' : ($bidang->level == 'UID_SUBBIDANG' ? 'Sub UID' : ($bidang->level == 'UP3_BIDANG' ? 'UP3' : 'ULP')) }})</span>
+                                            </label>
                                         @endforeach
-                                    </select>
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Unit Pemilik</label>

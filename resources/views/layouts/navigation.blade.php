@@ -135,21 +135,39 @@
                                         $pendingBreakdownWigs = \App\Models\BreakdownWig::with(['wig', 'unit'])->where('is_approved', false)->get()->unique(function ($item) { return $item->wig_id . '-' . $item->unit_id; });
                                         $pendingBreakdownLms = \App\Models\BreakdownLm::with(['lm', 'unit'])->where('is_approved', false)->get()->unique(function ($item) { return $item->lm_id . '-' . $item->unit_id; });
                                     } elseif ($isSubBidang) {
-                                        $userDivisi = auth()->user()->matrix_group_id;
-                                        $pendingWigs = \App\Models\MasterWig::where('is_approved', false)->where('divisi', $userDivisi)->get();
-                                        $pendingLms = \App\Models\MasterLm::with('wig')->where('is_approved', false)->whereHas('wig', function($q) use ($userDivisi) {
-                                            $q->where('divisi', $userDivisi);
-                                        })->get();
+                                        $userDivisi = (string)auth()->user()->matrix_group_id;
                                         
-                                        $pendingBreakdownWigs = \App\Models\BreakdownWig::with(['wig', 'unit'])->where('is_approved', false)->whereHas('wig', function($q) use ($userDivisi) {
-                                            $q->where('divisi', $userDivisi);
-                                        })->get()->unique(function ($item) { return $item->wig_id . '-' . $item->unit_id; });
+                                        $pendingWigs = \App\Models\MasterWig::where('is_approved', false)
+                                            ->where(function($q) use ($userDivisi) {
+                                                $q->where('divisi', $userDivisi)
+                                                  ->orWhere('divisi', 'like', '%"'.$userDivisi.'"%');
+                                            })->get();
+                                            
+                                        $pendingLms = \App\Models\MasterLm::with('wig')->where('is_approved', false)
+                                            ->whereHas('wig', function($q) use ($userDivisi) {
+                                                $q->where('divisi', $userDivisi)
+                                                  ->orWhere('divisi', 'like', '%"'.$userDivisi.'"%');
+                                            })->get();
                                         
-                                        $pendingBreakdownLms = \App\Models\BreakdownLm::with(['lm.wig', 'unit'])->where('is_approved', false)->whereHas('lm.wig', function($q) use ($userDivisi) {
-                                            $q->where('divisi', $userDivisi);
-                                        })->get()->unique(function ($item) { return $item->lm_id . '-' . $item->unit_id; });
+                                        $pendingBreakdownWigs = \App\Models\BreakdownWig::with(['wig', 'unit'])->where('is_approved', false)
+                                            ->whereHas('wig', function($q) use ($userDivisi) {
+                                                $q->where('divisi', $userDivisi)
+                                                  ->orWhere('divisi', 'like', '%"'.$userDivisi.'"%');
+                                            })->get()->unique(function ($item) { return $item->wig_id . '-' . $item->unit_id; });
+                                        
+                                        $pendingBreakdownLms = \App\Models\BreakdownLm::with(['lm.wig', 'unit'])->where('is_approved', false)
+                                            ->whereHas('lm.wig', function($q) use ($userDivisi) {
+                                                $q->where('divisi', $userDivisi)
+                                                  ->orWhere('divisi', 'like', '%"'.$userDivisi.'"%');
+                                            })->get()->unique(function ($item) { return $item->lm_id . '-' . $item->unit_id; });
                                     } elseif ($isManagerUp3) {
                                         $userUnitId = auth()->user()->unit_id;
+                                        
+                                        $pendingBreakdownWigs = \App\Models\BreakdownWig::with(['wig', 'unit'])
+                                            ->where('is_approved', false)
+                                            ->where('unit_id', $userUnitId)
+                                            ->get()->unique(function ($item) { return $item->wig_id . '-' . $item->unit_id; });
+
                                         $pendingBreakdownLms = \App\Models\BreakdownLm::with(['lm', 'unit'])->where('is_approved', false)
                                             ->whereHas('unit', function($q) use ($userUnitId) {
                                                 // Only show breakdowns for ULP under this UP3, or for the UP3 itself

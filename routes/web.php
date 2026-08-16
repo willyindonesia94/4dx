@@ -51,6 +51,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/cascading/lm/breakdown/template', [\App\Http\Controllers\CascadingController::class, 'breakdownLmTemplate'])->name('cascading.breakdown.template');
     Route::post('/cascading/lm/breakdown/import', [\App\Http\Controllers\CascadingController::class, 'importBreakdownLm'])->name('cascading.breakdown.import');
     Route::post('/cascading/breakdown', [\App\Http\Controllers\CascadingController::class, 'storeBreakdown'])->name('cascading.breakdown.store');
+    Route::delete('/cascading/breakdown-lm/bulk', [\App\Http\Controllers\CascadingController::class, 'bulkDestroyLm'])->name('cascading.breakdown.bulk-destroy');
+    Route::post('/cascading/breakdown-lm/bulk-approve', [\App\Http\Controllers\CascadingController::class, 'bulkApproveLm'])->name('cascading.breakdown.bulk-approve');
     Route::put('/cascading/breakdown/{id}', [\App\Http\Controllers\CascadingController::class, 'updateBreakdown'])->name('cascading.breakdown.update');
     Route::delete('/cascading/breakdown/{id}', [\App\Http\Controllers\CascadingController::class, 'destroyBreakdown'])->name('cascading.breakdown.destroy');
     Route::post('/cascading/breakdown/{id}/approve', [\App\Http\Controllers\CascadingController::class, 'approveLmBreakdown'])->name('cascading.breakdown.approve');
@@ -120,6 +122,13 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/run-migrate-temp', function() {
     return 'Done';
+});
+
+Route::get('/debug-up2d', function() {
+    $wig = \App\Models\MasterWig::find(4);
+    return response()->json([
+        'wig' => $wig
+    ]);
 });
 
 require __DIR__.'/auth.php';

@@ -22,7 +22,7 @@ class CascadingController extends Controller
         $canApproveWig = $isSuperAdmin || $isMsb;
         
         $wigsQuery = MasterWig::where('is_approved', true)
-            ->with(['breakdowns', 'breakdowns.unit', 'breakdowns.satuan']);
+            ->with(['satuan', 'breakdowns', 'breakdowns.unit', 'breakdowns.satuan']);
             
         if (!$isSuperAdmin && !$isPerencanaanUid && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
@@ -35,7 +35,10 @@ class CascadingController extends Controller
         
         $wigs = $wigsQuery->get()->each(function ($wig) {
             $wig->setRelation('breakdowns', $wig->breakdowns->sortBy(function ($bd) {
-                return $bd->unit ? strtolower($bd->unit->name) : '';
+                if (!$bd->unit) return '';
+                $type = strtoupper(trim($bd->unit->type));
+                $prefix = in_array($type, ['UP2D', 'UP2K']) ? 'z_' : 'a_';
+                return $prefix . strtolower($bd->unit->name);
             })->values());
         });
 
@@ -71,9 +74,10 @@ class CascadingController extends Controller
                 $q->where('is_approved', true);
             }, 'masterLms.breakdowns' => function($q) {
                 $q->join('master_units', 'breakdown_lms.unit_id', '=', 'master_units.id')
+                  ->orderByRaw("CASE WHEN UPPER(TRIM(master_units.type)) IN ('UP2D', 'UP2K') THEN 2 ELSE 1 END")
                   ->orderBy('master_units.name', 'asc')
                   ->select('breakdown_lms.*');
-            }, 'masterLms.breakdowns.unit', 'masterLms.breakdowns.satuan']);
+            }, 'masterLms.breakdowns.unit', 'masterLms.breakdowns.satuan', 'masterLms.satuan']);
 
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
@@ -308,6 +312,25 @@ class CascadingController extends Controller
         return redirect()->back()->with('success', 'Breakdown LM berhasil dihapus.');
     }
 
+    public function bulkDestroyLm(Request $request)
+    {
+        $ids = json_decode($request->input('ids', '[]'), true);
+        if (empty($ids) || !is_array($ids)) {
+            return redirect()->back()->with('error', 'Tidak ada data yang dipilih.');
+        }
+
+        $role = auth()->user()->role_name ?? '';
+        $canEditDelete = !in_array(strtoupper($role), ['BIDANG UID', 'SUB BIDANG UID', 'MANAGER UP3', 'UP2K', 'UP2D', 'MANAGER ULP', 'GENERAL MANAGER UID']);
+        
+        if (!$canEditDelete) {
+            return redirect()->back()->with('error', 'Anda tidak memiliki akses untuk menghapus target.');
+        }
+
+        \App\Models\BreakdownLm::whereIn('id', $ids)->delete();
+
+        return redirect()->back()->with('success', count($ids) . ' target berhasil dihapus.');
+    }
+
     public function storeWigBreakdown(Request $request)
     {
         $request->validate([
@@ -339,9 +362,25 @@ class CascadingController extends Controller
         $data = $request->all();
         $data['is_approved'] = $is_approved;
 
-        \App\Models\BreakdownWig::create($data);
+        $breakdown = \App\Models\BreakdownWig::create($data);
 
-        return redirect()->back()->with('success', 'Breakdown WIG berhasil ditambahkan ke UID. ' . (!$is_approved ? 'Menunggu persetujuan.' : ''));
+        if (!$is_approved) {
+            $approvers = \App\Models\User::whereIn('role_name', ['Manager UP3', 'UP2K', 'UP2D'])
+                ->where('unit_id', $request->unit_id)
+                ->get();
+            
+            if ($approvers->isEmpty()) {
+                $approvers = \App\Models\User::whereIn('role_name', ['Super Admin', 'Sub Bidang UID'])->get();
+            }
+
+            \Illuminate\Support\Facades\Notification::send($approvers, new \App\Notifications\RequiresApprovalNotification(
+                'Persetujuan Cascading WIG Baru', 
+                'Cascading WIG Baru', 
+                "Cascading WIG untuk unit Anda telah dibuat oleh " . $user->name . " dan membutuhkan persetujuan."
+            ));
+        }
+
+        return redirect()->back()->with('success', 'Breakdown WIG berhasil ditambahkan ke Unit. ' . (!$is_approved ? 'Menunggu persetujuan.' : ''));
     }
 
     public function updateWigBreakdown(Request $request, $id)
@@ -394,11 +433,23 @@ class CascadingController extends Controller
         $breakdown->save();
 
         if (!$isSuperAdmin && !$isMsb) {
-            $approvers = \App\Models\User::whereIn('role_name', ['Super Admin', 'Sub Bidang UID'])->get();
+            // Gabungkan approver pusat dan approver unit terkait
+            $approvers = \App\Models\User::whereIn('role_name', ['Super Admin', 'Sub Bidang UID'])
+                ->orWhere(function($query) use ($breakdown) {
+                    $query->whereIn('role_name', ['Manager UP3', 'UP2K', 'UP2D'])
+                          ->where('unit_id', $breakdown->unit_id);
+                })->get();
+
+            $title = !$breakdown->is_approved ? 'Persetujuan Cascading WIG (Dari Edit)' : 'Perubahan Cascading WIG';
+            $subject = !$breakdown->is_approved ? 'Menunggu Persetujuan' : 'Cascading WIG Diubah';
+            $message = !$breakdown->is_approved 
+                ? "Draft Cascading WIG unit " . ($breakdown->unit->name ?? '-') . " telah diperbarui oleh " . $user->name . " dan menunggu persetujuan Anda."
+                : "Data Cascading WIG unit " . ($breakdown->unit->name ?? '-') . " telah diubah oleh " . $user->name . " (Target lama: " . $oldTarget . " -> " . $breakdown->target_tahunan . ")";
+
             \Illuminate\Support\Facades\Notification::send($approvers, new \App\Notifications\RequiresApprovalNotification(
-                'Perubahan Cascading WIG', 
-                'Cascading WIG Diubah', 
-                "Data Cascading WIG unit " . ($breakdown->unit->name ?? '-') . " telah diubah oleh " . $user->name . " (Target lama: " . $oldTarget . " -> " . $breakdown->target_tahunan . ")"
+                $title, 
+                $subject, 
+                $message
             ));
         }
 
@@ -505,6 +556,18 @@ class CascadingController extends Controller
         $breakdown->update(['is_approved' => true]);
 
         return redirect()->back()->with('success', 'Cascading LM berhasil disetujui.');
+    }
+
+    public function bulkApproveLm(Request $request)
+    {
+        $ids = json_decode($request->input('ids', '[]'), true);
+        if (empty($ids) || !is_array($ids)) {
+            return redirect()->back()->with('error', 'Tidak ada data yang dipilih.');
+        }
+
+        BreakdownLm::whereIn('id', $ids)->update(['is_approved' => true]);
+
+        return redirect()->back()->with('success', 'Cascading LM terpilih berhasil disetujui.');
     }
 
 

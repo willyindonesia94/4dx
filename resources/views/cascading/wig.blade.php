@@ -150,7 +150,7 @@
                                     });
                                     
                                     $up3Breakdowns = $wig->breakdowns->filter(function($bw) {
-                                        return $bw->unit && $bw->unit->type === 'UP3';
+                                        return $bw->unit && in_array(strtoupper($bw->unit->type), ['UP3', 'UP2D', 'UP2K']);
                                     });
                                 @endphp
 
@@ -180,7 +180,7 @@
                                                             @endif
                                                         </td>
                                                         <td class="px-3 py-2 text-center">{{ $bw->tahun }}</td>
-                                                        <td class="px-3 py-2 text-right font-bold text-gray-800">{{ number_format($bw->target_tahunan, 2) }} {{ $bw->satuan->name ?? '' }}</td>
+                                                        <td class="px-3 py-2 text-right font-bold text-gray-800">{{ number_format($bw->target_tahunan, 2) }} {{ $wig->satuan->name ?? '' }}</td>
                                                         <td class="px-3 py-2 text-center" @click.stop>
                                                             <div class="flex justify-center items-center gap-3">
                                                                 @if(!$bw->is_approved && isset($canApproveWig) && $canApproveWig)
@@ -269,10 +269,10 @@
                                                             @endif
                                                         </td>
                                                         <td class="px-3 py-2 text-center">{{ $bw->tahun }}</td>
-                                                        <td class="px-3 py-2 text-right font-bold text-gray-800">{{ number_format($bw->target_tahunan, 2) }} {{ $bw->satuan->name ?? '' }}</td>
+                                                        <td class="px-3 py-2 text-right font-bold text-gray-800">{{ number_format($bw->target_tahunan, 2) }} {{ $wig->satuan->name ?? '' }}</td>
                                                         <td class="px-3 py-2 text-center" @click.stop>
                                                             <div class="flex justify-center items-center space-x-2">
-                                                                @if(!$bw->is_approved && isset($canApproveWig) && $canApproveWig)
+                                                                @if(!$bw->is_approved && ((isset($canApproveWig) && $canApproveWig) || (in_array(strtoupper(auth()->user()->role_name ?? ''), ['MANAGER UP3', 'UP2K', 'UP2D']) && auth()->user()->unit_id == $bw->unit_id)))
                                                                 <form action="{{ route('cascading.wig-breakdown.approve', $bw->id) }}" method="POST" class="inline m-0">
                                                                     @csrf
                                                                     <button type="submit" class="text-emerald-500 hover:text-emerald-700 font-bold transition-colors text-xs">Setujui</button>
