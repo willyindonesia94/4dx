@@ -52,7 +52,8 @@ class MasterWigController extends Controller
             'unit_pemilik_id' => 'required|exists:master_units,id',
             'angka_target' => 'required|numeric',
             'satuan_id' => 'required|exists:master_satuans,id',
-            'divisi' => 'required|string|max:255',
+            'divisi' => 'required|array',
+            'divisi.*' => 'string|max:255',
             'polaritas' => 'required|in:positif,negatif',
         ]);
 
@@ -98,7 +99,8 @@ class MasterWigController extends Controller
             'unit_pemilik_id' => 'required|exists:master_units,id',
             'angka_target' => 'required|numeric',
             'satuan_id' => 'required|exists:master_satuans,id',
-            'divisi' => 'required|string|max:255',
+            'divisi' => 'required|array',
+            'divisi.*' => 'string|max:255',
             'polaritas' => 'required|in:positif,negatif',
         ]);
 

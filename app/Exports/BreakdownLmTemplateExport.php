@@ -60,7 +60,11 @@ class BreakdownLmTemplateExport implements FromCollection, WithHeadings, ShouldA
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL' && class_exists(\App\Models\MasterBidang::class)) {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
             if (!empty($allowedDivisis)) {
-                $wigsQuery->whereIn('divisi', $allowedDivisis);
+                $wigsQuery->where(function($q) use ($allowedDivisis) {
+                    foreach ($allowedDivisis as $div) {
+                        $q->orWhereJsonContains('divisi', $div);
+                    }
+                });
             }
         }
 

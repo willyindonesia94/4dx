@@ -63,7 +63,13 @@
                             @forelse($wigs as $wig)
                             <tr class="hover:bg-slate-50/80 transition-colors">
                                 <td class="px-6 py-4 text-sm font-semibold text-slate-800">{{ $wig->judul }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{{ $wig->divisi }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                    @php
+                                        $divs = is_array($wig->divisi) ? $wig->divisi : json_decode($wig->divisi, true);
+                                        $divs = is_array($divs) ? $divs : [$wig->divisi];
+                                    @endphp
+                                    {{ implode(', ', $divs) }}
+                                </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 text-right font-bold">
                                     {{ number_format($wig->angka_target, 2) }} {{ $wig->satuan->name ?? '' }}
                                     <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium {{ $wig->polaritas == 'positif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
@@ -139,7 +145,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Sub Bidang</label>
-                                    <select name="divisi" required class="block w-full py-2 px-3 rounded-md border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 sm:text-sm">
+                                    <select name="divisi[]" multiple required class="block w-full py-2 px-3 rounded-md border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 sm:text-sm" style="min-height: 100px;">
                                         <option value="">-- Pilih Sub Bidang --</option>
                                         @foreach($bidangs as $bidang)
                                             <option value="{{ $bidang->name }}">{{ $bidang->name }} ({{ $bidang->level == 'UID_BIDANG' ? 'UID' : ($bidang->level == 'UID_SUBBIDANG' ? 'Sub UID' : ($bidang->level == 'UP3_BIDANG' ? 'UP3' : 'ULP')) }})</option>
@@ -213,7 +219,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Sub Bidang</label>
-                                    <select name="divisi" x-model="editData.divisi" required class="block w-full py-2 px-3 rounded-md border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 sm:text-sm">
+                                    <select name="divisi[]" x-model="editData.divisi" multiple required class="block w-full py-2 px-3 rounded-md border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 sm:text-sm" style="min-height: 100px;">
                                         <option value="">-- Pilih Sub Bidang --</option>
                                         @foreach($bidangs as $bidang)
                                             <option value="{{ $bidang->name }}">{{ $bidang->name }} ({{ $bidang->level == 'UID_BIDANG' ? 'UID' : ($bidang->level == 'UID_SUBBIDANG' ? 'Sub UID' : ($bidang->level == 'UP3_BIDANG' ? 'UP3' : 'ULP')) }})</option>

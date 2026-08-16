@@ -35,7 +35,13 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
         $lmsQuery = MasterLm::with(['wig', 'satuan']);
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
-            $lmsQuery->whereHas('wig', fn($q) => $q->whereIn('divisi', $allowedDivisis));
+            $lmsQuery->whereHas('wig', function($q) use ($allowedDivisis) {
+                $q->where(function($query) use ($allowedDivisis) {
+                    foreach ($allowedDivisis as $div) {
+                        $query->orWhereJsonContains('divisi', $div);
+                    }
+                });
+            });
         }
         $lms = $lmsQuery->get();
 

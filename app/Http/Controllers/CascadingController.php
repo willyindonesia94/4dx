@@ -26,7 +26,11 @@ class CascadingController extends Controller
             
         if (!$isSuperAdmin && !$isPerencanaanUid && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
-            $wigsQuery->whereIn('divisi', $allowedDivisis);
+            $wigsQuery->where(function($q) use ($allowedDivisis) {
+                foreach ($allowedDivisis as $div) {
+                    $q->orWhereJsonContains('divisi', $div);
+                }
+            });
         }
         
         $wigs = $wigsQuery->get()->each(function ($wig) {
@@ -73,7 +77,11 @@ class CascadingController extends Controller
 
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
-            $wigsQuery->whereIn('divisi', $allowedDivisis);
+            $wigsQuery->where(function($q) use ($allowedDivisis) {
+                foreach ($allowedDivisis as $div) {
+                    $q->orWhereJsonContains('divisi', $div);
+                }
+            });
         }
 
         $wigs = $wigsQuery->get()

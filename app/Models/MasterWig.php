@@ -16,7 +16,10 @@ class MasterWig extends Model
             ->logUnguarded()
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
-    }
+    protected $casts = [
+        'divisi' => 'array',
+    ];
+
     protected $fillable = [
         'judul',
         'deskripsi',

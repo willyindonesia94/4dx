@@ -33,7 +33,11 @@ class RealisasiWigController extends Controller
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
             $query->whereHas('wig', function($q) use ($allowedDivisis) {
-                $q->whereIn('divisi', $allowedDivisis);
+                $q->where(function($query) use ($allowedDivisis) {
+                    foreach ($allowedDivisis as $div) {
+                        $query->orWhereJsonContains('divisi', $div);
+                    }
+                });
             });
         }
         
@@ -55,7 +59,11 @@ class RealisasiWigController extends Controller
 
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
-            $wigsQuery->whereIn('divisi', $allowedDivisis);
+            $wigsQuery->where(function($q) use ($allowedDivisis) {
+                foreach ($allowedDivisis as $div) {
+                    $q->orWhereJsonContains('divisi', $div);
+                }
+            });
         }
         $wigs = $wigsQuery->get();
 

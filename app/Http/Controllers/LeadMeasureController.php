@@ -37,7 +37,7 @@ class LeadMeasureController extends Controller
         if ($user && !$user->hasAnyRole(['Super Admin', 'Perencanaan UID']) && $user->matrix_group_id !== 'ALL') {
             $query->whereHas('wig', function($q) use ($user) {
                 // Assuming we show LMs where the user's matrix_group_id matches the WIG's divisi
-                $q->where('divisi', $user->matrix_group_id);
+                $q->whereJsonContains('divisi', $user->matrix_group_id);
             });
         }
         

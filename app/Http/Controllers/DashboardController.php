@@ -24,7 +24,18 @@ class DashboardController extends Controller
         $periodeEnd   = Carbon::createFromDate($tahun, $bulan, 1)->endOfMonth()->format('Y-m-d');
 
         // ── Filter UI Data ──────────────────────────────────────────────────────
-        $divisions = MasterWig::select('divisi')->distinct()->pluck('divisi');
+        $rawDivisions = MasterWig::select('divisi')->whereNotNull('divisi')->pluck('divisi');
+        $divisions = collect();
+        foreach ($rawDivisions as $raw) {
+            $divs = is_array($raw) ? $raw : json_decode($raw, true);
+            $divs = is_array($divs) ? $divs : [$raw];
+            foreach ($divs as $d) {
+                if (!empty($d) && !$divisions->contains($d)) {
+                    $divisions->push($d);
+                }
+            }
+        }
+        $divisions = $divisions->sort()->values();
         $up3s      = MasterUnit::where('type', 'UP3')->get();
         $ulpsQuery = MasterUnit::where('type', 'ULP');
         if ($selectedUp3) $ulpsQuery->where('parent_id', $selectedUp3);
@@ -131,7 +142,7 @@ class DashboardController extends Controller
         $wigQuery = MasterWig::where('is_approved', true)->with(['satuan', 'masterLms' => function ($q) {
             $q->where('is_approved', true)->with('satuan');
         }]);
-        if ($selectedDivisi) $wigQuery->where('divisi', $selectedDivisi);
+        if ($selectedDivisi) $wigQuery->whereJsonContains('divisi', $selectedDivisi);
         $wigs = $wigQuery->get()->each(function($wig) {
             $wig->setRelation('masterLms', $wig->masterLms->sortBy(function($lm) {
                 preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
@@ -305,7 +316,9 @@ class DashboardController extends Controller
         // Divisi – reuse already-loaded $wigs + scoped maps
         $divisiData = [];
         foreach ($wigs as $wig) {
-            $name = $wig->divisi ?? 'Lainnya';
+            $divs = is_array($wig->divisi) ? $wig->divisi : json_decode($wig->divisi, true);
+            $divs = is_array($divs) ? $divs : [$wig->divisi ?? 'Lainnya'];
+            
             $totalPct = 0; $count = 0;
             foreach ($wig->masterLms as $lm) {
                 $target = (float) ($scopedTarget[$lm->id] ?? 0);
@@ -315,8 +328,11 @@ class DashboardController extends Controller
                 }
             }
             $avg = $count > 0 ? round($totalPct / $count, 1) : 0;
-            $divisiData[$name]['total'] = ($divisiData[$name]['total'] ?? 0) + $avg;
-            $divisiData[$name]['count'] = ($divisiData[$name]['count'] ?? 0) + 1;
+            
+            foreach ($divs as $name) {
+                $divisiData[$name]['total'] = ($divisiData[$name]['total'] ?? 0) + $avg;
+                $divisiData[$name]['count'] = ($divisiData[$name]['count'] ?? 0) + 1;
+            }
         }
         foreach ($divisiData as $name => $d) {
             $avg = round($d['total'] / $d['count'], 1);
@@ -615,14 +631,18 @@ class DashboardController extends Controller
 
             $wig = $wigs->where('id', $lm->wig_id)->first();
             if ($wig) {
-                $name = $wig->divisi ?? 'Lainnya';
+                $divs = is_array($wig->divisi) ? $wig->divisi : json_decode($wig->divisi, true);
+                $divs = is_array($divs) ? $divs : [$wig->divisi ?? 'Lainnya'];
+                
                 $target = 0; 
                 $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
                 foreach ($uidUnits as $uid) { $target += $rtBdMap[$uid][$lm->id] ?? 0; }
                 $realisasi = 0; foreach ($rtRealMap as $uid => $lmsReal) { $realisasi += $lmsReal[$lm->id] ?? 0; }
                 if ($target > 0) {
                     $pct = min($realisasi / $target * 100, 100);
-                    $rtMenangKalah[$lm->id]['divisi'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $name, 'score' => round($pct, 1)];
+                    foreach ($divs as $name) {
+                        $rtMenangKalah[$lm->id]['divisi'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $name, 'score' => round($pct, 1)];
+                    }
                 }
             }
 
