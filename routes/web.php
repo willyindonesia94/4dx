@@ -53,9 +53,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/cascading/breakdown', [\App\Http\Controllers\CascadingController::class, 'storeBreakdown'])->name('cascading.breakdown.store');
     Route::put('/cascading/breakdown/{id}', [\App\Http\Controllers\CascadingController::class, 'updateBreakdown'])->name('cascading.breakdown.update');
     Route::delete('/cascading/breakdown/{id}', [\App\Http\Controllers\CascadingController::class, 'destroyBreakdown'])->name('cascading.breakdown.destroy');
+    Route::post('/cascading/breakdown/{id}/approve', [\App\Http\Controllers\CascadingController::class, 'approveLmBreakdown'])->name('cascading.breakdown.approve');
     Route::post('/cascading/wig-breakdown', [\App\Http\Controllers\CascadingController::class, 'storeWigBreakdown'])->name('cascading.wig-breakdown.store');
     Route::put('/cascading/wig-breakdown/{id}', [\App\Http\Controllers\CascadingController::class, 'updateWigBreakdown'])->name('cascading.wig-breakdown.update');
     Route::delete('/cascading/wig-breakdown/{id}', [\App\Http\Controllers\CascadingController::class, 'destroyWigBreakdown'])->name('cascading.wig-breakdown.destroy');
+    Route::post('/cascading/wig-breakdown/{id}/approve', [\App\Http\Controllers\CascadingController::class, 'approveWigBreakdown'])->name('cascading.wig-breakdown.approve');
 
     
     // Master Data Tambahan
@@ -99,6 +101,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/laporan-bulanan/preview', [\App\Http\Controllers\LaporanBulananController::class, 'previewReport'])->name('laporan.preview');
 
     // User Management (Superadmin Only)
+    Route::get('/users/template', [\App\Http\Controllers\UserController::class, 'template'])->name('users.template');
+    Route::post('/users/preview-import', [\App\Http\Controllers\UserController::class, 'previewImport'])->name('users.preview_import');
+    Route::post('/users/import', [\App\Http\Controllers\UserController::class, 'import'])->name('users.import');
     Route::resource('users', \App\Http\Controllers\UserController::class)
         ->middleware(['role:Super Admin|Perencanaan UID']);
         
@@ -108,6 +113,7 @@ Route::middleware('auth')->group(function () {
         ->name('audit-logs.index');
 
     // Notifications
+    Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/check', [\App\Http\Controllers\NotificationController::class, 'getUnread'])->name('notifications.check');
     Route::post('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.read');
 });

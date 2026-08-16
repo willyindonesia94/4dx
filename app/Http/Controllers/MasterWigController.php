@@ -5,6 +5,8 @@ use App\Models\MasterWig;
 use App\Models\MasterUnit;
 use App\Models\MasterSatuan;
 use App\Models\MasterBidang;
+use App\Models\User;
+use App\Notifications\RequiresApprovalNotification;
 use Illuminate\Http\Request;
 
 class MasterWigController extends Controller
@@ -55,7 +57,7 @@ class MasterWigController extends Controller
         ]);
 
         $data = $request->all();
-        $data['is_approved'] = true; // Created via UI is approved by default
+        $data['is_approved'] = false; // Created via UI requires approval by MSB
         $wig = MasterWig::create($data);
 
         // Auto-create cascading to UID Jabar
@@ -100,7 +102,13 @@ class MasterWigController extends Controller
             'polaritas' => 'required|in:positif,negatif',
         ]);
 
-        $masterWig->update($request->all());
+        $data = $request->all();
+        $user = Auth::user();
+        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
+        $isMsb = $user && (strtolower(trim($user->role_name ?? '')) === 'sub bidang uid');
+
+        $data['is_approved'] = ($isSuperAdmin || $isMsb) ? true : false;
+        $masterWig->update($data);
 
         return redirect()->route('master-wigs.index')->with('success', 'Master WIG berhasil diperbarui.');
     }
@@ -108,6 +116,7 @@ class MasterWigController extends Controller
     public function destroy(MasterWig $masterWig)
     {
         $masterWig->delete();
+
         return redirect()->route('master-wigs.index')->with('success', 'Master WIG berhasil dihapus.');
     }
 

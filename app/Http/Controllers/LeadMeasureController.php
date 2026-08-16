@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 use App\Models\MasterLm;
 use App\Models\MasterWig;
 use App\Models\MasterSatuan;
+use App\Models\User;
+use App\Notifications\RequiresApprovalNotification;
 use Illuminate\Http\Request;
 
 class LeadMeasureController extends Controller
@@ -68,9 +70,9 @@ class LeadMeasureController extends Controller
         $wig = MasterWig::with('unitPemilik')->findOrFail($data['wig_id']);
         $data['tujuan_unit_role'] = $wig->unitPemilik ? $wig->unitPemilik->name : '';
 
-        $data['is_approved'] = true; // Created via UI is approved by default
+        $data['is_approved'] = false; // Created via UI requires approval by MSB
         $data['angka_target'] = $data['angka_target'] ?? 0;
-        MasterLm::create($data);
+        $lm = MasterLm::create($data);
 
         return redirect()->route('master-lms.index')->with('success', 'Lead Measure berhasil dibuat.');
     }
@@ -99,6 +101,12 @@ class LeadMeasureController extends Controller
         $data['tujuan_unit_role'] = $wig->unitPemilik ? $wig->unitPemilik->name : '';
 
         $data['angka_target'] = $data['angka_target'] ?? 0;
+        $user = Auth::user();
+        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
+        $isMsb = $user && (strtolower(trim($user->role_name ?? '')) === 'sub bidang uid');
+
+        $data['is_approved'] = ($isSuperAdmin || $isMsb) ? true : false;
+        
         $masterLm->update($data);
 
         return redirect()->route('master-lms.index')->with('success', 'Lead Measure berhasil diperbarui.');
@@ -107,7 +115,8 @@ class LeadMeasureController extends Controller
     public function destroy(MasterLm $masterLm)
     {
         $masterLm->delete();
-        return redirect()->route('master-lms.index')->with('success', 'Lead Measure berhasil dihapus.');
+
+        return redirect()->route('master-lms.index')->with('success', 'Master LM berhasil dihapus.');
     }
 
     public function approve($id)

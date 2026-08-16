@@ -15,7 +15,7 @@ class UserController extends Controller
     {
         $selectedLevel = $request->query('level');
         $search = $request->query('search');
-        $levels = ['Super Admin', 'UID', 'UP3', 'ULP'];
+        $levels = ['Super Admin', 'UID', 'UP3', 'UP2K', 'UP2D', 'ULP'];
 
         $query = User::with('unit');
         
@@ -118,5 +118,55 @@ class UserController extends Controller
 
         $user->delete();
         return redirect()->route('users.index')->with('success', 'Pengguna berhasil dihapus.');
+    }
+
+    public function previewImport(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv|max:5120'
+        ]);
+
+        try {
+            $data = \Maatwebsite\Excel\Facades\Excel::toArray(new \App\Imports\UsersPreviewImport, $request->file('file'));
+            // toArray returns an array of sheets. We assume the first sheet is the one we want.
+            $rows = $data[0] ?? [];
+            
+            // Filter out empty rows
+            $rows = array_filter($rows, function($row) {
+                return !empty($row['nama']) && !empty($row['email']) && !empty($row['role_name']);
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => array_values($rows)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membaca file: ' . $e->getMessage()
+            ], 400);
+        }
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv|max:5120'
+        ]);
+
+        try {
+            \Illuminate\Support\Facades\DB::beginTransaction();
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\UsersImport, $request->file('file'));
+            \Illuminate\Support\Facades\DB::commit();
+            return redirect()->route('users.index')->with('success', 'Data pengguna berhasil diunggah secara massal.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return redirect()->route('users.index')->with('error', 'Gagal mengunggah data: ' . $e->getMessage());
+        }
+    }
+
+    public function template()
+    {
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\UsersTemplateExport, 'Template_Bulk_User.xlsx');
     }
 }

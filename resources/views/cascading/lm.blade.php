@@ -7,7 +7,7 @@
 
     @php
         $role = auth()->user()->role_name ?? '';
-        $canEditDelete = !in_array(strtoupper($role), ['BIDANG UID', 'SUB BIDANG UID', 'MANAGER UP3', 'MANAGER ULP', 'GENERAL MANAGER UID']);
+        $canEditDelete = !in_array(strtoupper($role), ['BIDANG UID', 'SUB BIDANG UID', 'MANAGER UP3', 'UP2K', 'UP2D', 'MANAGER ULP', 'GENERAL MANAGER UID']);
     @endphp
 
     <div class="py-12" x-data='{ 
@@ -256,7 +256,12 @@
     return ($b->unit->name ?? '') . '_' . $isMonthly . '_' . $b->periode_start; 
 }) as $breakdown)
                                                                             <tr x-show="openMonth">
-                                                                                <td class="px-4 py-2 font-semibold text-gray-700">{{ $breakdown->unit->name ?? '-' }}</td>
+                                                                                <td class="px-4 py-2 font-semibold text-gray-700">
+                                                                                    {{ $breakdown->unit->name ?? '-' }}
+                                                                                    @if(!$breakdown->is_approved)
+                                                                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Draft</span>
+                                                                                    @endif
+                                                                                </td>
                                                                                 <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
                                                                                 <td class="px-4 py-2 text-right font-bold text-gray-800">{{ number_format($breakdown->angka_target, 2) }} {{ $breakdown->satuan->name ?? '' }}</td>
                                                                                 <td class="px-4 py-2 text-gray-500">
@@ -268,15 +273,23 @@
                                                                                     @endif
                                                                                 </td>
                                                                                 @if(!empty($canBreakdownToUid))
-                                                                                <td class="px-4 py-2 text-center space-x-2 whitespace-nowrap">
-                                                                                    <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ $lm->judul_lm }}", "uid")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
-                                                                                    @if($canEditDelete)
-                                                                                    <form action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Hapus breakdown LM ini?');">
-                                                                                        @csrf
-                                                                                        @method('DELETE')
-                                                                                        <button type="submit" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
-                                                                                    </form>
-                                                                                    @endif
+                                                                                <td class="px-4 py-2 text-center whitespace-nowrap">
+                                                                                    <div class="flex justify-center items-center gap-3">
+                                                                                        @if(!$breakdown->is_approved && isset($canApproveLm) && $canApproveLm)
+                                                                                        <form action="{{ route('cascading.breakdown.approve', $breakdown->id) }}" method="POST" class="inline m-0">
+                                                                                            @csrf
+                                                                                            <button type="submit" class="text-emerald-500 hover:text-emerald-700 font-bold transition-colors text-xs">Setujui</button>
+                                                                                        </form>
+                                                                                        @endif
+                                                                                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ $lm->judul_lm }}", "uid")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
+                                                                                        @if($canEditDelete)
+                                                                                        <form action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Hapus breakdown LM ini?');">
+                                                                                            @csrf
+                                                                                            @method('DELETE')
+                                                                                            <button type="submit" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
+                                                                                        </form>
+                                                                                        @endif
+                                                                                    </div>
                                                                                 </td>
                                                                                 @endif
                                                                             </tr>
@@ -343,20 +356,33 @@
     return ($b->unit->name ?? '') . '_' . $isMonthly . '_' . $b->periode_start; 
 }) as $breakdown)
                                                                             <tr x-show="openMonth">
-                                                                                <td class="px-4 py-2 font-semibold text-gray-700">{{ $breakdown->unit->name ?? '-' }}</td>
+                                                                                <td class="px-4 py-2 font-semibold text-gray-700">
+                                                                                    {{ $breakdown->unit->name ?? '-' }}
+                                                                                    @if(!$breakdown->is_approved)
+                                                                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Draft</span>
+                                                                                    @endif
+                                                                                </td>
                                                                                 <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
                                                                                 <td class="px-4 py-2 text-right font-bold text-gray-800">{{ number_format($breakdown->angka_target, 2) }} {{ $breakdown->satuan->name ?? '' }}</td>
                                                                                 <td class="px-4 py-2 text-gray-500">{{ \Carbon\Carbon::parse($breakdown->periode_start)->locale('id')->translatedFormat('d M Y') }} - {{ \Carbon\Carbon::parse($breakdown->periode_end)->locale('id')->translatedFormat('d M Y') }}</td>
                                                                                 @if(!empty($canBreakdownToUp3))
-                                                                                <td class="px-4 py-2 text-center space-x-2 whitespace-nowrap">
-                                                                                    <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ $lm->judul_lm }}", "up3")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
-                                                                                    @if($canEditDelete)
-                                                                                    <form action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Hapus breakdown LM ini?');">
-                                                                                        @csrf
-                                                                                        @method('DELETE')
-                                                                                        <button type="submit" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
-                                                                                    </form>
-                                                                                    @endif
+                                                                                <td class="px-4 py-2 text-center whitespace-nowrap">
+                                                                                    <div class="flex justify-center items-center gap-3">
+                                                                                        @if(!$breakdown->is_approved && isset($canApproveLm) && $canApproveLm)
+                                                                                        <form action="{{ route('cascading.breakdown.approve', $breakdown->id) }}" method="POST" class="inline m-0">
+                                                                                            @csrf
+                                                                                            <button type="submit" class="text-emerald-500 hover:text-emerald-700 font-bold transition-colors text-xs">Setujui</button>
+                                                                                        </form>
+                                                                                        @endif
+                                                                                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ $lm->judul_lm }}", "up3")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
+                                                                                        @if($canEditDelete)
+                                                                                        <form action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Hapus breakdown LM ini?');">
+                                                                                            @csrf
+                                                                                            @method('DELETE')
+                                                                                            <button type="submit" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
+                                                                                        </form>
+                                                                                        @endif
+                                                                                    </div>
                                                                                 </td>
                                                                                 @endif
                                                                             </tr>
@@ -424,20 +450,33 @@
     return ($b->unit->name ?? '') . '_' . $isMonthly . '_' . $b->periode_start; 
 }) as $breakdown)
                                                                             <tr x-show="openMonth">
-                                                                                <td class="px-4 py-2 font-semibold text-gray-700">{{ $breakdown->unit->name ?? '-' }}</td>
+                                                                                <td class="px-4 py-2 font-semibold text-gray-700">
+                                                                                    {{ $breakdown->unit->name ?? '-' }}
+                                                                                    @if(!$breakdown->is_approved)
+                                                                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Draft</span>
+                                                                                    @endif
+                                                                                </td>
                                                                                 <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
                                                                                 <td class="px-4 py-2 text-right font-bold text-gray-800">{{ number_format($breakdown->angka_target, 2) }} {{ $breakdown->satuan->name ?? '' }}</td>
                                                                                 <td class="px-4 py-2 text-gray-500">{{ \Carbon\Carbon::parse($breakdown->periode_start)->locale('id')->translatedFormat('d M Y') }} - {{ \Carbon\Carbon::parse($breakdown->periode_end)->locale('id')->translatedFormat('d M Y') }}</td>
                                                                                 @if(!empty($canBreakdownToUlp))
-                                                                                <td class="px-4 py-2 text-center space-x-2 whitespace-nowrap">
-                                                                                    <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ addslashes($lm->judul_lm) }}", "ulp", "{{ addslashes($myUp3TargetText) }}")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
-                                                                                    @if($canEditDelete)
-                                                                                    <form action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Hapus breakdown LM ini?');">
-                                                                                        @csrf
-                                                                                        @method('DELETE')
-                                                                                        <button type="submit" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
-                                                                                    </form>
-                                                                                    @endif
+                                                                                <td class="px-4 py-2 text-center whitespace-nowrap">
+                                                                                    <div class="flex justify-center items-center gap-3">
+                                                                                        @if(!$breakdown->is_approved && isset($canApproveLm) && $canApproveLm)
+                                                                                        <form action="{{ route('cascading.breakdown.approve', $breakdown->id) }}" method="POST" class="inline m-0">
+                                                                                            @csrf
+                                                                                            <button type="submit" class="text-emerald-500 hover:text-emerald-700 font-bold transition-colors text-xs">Setujui</button>
+                                                                                        </form>
+                                                                                        @endif
+                                                                                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ addslashes($lm->judul_lm) }}", "ulp", "{{ addslashes($myUp3TargetText) }}")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
+                                                                                        @if($canEditDelete)
+                                                                                        <form action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Hapus breakdown LM ini?');">
+                                                                                            @csrf
+                                                                                            @method('DELETE')
+                                                                                            <button type="submit" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
+                                                                                        </form>
+                                                                                        @endif
+                                                                                    </div>
                                                                                 </td>
                                                                                 @endif
                                                                             </tr>

@@ -78,7 +78,11 @@
                                     @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium flex justify-center items-center space-x-2">
-                                    @if(!$wig->is_approved && auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID']))
+                                    @php
+                                        $isSuperAdmin = auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin');
+                                        $isSubBidang = auth()->user()->role_name === 'Sub Bidang UID' || auth()->user()->hasRole('Sub Bidang UID');
+                                    @endphp
+                                    @if(!$wig->is_approved && ($isSuperAdmin || ($isSubBidang && auth()->user()->matrix_group_id === $wig->divisi)))
                                         <form action="{{ route('master-wigs.approve', $wig->id) }}" method="POST" class="inline m-0">
                                             @csrf
                                             <button type="submit" class="text-green-600 hover:text-green-900 hover:bg-green-100 font-bold bg-green-50 px-3 py-1.5 rounded-md border border-green-200 transition-colors text-xs">Setujui</button>

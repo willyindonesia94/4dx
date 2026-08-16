@@ -13,13 +13,18 @@ class CascadingController extends Controller
     public function wigIndex()
     {
         $user = Auth::user();
+        $userRole = strtolower(trim($user->role_name ?? ''));
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin', 'perencanaan uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Perencanaan UID'])));
+        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
+        $isPerencanaanUid = $user && (in_array($userRole, ['perencanaan uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Perencanaan UID'])));
+        $isMsb = $userRole === 'sub bidang uid';
+        
+        $canApproveWig = $isSuperAdmin || $isMsb;
         
         $wigsQuery = MasterWig::where('is_approved', true)
-            ->with(['breakdowns.unit', 'breakdowns.satuan']);
+            ->with(['breakdowns', 'breakdowns.unit', 'breakdowns.satuan']);
             
-        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+        if (!$isSuperAdmin && !$isPerencanaanUid && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
             $wigsQuery->whereIn('divisi', $allowedDivisis);
         }
@@ -34,7 +39,7 @@ class CascadingController extends Controller
         $uidUnits = MasterUnit::where('type', 'UID')->get();
         $up3Units = MasterUnit::where('type', 'UP3')->get();
 
-        return view('cascading.wig', compact('wigs', 'satuans', 'uidUnits', 'up3Units'));
+        return view('cascading.wig', compact('wigs', 'satuans', 'uidUnits', 'up3Units', 'canApproveWig'));
     }
 
     public function lmIndex()
@@ -42,12 +47,17 @@ class CascadingController extends Controller
         $user = Auth::user();
         $userRole = strtolower(trim($user->role_name ?? ''));
         $unitType = $user->unit ? strtoupper(trim((string)$user->unit->type)) : '';
-        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin', 'perencanaan uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Perencanaan UID'])));
+        $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
+        $isPerencanaanUid = $user && (in_array($userRole, ['perencanaan uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Perencanaan UID'])));
         
         $isUid = !$isSuperAdmin && ($unitType === 'UID' || str_contains($userRole, 'uid') || (str_contains($userRole, 'bidang') && !str_contains($userRole, 'up3')));
         $isUp3 = !$isSuperAdmin && ($unitType === 'UP3' || str_contains($userRole, 'up3'));
+        $isMsb = $userRole === 'sub bidang uid';
+        $isManagerUp3 = in_array($userRole, ['manager up3', 'up2k', 'up2d']);
         
-        $canBreakdownToUid = $isSuperAdmin || str_contains($userRole, 'perencanaan uid');
+        $canApproveLm = $isSuperAdmin || $isMsb || $isManagerUp3;
+        
+        $canBreakdownToUid = $isSuperAdmin || $isPerencanaanUid || str_contains($userRole, 'perencanaan uid');
         $canBreakdownToUp3 = $isSuperAdmin || $isUid;
         $canBreakdownToUlp = $isSuperAdmin || $isUp3;
         
@@ -94,7 +104,7 @@ class CascadingController extends Controller
         return view('cascading.lm', compact(
             'wigs', 'satuans', 'availableUnits', 
             'canBreakdownToUid', 'canBreakdownToUp3', 'canBreakdownToUlp',
-            'isSuperAdmin', 'isUid', 'isUp3', 'user'
+            'isSuperAdmin', 'isUid', 'isUp3', 'user', 'canApproveLm'
         ));
     }
 
@@ -139,6 +149,13 @@ class CascadingController extends Controller
             return redirect()->back()->with('error', 'Akses ditolak. UP3 hanya berwenang menurunkan target (breakdown) ke unit ULP di bawah naungannya.');
         }
 
+        $user = Auth::user();
+        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
+        $isMsb = $user && (strtolower(trim($user->role_name ?? '')) === 'sub bidang uid');
+        $isManagerUp3 = $user && in_array(strtolower(trim($user->role_name ?? '')), ['manager up3', 'up2k', 'up2d']);
+
+        $is_approved = ($isSuperAdmin || $isMsb || $isManagerUp3) ? true : false;
+
         $carbonStart = \Carbon\Carbon::create($request->tahun, $request->bulan, 1);
         $carbonEnd = $carbonStart->copy()->endOfMonth();
 
@@ -151,6 +168,7 @@ class CascadingController extends Controller
         $data['periode_start'] = $weeks['target_m1']['start'] ?? $carbonStart->format('Y-m-d');
         $endWeek = isset($weeks['target_m5']) && $weeks['target_m5'] ? 'target_m5' : 'target_m4';
         $data['periode_end'] = $weeks[$endWeek]['end'] ?? $carbonEnd->format('Y-m-d');
+        $data['is_approved'] = $is_approved;
         BreakdownLm::create($data);
         
         // Handle weekly targets if provided
@@ -173,12 +191,13 @@ class CascadingController extends Controller
                         'periode_end' => $dates['end'],
                         'bulan' => $request->bulan,
                         'tahun' => $request->tahun,
+                        'is_approved' => $is_approved,
                     ]);
                 }
             }
         }
 
-        return redirect()->back()->with('success', 'Breakdown LM berhasil ditambahkan ke Unit sesuai kalender Master Periode.');
+        return redirect()->back()->with('success', 'Breakdown LM berhasil ditambahkan ke Unit. ' . (!$is_approved ? 'Menunggu persetujuan.' : ''));
     }
 
     public function updateBreakdown(Request $request, $id)
@@ -193,6 +212,9 @@ class CascadingController extends Controller
         ]);
 
         $breakdown = BreakdownLm::with('unit')->findOrFail($id);
+        
+        $oldTarget = $breakdown->angka_target;
+
         if (!$this->checkUp3Permission($request->unit_id, $breakdown)) {
             return redirect()->back()->with('error', 'Akses ditolak. UP3 hanya berwenang mengubah target untuk unit ULP di bawah naungannya.');
         }
@@ -215,7 +237,23 @@ class CascadingController extends Controller
         $breakdown->bidang = $request->bidang;
         $breakdown->angka_target = $request->angka_target;
         $breakdown->satuan_id = $request->satuan_id;
+
+        $user = Auth::user();
+        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
+        $isMsb = $user && (strtolower(trim($user->role_name ?? '')) === 'sub bidang uid');
+        $isManagerUp3 = $user && in_array(strtolower(trim($user->role_name ?? '')), ['manager up3', 'up2k', 'up2d']);
+
+        // Do not require re-approval on edit, just notify
         $breakdown->save();
+
+        if (!$isSuperAdmin && !$isMsb && !$isManagerUp3) {
+            $approvers = \App\Models\User::whereIn('role_name', ['Super Admin', 'Sub Bidang UID', 'Manager UP3', 'UP2K', 'UP2D'])->get();
+            \Illuminate\Support\Facades\Notification::send($approvers, new \App\Notifications\RequiresApprovalNotification(
+                'Perubahan Cascading LM', 
+                'Cascading LM Diubah', 
+                "Data Cascading LM unit " . ($breakdown->unit->name ?? '-') . " telah diubah oleh " . $user->name . " (Target lama: " . $oldTarget . " -> " . $breakdown->angka_target . ")"
+            ));
+        }
 
         return redirect()->back()->with('success', 'Breakdown LM berhasil diperbarui.');
     }
@@ -225,6 +263,20 @@ class CascadingController extends Controller
         $breakdown = BreakdownLm::with('unit')->findOrFail($id);
         if (!$this->checkUp3Permission(null, $breakdown)) {
             return redirect()->back()->with('error', 'Akses ditolak. UP3 hanya berwenang menghapus target untuk unit ULP di bawah naungannya.');
+        }
+
+        $user = Auth::user();
+        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
+        $isMsb = $user && (strtolower(trim($user->role_name ?? '')) === 'sub bidang uid');
+        $isManagerUp3 = $user && in_array(strtolower(trim($user->role_name ?? '')), ['manager up3', 'up2k', 'up2d']);
+
+        if (!$isSuperAdmin && !$isMsb && !$isManagerUp3) {
+            $approvers = \App\Models\User::whereIn('role_name', ['Super Admin', 'Sub Bidang UID', 'Manager UP3', 'UP2K', 'UP2D'])->get();
+            \Illuminate\Support\Facades\Notification::send($approvers, new \App\Notifications\RequiresApprovalNotification(
+                'Penghapusan Cascading LM', 
+                'Cascading LM Dihapus', 
+                "Data Cascading LM unit " . ($breakdown->unit->name ?? '-') . " telah dihapus oleh " . $user->name . " (Target lama: " . $breakdown->angka_target . ")"
+            ));
         }
 
         $breakdown->delete();
@@ -254,9 +306,18 @@ class CascadingController extends Controller
             'target_des' => 'nullable|numeric',
         ]);
 
-        \App\Models\BreakdownWig::create($request->all());
+        $user = Auth::user();
+        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
+        $isMsb = $user && (strtolower(trim($user->role_name ?? '')) === 'sub bidang uid');
 
-        return redirect()->back()->with('success', 'Breakdown WIG berhasil ditambahkan ke UID.');
+        $is_approved = ($isSuperAdmin || $isMsb) ? true : false;
+
+        $data = $request->all();
+        $data['is_approved'] = $is_approved;
+
+        \App\Models\BreakdownWig::create($data);
+
+        return redirect()->back()->with('success', 'Breakdown WIG berhasil ditambahkan ke UID. ' . (!$is_approved ? 'Menunggu persetujuan.' : ''));
     }
 
     public function updateWigBreakdown(Request $request, $id)
@@ -281,14 +342,62 @@ class CascadingController extends Controller
         ]);
 
         $breakdown = \App\Models\BreakdownWig::findOrFail($id);
-        $breakdown->update($request->all());
+        
+        $oldTarget = $breakdown->target_tahunan;
+
+        $breakdown->unit_id = $request->unit_id;
+        $breakdown->satuan_id = $request->satuan_id;
+        $breakdown->tahun = $request->tahun;
+        $breakdown->target_tahunan = $request->target_tahunan;
+        $breakdown->target_jan = $request->target_jan;
+        $breakdown->target_feb = $request->target_feb;
+        $breakdown->target_mar = $request->target_mar;
+        $breakdown->target_apr = $request->target_apr;
+        $breakdown->target_mei = $request->target_mei;
+        $breakdown->target_jun = $request->target_jun;
+        $breakdown->target_jul = $request->target_jul;
+        $breakdown->target_agu = $request->target_agu;
+        $breakdown->target_sep = $request->target_sep;
+        $breakdown->target_okt = $request->target_okt;
+        $breakdown->target_nov = $request->target_nov;
+        $breakdown->target_des = $request->target_des;
+
+        $user = Auth::user();
+        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
+        $isMsb = $user && (strtolower(trim($user->role_name ?? '')) === 'sub bidang uid');
+
+        // Do not require re-approval on edit, just notify
+        $breakdown->save();
+
+        if (!$isSuperAdmin && !$isMsb) {
+            $approvers = \App\Models\User::whereIn('role_name', ['Super Admin', 'Sub Bidang UID'])->get();
+            \Illuminate\Support\Facades\Notification::send($approvers, new \App\Notifications\RequiresApprovalNotification(
+                'Perubahan Cascading WIG', 
+                'Cascading WIG Diubah', 
+                "Data Cascading WIG unit " . ($breakdown->unit->name ?? '-') . " telah diubah oleh " . $user->name . " (Target lama: " . $oldTarget . " -> " . $breakdown->target_tahunan . ")"
+            ));
+        }
 
         return redirect()->back()->with('success', 'Breakdown WIG berhasil diperbarui.');
     }
 
     public function destroyWigBreakdown($id)
     {
-        $breakdown = \App\Models\BreakdownWig::findOrFail($id);
+        $breakdown = \App\Models\BreakdownWig::with('unit')->findOrFail($id);
+        
+        $user = Auth::user();
+        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
+        $isMsb = $user && (strtolower(trim($user->role_name ?? '')) === 'sub bidang uid');
+
+        if (!$isSuperAdmin && !$isMsb) {
+            $approvers = \App\Models\User::whereIn('role_name', ['Super Admin', 'Sub Bidang UID'])->get();
+            \Illuminate\Support\Facades\Notification::send($approvers, new \App\Notifications\RequiresApprovalNotification(
+                'Penghapusan Cascading WIG', 
+                'Cascading WIG Dihapus', 
+                "Data Cascading WIG unit " . ($breakdown->unit->name ?? '-') . " telah dihapus oleh " . $user->name . " (Target lama: " . $breakdown->target_tahunan . ")"
+            ));
+        }
+
         $breakdown->delete();
 
         return redirect()->back()->with('success', 'Breakdown WIG berhasil dihapus.');
@@ -356,4 +465,23 @@ class CascadingController extends Controller
             return redirect()->back()->with("error", "Terjadi kesalahan saat upload data: " . $e->getMessage());
         }
     }
+
+    public function approveWigBreakdown($id)
+    {
+        $breakdown = \App\Models\BreakdownWig::findOrFail($id);
+        $breakdown->update(['is_approved' => true]);
+
+        // Delete from notifications table dynamically logic? Handled via dynamic UI.
+        return redirect()->back()->with('success', 'Cascading WIG berhasil disetujui.');
+    }
+
+    public function approveLmBreakdown($id)
+    {
+        $breakdown = BreakdownLm::findOrFail($id);
+        $breakdown->update(['is_approved' => true]);
+
+        return redirect()->back()->with('success', 'Cascading LM berhasil disetujui.');
+    }
+
+
 }
