@@ -15,7 +15,7 @@
                     @php
                         $userRole = auth()->user()->role_name ?? (auth()->user()->roles->pluck('name')->first() ?? '');
                         $isUlp = str_contains(strtoupper($userRole), 'ULP') || (auth()->user()->unit && strtoupper(auth()->user()->unit->type) === 'ULP');
-                        $isUp3 = str_contains(strtoupper($userRole), 'UP3') || (auth()->user()->unit && strtoupper(auth()->user()->unit->type) === 'UP3');
+                        $isUp3 = str_contains(strtoupper($userRole), 'UP3') || str_contains(strtoupper($userRole), 'UP2D') || str_contains(strtoupper($userRole), 'UP2K') || (auth()->user()->unit && in_array(strtoupper(auth()->user()->unit->type), ['UP3', 'UP2D', 'UP2K']));
                     @endphp
 
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
@@ -36,7 +36,7 @@
                         {{ __('Realisasi WIG') }}
                     </x-nav-link>
                     @endif
-                    @if($isUlp || (auth()->user() && in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID'])))
+                    @if($isUlp || (auth()->user()->unit && in_array(strtoupper(auth()->user()->unit->type), ['UP2D', 'UP2K'])) || (auth()->user() && in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID'])))
                     <x-nav-link :href="route('realisasis.index')" :active="request()->routeIs('realisasis.*')">
                         {{ __('Realisasi LM') }}
                     </x-nav-link>
@@ -407,7 +407,7 @@
             </x-responsive-nav-link>
             @endif
 
-            @if($isUlp || (auth()->user() && in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID'])))
+            @if($isUlp || (auth()->user()->unit && in_array(strtoupper(auth()->user()->unit->type), ['UP2D', 'UP2K'])) || (auth()->user() && in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID'])))
             <x-responsive-nav-link :href="route('realisasis.index')" :active="request()->routeIs('realisasis.*')">
                 {{ __('Realisasi LM') }}
             </x-responsive-nav-link>

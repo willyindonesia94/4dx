@@ -22,7 +22,7 @@ class RealizationController extends Controller
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
         $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
-        $isUlpLevel = !$isSuperAdmin && $user && $user->unit && strtoupper(trim((string)$user->unit->type)) === 'ULP';
+        $isUlpLevel = !$isSuperAdmin && $user && $user->unit && in_array(strtoupper(trim((string)$user->unit->type)), ['ULP', 'UP2D', 'UP2K']);
 
         $query = Realisasi::with(['lm.wig', 'lm.satuan', 'user', 'unit'])
             ->whereMonth('tanggal_input', $bulan)
@@ -48,7 +48,7 @@ class RealizationController extends Controller
         // 2. Pembatasan Sesuai Hierarki Unit Kerja
         if (!$isSuperAdmin && $user && $user->unit) {
             $unitType = strtoupper(trim((string)$user->unit->type));
-            if ($unitType === 'ULP') {
+            if (in_array($unitType, ['ULP', 'UP2D', 'UP2K'])) {
                 $query->where('unit_id', $user->unit_id);
             } elseif ($unitType === 'UP3') {
                 $query->whereIn('unit_id', function($q) use ($user) {

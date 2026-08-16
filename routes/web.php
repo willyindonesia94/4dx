@@ -109,7 +109,7 @@ Route::middleware('auth')->group(function () {
         
     // Audit Log
     Route::get('/audit-logs', [\App\Http\Controllers\AuditLogController::class, 'index'])
-        ->middleware(['role:Super Admin|Perencanaan UID|General Manager UID|Manager UP3|Manager ULP|Perencanaan UP3|Staff ULP'])
+        ->middleware(['role:Super Admin|Perencanaan UID|General Manager UID|Manager UP3|Manager ULP|Perencanaan UP3|Perencanaan UP2D|Perencanaan UP2K|Staff ULP'])
         ->name('audit-logs.index');
 
     // Notifications

@@ -100,7 +100,7 @@ class SesiWigController extends Controller
         $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
         $canEditSesiWig = $isSuperAdmin;
         $isUlpLevel = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'ULP') || str_contains(strtoupper($user->role_name ?? ''), 'ULP'));
-        $isUp3Level = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'UP3') || str_contains(strtoupper($user->role_name ?? ''), 'UP3'));
+        $isUp3Level = $user && (($user->unit && in_array(strtoupper(trim((string)$user->unit->type)), ['UP3', 'UP2D', 'UP2K'])) || str_contains(strtoupper($user->role_name ?? ''), 'UP3') || str_contains(strtoupper($user->role_name ?? ''), 'UP2D') || str_contains(strtoupper($user->role_name ?? ''), 'UP2K'));
 
         // Filter WIG & LM sesuai Matrix Bidang User
         $wigsQuery = MasterWig::query();
@@ -159,7 +159,7 @@ class SesiWigController extends Controller
         $nonSummableSatuans = [1, 2, 6, 14];
 
         $wigUnitData = []; // Store Unit-level data for WIGs
-        $up3List = \App\Models\MasterUnit::where('type', 'UP3')->orderBy('name')->get();
+        $up3List = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->orderBy('name')->get();
 
         // Calculate WIG Realization
         foreach ($wigs as $wig) {
@@ -290,9 +290,9 @@ class SesiWigController extends Controller
         }
         
         // Filter Unit sesuai tingkatan akses User (ULP/UP3/UID)
-        $ulpsQuery = MasterUnit::where('type', 'ULP')->orderBy('name');
-        $up3sQuery = MasterUnit::where('type', 'UP3')->orderBy('name');
-        $unitsQuery = MasterUnit::whereIn('type', ['UP3', 'ULP'])->orderBy('type')->orderBy('name');
+        $ulpsQuery = MasterUnit::whereIn('type', ['ULP', 'UP2D', 'UP2K'])->orderBy('name');
+        $up3sQuery = MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->orderBy('name');
+        $unitsQuery = MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K', 'ULP'])->orderBy('type')->orderBy('name');
 
         if (!$isSuperAdmin && $user && $user->unit) {
             $unitType = strtoupper(trim((string)$user->unit->type));
@@ -300,8 +300,12 @@ class SesiWigController extends Controller
                 $ulpsQuery->where('id', $user->unit_id);
                 $up3sQuery->where('id', $user->unit->parent_id);
                 $unitsQuery->whereIn('id', [$user->unit_id, $user->unit->parent_id]);
-            } elseif ($unitType === 'UP3') {
-                $ulpsQuery->where('parent_id', $user->unit_id);
+            } elseif (in_array($unitType, ['UP3', 'UP2D', 'UP2K'])) {
+                if (in_array($unitType, ['UP2D', 'UP2K'])) {
+                    $ulpsQuery->where('id', $user->unit_id);
+                } else {
+                    $ulpsQuery->where('parent_id', $user->unit_id);
+                }
                 $up3sQuery->where('id', $user->unit_id);
                 $unitsQuery->whereIn('id', function($q) use ($user) {
                     $q->select('id')->from('master_units')

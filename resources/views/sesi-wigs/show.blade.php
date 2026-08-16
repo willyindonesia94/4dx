@@ -619,6 +619,14 @@ $formatLmValue = function($value, $satuan) {
                                                                     $komData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
                                                                     $hasKom = $komData !== null;
                                                                     $komitmenVal = $hasKom ? $komData['komitmen'] : '';
+
+                                                                    $userAuth = auth()->user();
+                                                                    $canEditUp3Komitmen = $canEditSesiWig;
+                                                                    if ($userAuth && in_array(strtoupper(trim($up3->type)), ['UP2D', 'UP2K'])) {
+                                                                        if ($userAuth->unit_id == $up3->id && (str_contains(strtoupper($userAuth->role_name ?? ''), 'UP2D') || str_contains(strtoupper($userAuth->role_name ?? ''), 'UP2K'))) {
+                                                                            $canEditUp3Komitmen = true;
+                                                                        }
+                                                                    }
                                                                     
                                                                     // Calculate Target + Carry Over of NEXT week for UP3
                                                                     $nextSwObj = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke + 1)->first();
@@ -643,7 +651,7 @@ $formatLmValue = function($value, $satuan) {
                                                                 <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
                                                                 </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
-                                                                @if($canEditSesiWig)
+                                                                @if($canEditUp3Komitmen)
                                                                 <button type="button" 
                                                                     @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3Target }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}' } }))"
                                                                     class="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"

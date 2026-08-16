@@ -37,7 +37,7 @@ class CascadingController extends Controller
 
         $satuans = MasterSatuan::all();
         $uidUnits = MasterUnit::where('type', 'UID')->get();
-        $up3Units = MasterUnit::where('type', 'UP3')->get();
+        $up3Units = MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->get();
 
         return view('cascading.wig', compact('wigs', 'satuans', 'uidUnits', 'up3Units', 'canApproveWig'));
     }
@@ -50,8 +50,8 @@ class CascadingController extends Controller
         $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
         $isPerencanaanUid = $user && (in_array($userRole, ['perencanaan uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Perencanaan UID'])));
         
-        $isUid = !$isSuperAdmin && ($unitType === 'UID' || str_contains($userRole, 'uid') || (str_contains($userRole, 'bidang') && !str_contains($userRole, 'up3')));
-        $isUp3 = !$isSuperAdmin && ($unitType === 'UP3' || str_contains($userRole, 'up3'));
+        $isUid = !$isSuperAdmin && ($unitType === 'UID' || str_contains($userRole, 'uid') || (str_contains($userRole, 'bidang') && !str_contains($userRole, 'up3') && !str_contains($userRole, 'up2')));
+        $isUp3 = !$isSuperAdmin && (in_array($unitType, ['UP3', 'UP2D', 'UP2K']) || str_contains($userRole, 'up3') || str_contains($userRole, 'up2d') || str_contains($userRole, 'up2k'));
         $isMsb = $userRole === 'sub bidang uid';
         $isManagerUp3 = in_array($userRole, ['manager up3', 'up2k', 'up2d']);
         
@@ -90,14 +90,19 @@ class CascadingController extends Controller
         if ($isSuperAdmin) {
             $availableUnits = MasterUnit::orderBy('type')->get();
         } elseif ($isUid) {
-            // Level Bidang UID breakdown ke Level UP3
-            $availableUnits = MasterUnit::where('type', 'UP3')->orderBy('name')->get();
+            // Level Bidang UID breakdown ke Level UP3/UP2D/UP2K
+            $availableUnits = MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->orderBy('name')->get();
         } elseif ($isUp3) {
-            // Level UP3 breakdown ke ULP di bawah jangkauan UP3-nya
+            // Level UP3 breakdown ke ULP, atau UP2D/UP2K ke dirinya sendiri
             if ($user->unit_id) {
-                $availableUnits = MasterUnit::where('type', 'ULP')->where('parent_id', $user->unit_id)->orderBy('name')->get();
+                $userUnit = MasterUnit::find($user->unit_id);
+                if ($userUnit && in_array(strtoupper(trim($userUnit->type)), ['UP2D', 'UP2K'])) {
+                    $availableUnits = MasterUnit::where('id', $user->unit_id)->get();
+                } else {
+                    $availableUnits = MasterUnit::where('type', 'ULP')->where('parent_id', $user->unit_id)->orderBy('name')->get();
+                }
             } else {
-                $availableUnits = MasterUnit::where('type', 'ULP')->orderBy('name')->get();
+                $availableUnits = MasterUnit::whereIn('type', ['ULP', 'UP2D', 'UP2K'])->orderBy('name')->get();
             }
         }
 
@@ -114,19 +119,30 @@ class CascadingController extends Controller
         $userRole = strtolower(trim($user->role_name ?? ''));
         $unitType = $user->unit ? strtoupper(trim((string)$user->unit->type)) : '';
         $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin', 'perencanaan uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Perencanaan UID'])));
-        $isUp3 = !$isSuperAdmin && ($unitType === 'UP3' || str_contains($userRole, 'up3'));
+        $isUp3 = !$isSuperAdmin && (in_array($unitType, ['UP3', 'UP2D', 'UP2K']) || str_contains($userRole, 'up3') || str_contains($userRole, 'up2d') || str_contains($userRole, 'up2k'));
 
         if ($isUp3 && $user->unit_id) {
+            $userUnit = MasterUnit::find($user->unit_id);
+            $isTechnicalUp3 = $userUnit && in_array(strtoupper(trim($userUnit->type)), ['UP2D', 'UP2K']);
+            
             if ($targetUnitId) {
                 $unit = MasterUnit::find($targetUnitId);
-                if (!$unit || strtoupper(trim($unit->type)) !== 'ULP' || (int)$unit->parent_id !== (int)$user->unit_id) {
-                    return false;
+                if ($isTechnicalUp3) {
+                    if ((int)$unit->id !== (int)$user->unit_id) return false;
+                } else {
+                    if (!$unit || strtoupper(trim($unit->type)) !== 'ULP' || (int)$unit->parent_id !== (int)$user->unit_id) {
+                        return false;
+                    }
                 }
             }
             if ($existingBreakdown && $existingBreakdown->unit) {
                 $unit = $existingBreakdown->unit;
-                if (strtoupper(trim($unit->type)) !== 'ULP' || (int)$unit->parent_id !== (int)$user->unit_id) {
-                    return false;
+                if ($isTechnicalUp3) {
+                    if ((int)$unit->id !== (int)$user->unit_id) return false;
+                } else {
+                    if (strtoupper(trim($unit->type)) !== 'ULP' || (int)$unit->parent_id !== (int)$user->unit_id) {
+                        return false;
+                    }
                 }
             }
         }

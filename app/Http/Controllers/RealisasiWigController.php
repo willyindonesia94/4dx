@@ -59,7 +59,7 @@ class RealisasiWigController extends Controller
         }
         $wigs = $wigsQuery->get();
 
-        $availableUnits = \App\Models\MasterUnit::where('type', 'up3')->get();
+        $availableUnits = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->get();
 
         return view('realisasis.wig', compact('realisasis', 'wigs', 'bulanFilter', 'tahunFilter', 'wigFilter', 'availableUnits'));
     }
@@ -218,7 +218,7 @@ class RealisasiWigController extends Controller
         $tahun = $request->query('tahun', date('Y'));
         
         $wigs = MasterWig::all();
-        $up3s = \App\Models\MasterUnit::where('type', 'up3')->get();
+        $up3s = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->get();
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();

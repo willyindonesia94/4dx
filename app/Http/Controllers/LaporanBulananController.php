@@ -25,7 +25,7 @@ class LaporanBulananController extends Controller
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
         $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
         $isUlpLevel = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'ULP') || str_contains(strtoupper($user->role_name ?? ''), 'ULP'));
-        $isUp3Level = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'UP3') || str_contains(strtoupper($user->role_name ?? ''), 'UP3'));
+        $isUp3Level = $user && (($user->unit && in_array(strtoupper(trim((string)$user->unit->type)), ['UP3', 'UP2D', 'UP2K'])) || str_contains(strtoupper($user->role_name ?? ''), 'UP3') || str_contains(strtoupper($user->role_name ?? ''), 'UP2D') || str_contains(strtoupper($user->role_name ?? ''), 'UP2K'));
 
         $wigsQuery = \App\Models\MasterWig::query();
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
@@ -162,7 +162,7 @@ class LaporanBulananController extends Controller
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
         $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
         $isUlpLevel = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'ULP') || str_contains(strtoupper($user->role_name ?? ''), 'ULP'));
-        $isUp3Level = $user && (($user->unit && strtoupper(trim((string)$user->unit->type)) === 'UP3') || str_contains(strtoupper($user->role_name ?? ''), 'UP3'));
+        $isUp3Level = $user && (($user->unit && in_array(strtoupper(trim((string)$user->unit->type)), ['UP3', 'UP2D', 'UP2K'])) || str_contains(strtoupper($user->role_name ?? ''), 'UP3') || str_contains(strtoupper($user->role_name ?? ''), 'UP2D') || str_contains(strtoupper($user->role_name ?? ''), 'UP2K'));
 
         if ($wigId === 'all') {
             $wigsQuery = \App\Models\MasterWig::with(['masterLms' => function($q) {
@@ -183,15 +183,15 @@ class LaporanBulananController extends Controller
         $unitsQuery = \App\Models\MasterUnit::query();
         if (!$isSuperAdmin && $user && $user->unit) {
             $unitType = strtoupper(trim((string)$user->unit->type));
-            if ($unitType === 'ULP') {
-                $unitsQuery->where('type', 'ULP')->where('id', $user->unit_id);
+            if (in_array($unitType, ['ULP', 'UP2D', 'UP2K'])) {
+                $unitsQuery->where('id', $user->unit_id);
             } elseif ($unitType === 'UP3') {
                 $unitsQuery->where('type', 'ULP')->where('parent_id', $user->unit_id);
             } else {
-                $unitsQuery->where('type', 'up3');
+                $unitsQuery->whereIn('type', ['UP3', 'UP2D', 'UP2K']);
             }
         } else {
-            $unitsQuery->where('type', 'up3');
+            $unitsQuery->whereIn('type', ['UP3', 'UP2D', 'UP2K']);
         }
         $units = $unitsQuery->orderBy('name')->get();
         $unitIds = $units->pluck('id')->toArray();

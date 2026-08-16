@@ -26,7 +26,7 @@ class MasterUnitController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:UID,UP3,ULP',
+            'type' => 'required|in:UID,UP3,UP2D,UP2K,ULP',
             'parent_id' => 'nullable|exists:master_units,id',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric'
@@ -41,7 +41,7 @@ class MasterUnitController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:UID,UP3,ULP',
+            'type' => 'required|in:UID,UP3,UP2D,UP2K,ULP',
             'parent_id' => 'nullable|exists:master_units,id',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric'
