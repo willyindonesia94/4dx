@@ -16,6 +16,8 @@
                     <div class="flex space-x-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm w-full sm:w-auto overflow-x-auto">
                         <button @click="activeTab = 'UID'" :class="activeTab === 'UID' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold rounded-md transition-colors whitespace-nowrap">UID</button>
                         <button @click="activeTab = 'UP3'" :class="activeTab === 'UP3' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold rounded-md transition-colors whitespace-nowrap">UP3</button>
+                        <button @click="activeTab = 'UP2D'" :class="activeTab === 'UP2D' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold rounded-md transition-colors whitespace-nowrap">UP2D</button>
+                        <button @click="activeTab = 'UP2K'" :class="activeTab === 'UP2K' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold rounded-md transition-colors whitespace-nowrap">UP2K</button>
                         <button @click="activeTab = 'ULP'" :class="activeTab === 'ULP' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'" class="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold rounded-md transition-colors whitespace-nowrap">ULP</button>
                     </div>
                     <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
@@ -31,7 +33,7 @@
                 
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg" id="ajax-container">
                     <div class="p-0 sm:p-6 bg-white border-b border-gray-200 overflow-x-auto">
-                        @foreach(['UID', 'UP3', 'ULP'] as $tabType)
+                        @foreach(['UID', 'UP3', 'UP2D', 'UP2K', 'ULP'] as $tabType)
                         <div x-show="activeTab === '{{ $tabType }}'" style="display: none;">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
@@ -101,6 +103,8 @@
                                         <select name="type" x-model="formType" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700">
                                             <option value="UID">UID</option>
                                             <option value="UP3">UP3</option>
+                                            <option value="UP2D">UP2D</option>
+                                            <option value="UP2K">UP2K</option>
                                             <option value="ULP">ULP</option>
                                         </select>
                                     </div>
