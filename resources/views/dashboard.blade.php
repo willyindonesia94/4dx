@@ -4,14 +4,14 @@
 
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
             
             <!-- Welcome Banner -->
-            <div class="bg-gradient-to-r from-blue-900 to-blue-700 overflow-hidden shadow-xl sm:rounded-2xl relative border border-blue-800">
+            <div class="bg-gradient-to-r from-blue-900 to-blue-700 overflow-hidden shadow-xl rounded-2xl relative border border-blue-800">
                 <div class="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-white opacity-5 rounded-full transform scale-150 pointer-events-none"></div>
                 <div class="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-cyan-400 opacity-10 rounded-full transform scale-150 pointer-events-none"></div>
                 
-                <div class="p-8 text-white relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div class="p-6 md:p-8 text-white relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
                     <div>
                         <h3 class="text-3xl font-extrabold tracking-tight mb-2 text-white drop-shadow-md">Pusat Komando 4DX</h3>
                         <p class="text-cyan-300 font-medium text-lg flex items-center gap-2">
@@ -72,8 +72,8 @@
                 <div class="lg:col-span-2 space-y-8">
                     
                     <!-- Trend Chart (New) -->
-                    <div class="bg-white shadow-md sm:rounded-2xl border border-gray-100 overflow-hidden">
-                        <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div class="bg-white shadow-md rounded-xl sm:rounded-2xl border border-gray-100 overflow-hidden">
+                        <div class="px-4 md:px-6 py-4 md:py-5 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                             <h4 class="text-xl font-black text-slate-800 drop-shadow-sm flex items-center gap-3">
                                 <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
                                 Tren Rata-rata Pencapaian
@@ -159,8 +159,8 @@
                     </div>
 
                     <!-- Recent Realizations -->
-                    <div class="bg-white shadow-md sm:rounded-2xl border border-gray-100 overflow-hidden">
-                        <div class="px-6 py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                    <div class="bg-white shadow-md rounded-xl sm:rounded-2xl border border-gray-100 overflow-hidden">
+                        <div class="px-4 md:px-6 py-4 md:py-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                             <div>
                                 <h4 class="text-xl font-black text-slate-800 drop-shadow-sm flex items-center gap-3">
                                     <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -244,8 +244,8 @@
                 <div class="lg:col-span-1 space-y-8">
                     
                     <!-- ULP Progress Map -->
-                    <div class="bg-slate-900 shadow-xl sm:rounded-2xl overflow-hidden border border-slate-800 flex flex-col h-[400px]">
-                        <div class="px-5 py-4 border-b border-slate-700 bg-slate-950 relative overflow-hidden flex-shrink-0">
+                    <div class="bg-slate-900 shadow-xl rounded-xl sm:rounded-2xl overflow-hidden border border-slate-800 flex flex-col h-[400px]">
+                        <div class="px-4 md:px-5 py-3 md:py-4 border-b border-slate-700 bg-slate-950 relative overflow-hidden flex-shrink-0">
                             <h4 class="text-lg font-extrabold flex items-center gap-2 text-white relative z-10 drop-shadow-md">
                                 <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
                                 Peta Performa ULP

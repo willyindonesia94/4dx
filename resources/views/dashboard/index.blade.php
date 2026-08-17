@@ -9,9 +9,9 @@
     </style>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
             <!-- Welcome Banner -->
-            <div class="bg-gradient-to-r from-blue-900 to-blue-700 shadow-xl sm:rounded-lg relative border border-blue-800 z-20">
+            <div class="bg-gradient-to-r from-blue-900 to-blue-700 shadow-xl rounded-xl sm:rounded-lg relative border border-blue-800 z-20">
                 <div class="absolute inset-0 overflow-hidden rounded-lg pointer-events-none">
                     <div class="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-white opacity-5 rounded-full transform scale-150 pointer-events-none"></div>
                 </div>
@@ -33,15 +33,15 @@
             <div class="grid grid-cols-1 gap-6">
                 <!-- Scoreboard WIGs -->
                 <div class="w-full space-y-4">
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                        <div class="flex flex-col md:flex-row justify-between items-center mb-6">
-                            <h3 class="text-lg font-bold text-gray-900 flex items-center mb-4 md:mb-0">
-                                <svg class="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <div class="bg-white rounded-xl sm:rounded-lg shadow-sm border border-gray-100 p-4 sm:p-6">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                            <h3 class="text-lg font-bold text-gray-900 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                 Progress Bar Pencapaian WIG dan LM
                             </h3>
                             
                             <!-- Filter Form -->
-                            <form method="GET" action="{{ route('dashboard') }}" class="flex items-center gap-3">
+                            <form method="GET" action="{{ route('dashboard') }}" class="flex flex-wrap items-center gap-3 w-full md:w-auto">
                                 <div class="flex bg-gray-100 p-1 rounded-md">
                                     <button type="submit" name="periode_wig" value="bulanan" class="{{ ($periodeWig ?? 'bulanan') === 'bulanan' ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700' }} px-4 py-1.5 rounded transition-all">Bulanan</button>
                                     <button type="submit" name="periode_wig" value="tahunan" class="{{ ($periodeWig ?? 'bulanan') === 'tahunan' ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700' }} px-4 py-1.5 rounded transition-all">Tahunan</button>
@@ -234,7 +234,7 @@
                                     <div class="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start mb-8">
                                         <!-- Kiri: Tabel LM -->
                                         <div class="xl:col-span-3 w-full">
-                                            <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl border border-gray-200">
+                                            <div class="bg-white overflow-hidden shadow-sm rounded-xl sm:rounded-xl border border-gray-200">
                                                 <div class="p-3 bg-gray-50 border-b border-gray-200">
                                                     <h5 class="text-xs font-bold text-gray-800">{{ $lm->judul_lm }}</h5>
                                                 </div>
