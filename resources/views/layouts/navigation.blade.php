@@ -131,9 +131,9 @@
                                     
                                     if ($isSuperAdmin) {
                                         $pendingWigs = \App\Models\MasterWig::where('is_approved', false)->get();
-                                        $pendingLms = \App\Models\MasterLm::with('wig')->where('is_approved', false)->get();
-                                        $pendingBreakdownWigs = \App\Models\BreakdownWig::with(['wig', 'unit'])->where('is_approved', false)->get()->unique(function ($item) { return $item->wig_id . '-' . $item->unit_id; });
-                                        $pendingBreakdownLms = \App\Models\BreakdownLm::with(['lm', 'unit'])->where('is_approved', false)->get()->unique(function ($item) { return $item->lm_id . '-' . $item->unit_id; });
+                                        $pendingLms = \App\Models\MasterLm::with('wig')->whereHas('wig')->where('is_approved', false)->get();
+                                        $pendingBreakdownWigs = \App\Models\BreakdownWig::with(['wig', 'unit'])->whereHas('wig', function($q) { $q->where('is_approved', true); })->whereHas('unit')->where('is_approved', false)->get()->unique('unit_id');
+                                        $pendingBreakdownLms = \App\Models\BreakdownLm::with(['lm', 'unit'])->whereHas('lm', function($q) { $q->where('is_approved', true)->whereHas('wig', function($q2) { $q2->where('is_approved', true); }); })->whereHas('unit')->where('is_approved', false)->get()->unique('unit_id');
                                     } elseif ($isSubBidang) {
                                         $userDivisi = (string)auth()->user()->matrix_group_id;
                                         
@@ -149,30 +149,36 @@
                                                   ->orWhere('divisi', 'like', '%"'.$userDivisi.'"%');
                                             })->get();
                                         
-                                        $pendingBreakdownWigs = \App\Models\BreakdownWig::with(['wig', 'unit'])->where('is_approved', false)
+                                        $pendingBreakdownWigs = \App\Models\BreakdownWig::with(['wig', 'unit'])->whereHas('unit')->where('is_approved', false)
                                             ->whereHas('wig', function($q) use ($userDivisi) {
-                                                $q->where('divisi', $userDivisi)
-                                                  ->orWhere('divisi', 'like', '%"'.$userDivisi.'"%');
-                                            })->get()->unique(function ($item) { return $item->wig_id . '-' . $item->unit_id; });
+                                                $q->where('is_approved', true)->where(function($q2) use ($userDivisi) {
+                                                    $q2->where('divisi', $userDivisi)->orWhere('divisi', 'like', '%"'.$userDivisi.'"%');
+                                                });
+                                            })->get()->unique('unit_id');
                                         
-                                        $pendingBreakdownLms = \App\Models\BreakdownLm::with(['lm.wig', 'unit'])->where('is_approved', false)
-                                            ->whereHas('lm.wig', function($q) use ($userDivisi) {
-                                                $q->where('divisi', $userDivisi)
-                                                  ->orWhere('divisi', 'like', '%"'.$userDivisi.'"%');
-                                            })->get()->unique(function ($item) { return $item->lm_id . '-' . $item->unit_id; });
+                                        $pendingBreakdownLms = \App\Models\BreakdownLm::with(['lm.wig', 'unit'])->whereHas('unit')->where('is_approved', false)
+                                            ->whereHas('lm', function($q) use ($userDivisi) {
+                                                $q->where('is_approved', true)->whereHas('wig', function($qw) use ($userDivisi) {
+                                                    $qw->where('is_approved', true)->where(function($q2) use ($userDivisi) {
+                                                        $q2->where('divisi', $userDivisi)->orWhere('divisi', 'like', '%"'.$userDivisi.'"%');
+                                                    });
+                                                });
+                                            })->get()->unique('unit_id');
                                     } elseif ($isManagerUp3) {
                                         $userUnitId = auth()->user()->unit_id;
                                         
                                         $pendingBreakdownWigs = \App\Models\BreakdownWig::with(['wig', 'unit'])
+                                            ->whereHas('wig', function($q) { $q->where('is_approved', true); })->whereHas('unit')
                                             ->where('is_approved', false)
                                             ->where('unit_id', $userUnitId)
-                                            ->get()->unique(function ($item) { return $item->wig_id . '-' . $item->unit_id; });
+                                            ->get()->unique('unit_id');
 
                                         $pendingBreakdownLms = \App\Models\BreakdownLm::with(['lm', 'unit'])->where('is_approved', false)
+                                            ->whereHas('lm', function($q) { $q->where('is_approved', true)->whereHas('wig', function($q2) { $q2->where('is_approved', true); }); })
                                             ->whereHas('unit', function($q) use ($userUnitId) {
                                                 // Only show breakdowns for ULP under this UP3, or for the UP3 itself
                                                 $q->where('parent_id', $userUnitId)->orWhere('id', $userUnitId);
-                                            })->get()->unique(function ($item) { return $item->lm_id . '-' . $item->unit_id; });
+                                            })->get()->unique('unit_id');
                                     }
                                     $unreadCount = $validDbNotifications + $pendingWigs->count() + $pendingLms->count() + $pendingBreakdownWigs->count() + $pendingBreakdownLms->count();
                                     
@@ -189,9 +195,19 @@
                     <x-slot name="content">
                         <div class="px-5 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center rounded-t-xl">
                             <span class="text-sm font-bold text-gray-800">Notifikasi Terbaru</span>
-                            <a href="{{ route('notifications.index') }}" class="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors">
-                                Lihat Semua
-                            </a>
+                            <div class="flex items-center gap-3">
+                                @if(Auth::user()->notifications()->count() > 0)
+                                <form action="{{ route('notifications.clearAll') }}" method="POST" class="m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus semua riwayat notifikasi?');">
+                                    @csrf
+                                    <button type="submit" class="text-[11px] font-bold text-red-600 hover:text-red-800 transition-colors bg-red-50 hover:bg-red-100 px-2 py-1 rounded border border-red-100">
+                                        Bersihkan
+                                    </button>
+                                </form>
+                                @endif
+                                <a href="{{ route('notifications.index') }}" class="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors">
+                                    Lihat Semua
+                                </a>
+                            </div>
                         </div>
                         <div class="max-h-96 overflow-y-auto">
                             @foreach($pendingWigs as $wig)
@@ -205,7 +221,7 @@
                                             <p class="text-xs text-gray-600 leading-relaxed mb-3">WIG <span class="font-bold text-gray-800">"{{ $wig->judul }}"</span> sedang menunggu persetujuan Anda.</p>
                                             <div class="flex justify-between items-center">
                                                 <span class="text-[11px] text-gray-400 font-medium">{{ $wig->created_at->diffForHumans() }}</span>
-                                                <a href="{{ route('master-wigs.index', ['status' => 'draft']) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-xs text-orange-600 hover:text-orange-700 font-bold rounded-lg border border-orange-200 shadow-sm hover:shadow transition-all">
+                                                <a href="{{ route('master-wigs.index', ['highlight_wig' => $wig->id, 'status' => 'draft']) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-xs text-orange-600 hover:text-orange-700 font-bold rounded-lg border border-orange-200 shadow-sm hover:shadow transition-all">
                                                     Lihat Detail
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                                                 </a>
@@ -226,7 +242,7 @@
                                             <p class="text-xs text-gray-600 leading-relaxed mb-3">LM <span class="font-bold text-gray-800">"{{ $lm->judul_lm }}"</span> sedang menunggu persetujuan Anda.</p>
                                             <div class="flex justify-between items-center">
                                                 <span class="text-[11px] text-gray-400 font-medium">{{ $lm->created_at->diffForHumans() }}</span>
-                                                <a href="{{ route('master-lms.index', ['status' => 'draft']) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-xs text-orange-600 hover:text-orange-700 font-bold rounded-lg border border-orange-200 shadow-sm hover:shadow transition-all">
+                                                <a href="{{ route('master-lms.index', ['highlight_lm' => $lm->id, 'status' => 'draft']) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-xs text-orange-600 hover:text-orange-700 font-bold rounded-lg border border-orange-200 shadow-sm hover:shadow transition-all">
                                                     Lihat Detail
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                                                 </a>
@@ -247,7 +263,7 @@
                                             <p class="text-xs text-gray-600 leading-relaxed mb-3">Cascading WIG untuk Unit <span class="font-bold text-gray-800">"{{ $bw->unit->name ?? '-' }}"</span> sedang menunggu persetujuan Anda.</p>
                                             <div class="flex justify-between items-center">
                                                 <span class="text-[11px] text-gray-400 font-medium">{{ $bw->created_at->diffForHumans() }}</span>
-                                                <a href="{{ route('cascading.wig.index') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-xs text-orange-600 hover:text-orange-700 font-bold rounded-lg border border-orange-200 shadow-sm hover:shadow transition-all">
+                                                <a href="{{ route('cascading.wig.index', ['highlight_unit' => $bw->unit_id, 'status' => 'draft']) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-xs text-orange-600 hover:text-orange-700 font-bold rounded-lg border border-orange-200 shadow-sm hover:shadow transition-all">
                                                     Lihat Detail
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                                                 </a>
@@ -268,7 +284,7 @@
                                             <p class="text-xs text-gray-600 leading-relaxed mb-3">Cascading LM untuk Unit <span class="font-bold text-gray-800">"{{ $bl->unit->name ?? '-' }}"</span> sedang menunggu persetujuan Anda.</p>
                                             <div class="flex justify-between items-center">
                                                 <span class="text-[11px] text-gray-400 font-medium">{{ $bl->created_at->diffForHumans() }}</span>
-                                                <a href="{{ route('cascading.lm.index') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-xs text-orange-600 hover:text-orange-700 font-bold rounded-lg border border-orange-200 shadow-sm hover:shadow transition-all">
+                                                <a href="{{ route('cascading.lm.index', ['highlight_unit' => $bl->unit_id, 'status' => 'draft']) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-xs text-orange-600 hover:text-orange-700 font-bold rounded-lg border border-orange-200 shadow-sm hover:shadow transition-all">
                                                     Lihat Detail
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                                                 </a>

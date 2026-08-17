@@ -36,4 +36,10 @@ class NotificationController extends Controller
 
         return redirect()->back();
     }
+
+    public function clearAll()
+    {
+        auth()->user()->notifications()->delete();
+        return redirect()->back()->with('success', 'Semua riwayat notifikasi berhasil dibersihkan.');
+    }
 }

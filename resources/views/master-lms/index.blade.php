@@ -90,7 +90,10 @@
                         $wigLms = $groupedLms->get($wig->id, collect());
                     @endphp
                     @if($wigLms->count() > 0)
-                    <div x-data="{ expanded: false }" class="bg-white shadow-sm sm:rounded-xl border border-slate-200 overflow-hidden">
+                    @php
+                        $hasHighlight = request('highlight_lm') && $wigLms->contains('id', request('highlight_lm'));
+                    @endphp
+                    <div x-data="{ expanded: {{ $hasHighlight ? 'true' : 'false' }} }" class="bg-white shadow-sm sm:rounded-xl border border-slate-200 overflow-hidden">
                         <div @click="expanded = !expanded" class="cursor-pointer bg-slate-50 hover:bg-slate-100 px-6 py-4 flex justify-between items-center transition-colors">
                             <div class="flex items-center space-x-3">
                                 <div class="bg-indigo-100 text-indigo-700 font-bold p-2 rounded-lg text-xs w-8 h-8 flex items-center justify-center">
@@ -116,7 +119,10 @@
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-100">
                                         @foreach($wigLms as $lm)
-                                        <tr class="hover:bg-slate-50/50 transition-colors">
+                                        @php $isHighlighted = request('highlight_lm') == $lm->id && !$lm->is_approved; @endphp
+                                        <tr class="hover:bg-slate-50/50 transition-colors {{ $isHighlighted ? 'bg-yellow-50 outline outline-2 outline-yellow-400 z-10 relative' : '' }}"
+                                            @if($isHighlighted) x-data="{}" x-init="setTimeout(() => { $el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 500);" @endif
+                                        >
                                             <td class="px-6 py-4 text-sm font-semibold text-slate-800 break-words max-w-lg">
                                                 <div class="flex items-start">
                                                     <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 mr-2.5 mt-2 hidden sm:block flex-shrink-0"></span>

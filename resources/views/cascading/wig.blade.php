@@ -10,10 +10,20 @@
         $isUid = auth()->user()->unit && auth()->user()->unit->type === 'UID';
         $canCreateUp3Breakdown = in_array($role, ['Super Admin', 'superadmin', 'Perencanaan UID', 'perencanaan_uid']) || $isUid;
         $canEditDelete = !in_array(strtoupper($role), ['BIDANG UID', 'SUB BIDANG UID', 'MANAGER UP3', 'UP2K', 'UP2D', 'MANAGER ULP', 'GENERAL MANAGER UID']);
+        
+        $highlightWigId = 'null';
+        if(request('highlight_unit')) {
+            foreach($wigs as $w) {
+                if($w->breakdowns && $w->breakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; })) {
+                    $highlightWigId = $w->id;
+                    break;
+                }
+            }
+        }
     @endphp
 
     <div class="py-12" x-data="{ 
-        activeWig: null, 
+        activeWig: {{ $highlightWigId }}, 
         openBreakdownWigModal: false, 
         formWigId: null, 
         formWigTitle: '', 
@@ -169,7 +179,11 @@
                                                 </thead>
                                                 <tbody class="divide-y divide-gray-100">
                                                     @foreach($uidBreakdowns as $bw)
-                                                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" @click="expandedBreakdown = expandedBreakdown === {{ $bw->id }} ? null : {{ $bw->id }}">
+                                                    @php $isHighlighted = request('highlight_unit') == $bw->unit_id && !$bw->is_approved; @endphp
+                                                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer {{ $isHighlighted ? 'bg-yellow-50 outline outline-2 outline-yellow-400 z-10 relative' : '' }}" 
+                                                        @click="expandedBreakdown = expandedBreakdown === {{ $bw->id }} ? null : {{ $bw->id }}"
+                                                        @if($isHighlighted) x-init="setTimeout(() => { expandedBreakdown = {{ $bw->id }}; $el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 500);" @endif
+                                                    >
                                                         <td class="px-3 py-2 text-center text-gray-400">
                                                             <svg class="w-4 h-4 transform transition-transform" :class="{'rotate-90': expandedBreakdown === {{ $bw->id }}}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                                                         </td>
@@ -258,7 +272,11 @@
                                                 </thead>
                                                 <tbody class="divide-y divide-gray-100">
                                                     @foreach($up3Breakdowns as $bw)
-                                                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" @click="expandedBreakdown = expandedBreakdown === {{ $bw->id }} ? null : {{ $bw->id }}">
+                                                    @php $isHighlighted = request('highlight_unit') == $bw->unit_id && !$bw->is_approved; @endphp
+                                                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer {{ $isHighlighted ? 'bg-yellow-50 outline outline-2 outline-yellow-400 z-10 relative' : '' }}" 
+                                                        @click="expandedBreakdown = expandedBreakdown === {{ $bw->id }} ? null : {{ $bw->id }}"
+                                                        @if($isHighlighted) x-init="setTimeout(() => { expandedBreakdown = {{ $bw->id }}; $el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 500);" @endif
+                                                    >
                                                         <td class="px-3 py-2 text-center text-gray-400">
                                                             <svg class="w-4 h-4 transform transition-transform" :class="{'rotate-90': expandedBreakdown === {{ $bw->id }}}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                                                         </td>

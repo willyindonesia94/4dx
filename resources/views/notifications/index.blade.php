@@ -17,8 +17,19 @@
                 <div class="p-6 text-gray-900">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
                         <h3 class="text-lg font-bold text-gray-800">Riwayat Notifikasi Anda</h3>
-                        <div class="text-sm text-gray-500">
-                            Total: <span class="font-bold text-gray-700">{{ $notifications->total() }}</span> Notifikasi
+                        <div class="flex items-center gap-4">
+                            @if($notifications->count() > 0)
+                            <form action="{{ route('notifications.clearAll') }}" method="POST" class="m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus SEMUA riwayat notifikasi Anda? Tindakan ini tidak dapat dibatalkan.');">
+                                @csrf
+                                <button type="submit" class="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    Bersihkan Semua
+                                </button>
+                            </form>
+                            @endif
+                            <div class="text-sm text-gray-500">
+                                Total: <span class="font-bold text-gray-700">{{ $notifications->total() }}</span> Notifikasi
+                            </div>
                         </div>
                     </div>
                     

@@ -8,10 +8,22 @@
     @php
         $role = auth()->user()->role_name ?? '';
         $canEditDelete = !in_array(strtoupper($role), ['BIDANG UID', 'SUB BIDANG UID', 'MANAGER UP3', 'UP2K', 'UP2D', 'MANAGER ULP', 'GENERAL MANAGER UID']);
+        
+        $highlightWigId = 'null';
+        if(request('highlight_unit')) {
+            foreach($wigs as $w) {
+                foreach($w->masterLms as $lm) {
+                    if($lm->breakdowns && $lm->breakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; })) {
+                        $highlightWigId = $w->id;
+                        break 2;
+                    }
+                }
+            }
+        }
     @endphp
 
     <div class="py-12" x-data='{ 
-        activeWig: null, openBreakdownModal: false, editMode: false, editBreakdownId: null,
+        activeWig: {{ $highlightWigId }}, openBreakdownModal: false, editMode: false, editBreakdownId: null,
         formLmId: null, formLmTitle: "", formType: "uid", formUp3Target: "", availableUnitsData: @json($availableUnits),
         formUnitId: "", formBidang: "", formAngkaTarget: null, formSatuanId: "", formBulan: "", formTahun: "",
         targetM1: null, targetM2: null, targetM3: null, targetM4: null, targetM5: null, isAutoFill: true,
@@ -215,7 +227,22 @@
                                         </div>
                                         <ul class="divide-y divide-gray-100">
                                             @foreach($lmsInRole as $lm)
-                                            <li class="px-6 py-4 border-l-4 border-blue-400" x-data="{ openUid: false, openUp3: false, openUlp: false }">
+                                            @php
+                                                $uidLmBreakdowns = $lm->breakdowns ? $lm->breakdowns->filter(function($b) { return $b->unit && strtoupper(trim($b->unit->type)) === 'UID'; }) : collect();
+                                                $up3LmBreakdowns = $lm->breakdowns ? $lm->breakdowns->filter(function($b) { return $b->unit && in_array(strtoupper(trim($b->unit->type)), ['UP3', 'UP2D', 'UP2K']); }) : collect();
+                                                $ulpLmBreakdowns = $lm->breakdowns ? $lm->breakdowns->filter(function($b) use ($isUp3, $user) { 
+                                                    if (!$b->unit || strtoupper(trim($b->unit->type)) !== 'ULP') return false;
+                                                    if (!empty($isUp3) && !empty($user->unit_id)) {
+                                                        return (int)$b->unit->parent_id === (int)$user->unit_id;
+                                                    }
+                                                    return true;
+                                                }) : collect();
+                                                
+                                                $hasUidHighlight = request('highlight_unit') && $uidLmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                                $hasUp3Highlight = request('highlight_unit') && $up3LmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                                $hasUlpHighlight = request('highlight_unit') && $ulpLmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                            @endphp
+                                            <li class="px-6 py-4 border-l-4 border-blue-400" x-data="{ openUid: {{ $hasUidHighlight ? 'true' : 'false' }}, openUp3: {{ $hasUp3Highlight ? 'true' : 'false' }}, openUlp: {{ $hasUlpHighlight ? 'true' : 'false' }} }">
                                                 <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center pl-4">
                                                     <div>
                                                         <h4 class="text-md font-semibold text-gray-800">{{ $lm->judul_lm }}</h4>
@@ -228,16 +255,6 @@
                                                 </div>
                                                 
                                                 @php
-                                                    $uidLmBreakdowns = $lm->breakdowns ? $lm->breakdowns->filter(function($b) { return $b->unit && strtoupper(trim($b->unit->type)) === 'UID'; }) : collect();
-                                                    $up3LmBreakdowns = $lm->breakdowns ? $lm->breakdowns->filter(function($b) { return $b->unit && strtoupper(trim($b->unit->type)) === 'UP3'; }) : collect();
-                                                    $ulpLmBreakdowns = $lm->breakdowns ? $lm->breakdowns->filter(function($b) use ($isUp3, $user) { 
-                                                        if (!$b->unit || strtoupper(trim($b->unit->type)) !== 'ULP') return false;
-                                                        if (!empty($isUp3) && !empty($user->unit_id)) {
-                                                            return (int)$b->unit->parent_id === (int)$user->unit_id;
-                                                        }
-                                                        return true;
-                                                    }) : collect();
-
                                                     $myUp3TargetText = '';
                                                     if (!empty($isUp3) && !empty($user->unit_id)) {
                                                         $myUp3Targets = $up3LmBreakdowns->where('unit_id', $user->unit_id);
@@ -316,7 +333,10 @@
                                                                             });
                                                                         @endphp
                                                                         @foreach($groupedUid as $month => $items)
-                                                                        <tbody x-data="{ openMonth: false }" class="divide-y divide-indigo-50 bg-white border-b border-indigo-100/50">
+                                                                        @php
+                                                                            $hasMonthHighlight = request('highlight_unit') && $items->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                                                        @endphp
+                                                                        <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'false' }} }" class="divide-y divide-indigo-50 bg-white border-b border-indigo-100/50">
                                                                             <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
                                                                                 <td colspan="{{ !empty($canBreakdownToUid) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
                                                                                     <div class="flex justify-between items-center">
@@ -352,7 +372,11 @@
     $isMonthly = \Carbon\Carbon::parse($b->periode_start)->diffInDays(\Carbon\Carbon::parse($b->periode_end)) >= 20 ? 0 : 1;
     return ($b->unit->name ?? '') . '_' . $isMonthly . '_' . $b->periode_start; 
 }) as $breakdown)
-                                                                            <tr x-show="openMonth">
+                                                                            @php $isRowHighlighted = request('highlight_unit') == $breakdown->unit_id && !$breakdown->is_approved; @endphp
+                                                                            <tr x-show="openMonth" 
+                                                                                class="transition-all duration-1000 {{ $isRowHighlighted ? 'bg-yellow-50 outline outline-2 outline-yellow-400 z-10 relative' : '' }}"
+                                                                                @if($isRowHighlighted) x-init="setTimeout(() => { $el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 500);" @endif
+                                                                            >
                                                                                 <td class="px-4 py-2 text-center" @click.stop>
                                                                                     <input type="checkbox" value="{{ $breakdown->id }}" x-model="selectedBreakdowns" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
                                                                                 </td>
@@ -443,7 +467,10 @@
                                                                             });
                                                                         @endphp
                                                                         @foreach($groupedUp3 as $month => $items)
-                                                                        <tbody x-data="{ openMonth: false }" class="divide-y divide-emerald-50 bg-white border-b border-emerald-100/50">
+                                                                        @php
+                                                                            $hasMonthHighlight = request('highlight_unit') && $items->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                                                        @endphp
+                                                                        <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'false' }} }" class="divide-y divide-emerald-50 bg-white border-b border-emerald-100/50">
                                                                             <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
                                                                                 <td colspan="{{ !empty($canBreakdownToUp3) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
                                                                                     <div class="flex justify-between items-center">
@@ -564,7 +591,10 @@
                                                                             });
                                                                         @endphp
                                                                         @foreach($groupedUlp as $month => $items)
-                                                                        <tbody x-data="{ openMonth: false }" class="divide-y divide-amber-50 bg-white border-b border-amber-100/50">
+                                                                        @php
+                                                                            $hasMonthHighlight = request('highlight_unit') && $items->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                                                        @endphp
+                                                                        <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'false' }} }" class="divide-y divide-amber-50 bg-white border-b border-amber-100/50">
                                                                             <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
                                                                                 <td colspan="{{ !empty($canBreakdownToUlp) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
                                                                                     <div class="flex justify-between items-center">
@@ -600,7 +630,11 @@
     $isMonthly = \Carbon\Carbon::parse($b->periode_start)->diffInDays(\Carbon\Carbon::parse($b->periode_end)) >= 20 ? 0 : 1;
     return ($b->unit->name ?? '') . '_' . $isMonthly . '_' . $b->periode_start; 
 }) as $breakdown)
-                                                                            <tr x-show="openMonth">
+                                                                            @php $isRowHighlighted = request('highlight_unit') == $breakdown->unit_id && !$breakdown->is_approved; @endphp
+                                                                            <tr x-show="openMonth"
+                                                                                class="transition-all duration-1000 {{ $isRowHighlighted ? 'bg-yellow-50 outline outline-2 outline-yellow-400 z-10 relative' : '' }}"
+                                                                                @if($isRowHighlighted) x-init="setTimeout(() => { $el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 500);" @endif
+                                                                            >
                                                                                 <td class="px-4 py-2 text-center" @click.stop>
                                                                                     <input type="checkbox" value="{{ $breakdown->id }}" x-model="selectedBreakdowns" class="rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer">
                                                                                 </td>

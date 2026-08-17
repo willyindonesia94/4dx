@@ -71,7 +71,10 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @forelse($wigs as $wig)
-                            <tr class="hover:bg-slate-50/80 transition-colors">
+                            @php $isHighlighted = request('highlight_wig') == $wig->id && !$wig->is_approved; @endphp
+                            <tr class="hover:bg-slate-50/80 transition-colors {{ $isHighlighted ? 'bg-yellow-50 outline outline-2 outline-yellow-400 z-10 relative' : '' }}"
+                                @if($isHighlighted) x-data="{}" x-init="setTimeout(() => { $el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 500);" @endif
+                            >
                                 <td class="px-6 py-4 text-sm font-semibold text-slate-800">{{ $wig->judul }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                                     @php
