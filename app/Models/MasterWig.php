@@ -52,4 +52,9 @@ class MasterWig extends Model
     {
         return $this->hasMany(BreakdownWig::class, 'wig_id');
     }
+
+    public function realisasis()
+    {
+        return $this->hasMany(RealisasiWig::class, 'wig_id');
+    }
 }

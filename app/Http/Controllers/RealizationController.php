@@ -18,65 +18,112 @@ class RealizationController extends Controller
         $tahun      = $request->input('tahun', date('Y'));
         $wigId      = $request->input('wig_id');
         $lmIdFilter = $request->input('lm_id_filter');
+        $up3IdFilter = $request->input('up3_id');
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
+        $roleNameLower = strtolower(trim((string)($user->role_name ?? '')));
         $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
         $isUlpLevel = !$isSuperAdmin && $user && $user->unit && in_array(strtoupper(trim((string)$user->unit->type)), ['ULP', 'UP2D', 'UP2K']);
+        
+        $skipMatrixFilter = $isSuperAdmin || str_contains($roleNameLower, 'gm') || str_contains($roleNameLower, 'general manager') || str_contains($roleNameLower, 'perencanaan') || str_contains($roleNameLower, 'manager') || str_contains($roleNameLower, 'manajer');
 
-        $query = Realisasi::with(['lm.wig', 'lm.satuan', 'user', 'unit'])
-            ->whereMonth('tanggal_input', $bulan)
-            ->whereYear('tanggal_input', $tahun)
-            ->latest('tanggal_input');
+        // Base Query for WIGs to display (only approved WIGs and LMs)
+        $displayWigsQuery = \App\Models\MasterWig::where('is_approved', true)->with(['masterLms' => function($q) {
+            $q->where('is_approved', true);
+        }]);
 
         if ($wigId) {
-            $query->whereHas('lm', fn($q) => $q->where('wig_id', $wigId));
+            $displayWigsQuery->where('id', $wigId);
         }
 
-        if ($lmIdFilter) {
-            $query->where('lm_id', $lmIdFilter);
-        }
-
-        // 1. Pembatasan Sesuai Matrix Bidang User
-        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+        // Apply Matrix Bidang
+        if (!$skipMatrixFilter && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
-            $query->whereHas('lm.wig', function($q) use ($allowedDivisis) {
-                $q->whereIn('divisi', $allowedDivisis);
+            $displayWigsQuery->where(function($q) use ($allowedDivisis) {
+                foreach ($allowedDivisis as $div) {
+                    $q->orWhereJsonContains('divisi', $div);
+                }
             });
         }
 
-        // 2. Pembatasan Sesuai Hierarki Unit Kerja
-        if (!$isSuperAdmin && $user && $user->unit) {
-            $unitType = strtoupper(trim((string)$user->unit->type));
-            if (in_array($unitType, ['ULP', 'UP2D', 'UP2K'])) {
-                $query->where('unit_id', $user->unit_id);
-            } elseif ($unitType === 'UP3') {
-                $query->whereIn('unit_id', function($q) use ($user) {
-                    $q->select('id')->from('master_units')
-                      ->where('id', $user->unit_id)
-                      ->orWhere('parent_id', $user->unit_id);
+        $displayWigs = $displayWigsQuery->get();
+
+        // Eager load realisasis and apply filters
+        $displayWigs->load(['masterLms.realisasis' => function($q) use ($bulan, $tahun, $up3IdFilter, $lmIdFilter, $isSuperAdmin, $user) {
+            $q->whereMonth('tanggal_input', $bulan)
+              ->whereYear('tanggal_input', $tahun)
+              ->with('unit', 'user');
+
+            if ($lmIdFilter) {
+                $q->where('lm_id', $lmIdFilter);
+            }
+
+            // Hierarki Unit Kerja Filter
+            if (!$isSuperAdmin && $user && $user->unit) {
+                $unitType = strtoupper(trim((string)$user->unit->type));
+                if (in_array($unitType, ['ULP', 'UP2D', 'UP2K'])) {
+                    $q->where('unit_id', $user->unit_id);
+                } elseif ($unitType === 'UP3') {
+                    $q->whereIn('unit_id', function($subq) use ($user) {
+                        $subq->select('id')->from('master_units')
+                          ->where('id', $user->unit_id)
+                          ->orWhere('parent_id', $user->unit_id);
+                    });
+                }
+            }
+
+            // UP3 Filter from request
+            if ($up3IdFilter) {
+                $q->whereIn('unit_id', function($subq) use ($up3IdFilter) {
+                    $subq->select('id')->from('master_units')
+                      ->where('id', $up3IdFilter)
+                      ->orWhere('parent_id', $up3IdFilter);
                 });
             }
-        }
 
-        $realisasis = $query->paginate(20)->appends($request->query());
-        
+            $q->orderBy('tanggal_input', 'desc');
+        }]);
+
+        // Sort LMs but do NOT filter out empty ones
+        $displayWigs->each(function($wig) {
+            $wig->setRelation('masterLms', $wig->masterLms->sortBy(function($lm) {
+                preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
+                return (int)($m[1] ?? 999);
+            })->values());
+        });
+
         // Filter dropdown WIG & LM pada Modal Input agar sesuai Matrix Bidang User
         $wigsQuery = \App\Models\MasterWig::with('masterLms.satuan');
-        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+        if (!$skipMatrixFilter && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
-            $wigsQuery->whereIn('divisi', $allowedDivisis);
+            $wigsQuery->where(function($q) use ($allowedDivisis) {
+                foreach ($allowedDivisis as $div) {
+                    $q->orWhereJsonContains('divisi', $div);
+                }
+            });
         }
         $wigs = $wigsQuery->get();
         $availableLms = $wigs->pluck('masterLms')->flatten()->unique('id');
 
-        // Available months that have data (for tabs)
-        $availableMonths = Realisasi::selectRaw('MONTH(tanggal_input) as bulan, YEAR(tanggal_input) as tahun')
-            ->groupByRaw('YEAR(tanggal_input), MONTH(tanggal_input)')
-            ->orderByRaw('YEAR(tanggal_input) DESC, MONTH(tanggal_input) ASC')
-            ->get();
+        $isUid = !$isSuperAdmin && (str_contains($roleNameLower, 'uid') || (str_contains($roleNameLower, 'bidang') && !str_contains($roleNameLower, 'up3') && !str_contains($roleNameLower, 'up2')));
+        $isUp3 = !$isSuperAdmin && (($user && $user->unit && in_array(strtoupper(trim((string)$user->unit->type)), ['UP3', 'UP2D', 'UP2K'])) || str_contains($roleNameLower, 'up3') || str_contains($roleNameLower, 'up2d') || str_contains($roleNameLower, 'up2k'));
 
-        return view('realisasis.index', compact('realisasis', 'wigs', 'bulan', 'tahun', 'wigId', 'lmIdFilter', 'availableMonths', 'isUlpLevel', 'availableLms'));
+        $up3Units = collect();
+        if ($isSuperAdmin || $isUid) {
+            $up3Units = MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->orderBy('name')->get();
+        } elseif ($isUp3 && $user->unit_id) {
+            $userUnitType = strtoupper(trim((string)$user->unit->type));
+            if (in_array($userUnitType, ['UP2D', 'UP2K'])) {
+                $up3Units = MasterUnit::where('id', $user->unit_id)->get();
+            } else {
+                $up3Units = MasterUnit::where('id', $user->unit_id)
+                    ->orWhere(function($q) use ($user) {
+                        $q->where('type', 'ULP')->where('parent_id', $user->unit_id);
+                    })->orderBy('type')->orderBy('name')->get();
+            }
+        }
+        return view('realisasis.index', compact('displayWigs', 'wigs', 'bulan', 'tahun', 'wigId', 'lmIdFilter', 'up3IdFilter', 'up3Units', 'isUlpLevel', 'availableLms', 'isSuperAdmin'));
     }
 
     public function create()
@@ -161,6 +208,36 @@ class RealizationController extends Controller
         
         $realisasi->delete();
         return redirect()->route('realisasis.index')->with('success', 'Realisasi berhasil dihapus.');
+    }
+
+    public function bulkDestroy(Request $request)
+    {
+        $ids = json_decode($request->input('ids', '[]'), true);
+        if (empty($ids) || !is_array($ids)) {
+            return redirect()->back()->with('error', 'Tidak ada data yang dipilih.');
+        }
+
+        $user = auth()->user();
+        $isSuperAdmin = in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
+
+        $deletedCount = 0;
+        foreach ($ids as $id) {
+            $realisasi = Realisasi::find($id);
+            if ($realisasi) {
+                // If not superadmin, ensure it is the same day as tanggal_input
+                if (!$isSuperAdmin && !\Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now())) {
+                    continue; // skip if cannot delete
+                }
+                $realisasi->delete();
+                $deletedCount++;
+            }
+        }
+
+        if ($deletedCount === 0) {
+            return redirect()->back()->with('error', 'Tidak ada data yang berhasil dihapus (mungkin Anda tidak memiliki izin untuk menghapus data di luar hari ini).');
+        }
+
+        return redirect()->back()->with('success', "Berhasil menghapus {$deletedCount} data realisasi LM.");
     }
 
     /**

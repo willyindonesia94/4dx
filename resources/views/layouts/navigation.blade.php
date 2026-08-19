@@ -36,11 +36,9 @@
                         {{ __('Realisasi WIG') }}
                     </x-nav-link>
                     @endif
-                    @if($isUlp || (auth()->user()->unit && in_array(strtoupper(auth()->user()->unit->type), ['UP2D', 'UP2K'])) || (auth()->user() && in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID'])))
                     <x-nav-link :href="route('realisasis.index')" :active="request()->routeIs('realisasis.*')">
                         {{ __('Realisasi LM') }}
                     </x-nav-link>
-                    @endif
                     
                     <x-nav-link :href="route('sesi-wigs.index')" :active="request()->routeIs('sesi-wigs.*')">
                         {{ __('Sesi WIG') }}
@@ -441,11 +439,9 @@
             </x-responsive-nav-link>
             @endif
 
-            @if($isUlp || (auth()->user()->unit && in_array(strtoupper(auth()->user()->unit->type), ['UP2D', 'UP2K'])) || (auth()->user() && in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID'])))
             <x-responsive-nav-link :href="route('realisasis.index')" :active="request()->routeIs('realisasis.*')">
                 {{ __('Realisasi LM') }}
             </x-responsive-nav-link>
-            @endif
 
             <x-responsive-nav-link :href="route('sesi-wigs.index')" :active="request()->routeIs('sesi-wigs.*')">
                 {{ __('Sesi WIG') }}

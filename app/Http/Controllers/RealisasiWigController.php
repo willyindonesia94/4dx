@@ -16,60 +16,109 @@ class RealisasiWigController extends Controller
         $bulanFilter = $request->input('bulan', date('n'));
         $tahunFilter = $request->input('tahun', date('Y'));
         $wigFilter = $request->input('wig_id', '');
+        $up3Filter = $request->input('up3_id', '');
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
+        $roleNameLower = strtolower(trim((string)($user->role_name ?? '')));
         $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
 
-        $query = RealisasiWig::with(['wig.satuan', 'unit', 'user'])
-                             ->where('bulan', $bulanFilter)
-                             ->where('tahun', $tahunFilter);
-        
-        if (!empty($wigFilter)) {
-            $query->where('wig_id', $wigFilter);
-        }
-        
-        // Filter by Matrix Bidang
-        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
-            $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
-            $query->whereHas('wig', function($q) use ($allowedDivisis) {
-                $q->where(function($query) use ($allowedDivisis) {
-                    foreach ($allowedDivisis as $div) {
-                        $query->orWhereJsonContains('divisi', $div);
-                    }
+        $skipMatrixFilter = $isSuperAdmin || str_contains($roleNameLower, 'gm') || str_contains($roleNameLower, 'general manager') || str_contains($roleNameLower, 'perencanaan') || str_contains($roleNameLower, 'manager') || str_contains($roleNameLower, 'manajer');
+
+        // Query MasterWig with realisasis
+        $wigsQuery = MasterWig::with(['satuan', 'realisasis' => function($q) use ($bulanFilter, $tahunFilter, $up3Filter, $isSuperAdmin, $user) {
+            $q->where('bulan', $bulanFilter)
+              ->where('tahun', $tahunFilter)
+              ->with(['unit', 'user']);
+
+            // Hierarki Unit Kerja Filter (match Realisasi LM)
+            if (!$isSuperAdmin && $user && $user->unit) {
+                $unitType = strtoupper(trim((string)$user->unit->type));
+                if (in_array($unitType, ['ULP', 'UP2D', 'UP2K'])) {
+                    $q->where('unit_id', $user->unit_id);
+                } elseif ($unitType === 'UP3') {
+                    $q->whereIn('unit_id', function($subq) use ($user) {
+                        $subq->select('id')->from('master_units')
+                          ->where('id', $user->unit_id)
+                          ->orWhere('parent_id', $user->unit_id);
+                    });
+                }
+            }
+
+            // Filter UP3 dari Request
+            if ($up3Filter) {
+                $q->whereIn('unit_id', function($subq) use ($up3Filter) {
+                    $subq->select('id')->from('master_units')
+                      ->where('id', $up3Filter)
+                      ->orWhere('parent_id', $up3Filter);
                 });
-            });
-        }
-        
-        // Filter by user's unit if not superadmin/pusat (assuming UP3 only sees their own)
-        if (!$isSuperAdmin && $user->unit_id) {
-            $query->where('unit_id', $user->unit_id);
+            }
+
+            $q->orderBy('unit_id', 'asc');
+        }]);
+
+        if (!empty($wigFilter)) {
+            $wigsQuery->where('id', $wigFilter);
         }
 
-        $realisasis = $query->orderBy('unit_id', 'asc')->paginate(10)->withQueryString();
-        
+        // Filter by Matrix Bidang
+        if (!$skipMatrixFilter && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+            $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
+            $wigsQuery->where(function($query) use ($allowedDivisis) {
+                foreach ($allowedDivisis as $div) {
+                    $query->orWhereJsonContains('divisi', $div);
+                }
+            });
+        }
+
+        $displayWigs = $wigsQuery->get();
+
+        // Only keep wigs that have matching realisasis (or just show them all and display "No Data" inside)
+        // For standard cascading feel, we can show the WIG even if empty, but maybe sort them or just show all allowed WIGs.
+
         // We only show WIGs that have breakdown for this user's unit (for the input modal)
         $unitId = $user->unit_id;
-        $wigsQuery = MasterWig::whereHas('breakdowns', function($q) use ($unitId, $tahunFilter) {
+        $wigsInputQuery = MasterWig::whereHas('breakdowns', function($q) use ($unitId, $tahunFilter) {
             if ($unitId) {
                 $q->where('unit_id', $unitId);
             }
             $q->where('tahun', $tahunFilter);
         });
 
-        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+        if (!$skipMatrixFilter && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
-            $wigsQuery->where(function($q) use ($allowedDivisis) {
+            $wigsInputQuery->where(function($q) use ($allowedDivisis) {
                 foreach ($allowedDivisis as $div) {
                     $q->orWhereJsonContains('divisi', $div);
                 }
             });
         }
-        $wigs = $wigsQuery->get();
+        $wigs = $wigsInputQuery->get();
 
         $availableUnits = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->get();
 
-        return view('realisasis.wig', compact('realisasis', 'wigs', 'bulanFilter', 'tahunFilter', 'wigFilter', 'availableUnits'));
+        return view('realisasis.wig', compact('displayWigs', 'wigs', 'bulanFilter', 'tahunFilter', 'wigFilter', 'up3Filter', 'availableUnits', 'isSuperAdmin'));
+    }
+
+    public function bulkDestroy(Request $request)
+    {
+        $this->authorizeSuperadmin();
+        
+        $ids = json_decode($request->input('ids', '[]'), true);
+        if (empty($ids)) {
+            return redirect()->back()->with('error', 'Tidak ada data realisasi yang dipilih untuk dihapus.');
+        }
+
+        $realisasis = RealisasiWig::whereIn('id', $ids)->get();
+
+        foreach ($realisasis as $r) {
+            if ($r->bukti_file) {
+                Storage::disk('public')->delete($r->bukti_file);
+            }
+            $r->delete();
+        }
+
+        return redirect()->back()->with('success', count($realisasis) . ' data realisasi WIG berhasil dihapus.');
     }
 
     public function getTargetBulanan(Request $request)

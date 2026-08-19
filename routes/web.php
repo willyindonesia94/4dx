@@ -82,12 +82,14 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/realisasis/template', [\App\Http\Controllers\RealizationController::class, 'downloadTemplate'])->name('realisasis.template')->middleware('role:Super Admin|Perencanaan UID');
     Route::post('/realisasis/import', [\App\Http\Controllers\RealizationController::class, 'import'])->name('realisasis.import')->middleware('role:Super Admin|Perencanaan UID');
+    Route::delete('/realisasis/bulk-destroy', [\App\Http\Controllers\RealizationController::class, 'bulkDestroy'])->name('realisasis.bulk-destroy');
     Route::resource('realisasis', \App\Http\Controllers\RealizationController::class)->except(['show']);
     
     // Realisasi WIG
     Route::get('/realisasi-wig', [\App\Http\Controllers\RealisasiWigController::class, 'index'])->name('realisasi-wig.index');
     Route::post('/realisasi-wig', [\App\Http\Controllers\RealisasiWigController::class, 'store'])->name('realisasi-wig.store');
     Route::put('/realisasi-wig/{realisasi_wig}', [\App\Http\Controllers\RealisasiWigController::class, 'update'])->name('realisasi-wig.update');
+    Route::delete('/realisasi-wig/bulk-destroy', [\App\Http\Controllers\RealisasiWigController::class, 'bulkDestroy'])->name('realisasi-wig.bulk-destroy');
     Route::delete('/realisasi-wig/{realisasi_wig}', [\App\Http\Controllers\RealisasiWigController::class, 'destroy'])->name('realisasi-wig.destroy');
     Route::get('/realisasi-wig/template', [\App\Http\Controllers\RealisasiWigController::class, 'downloadTemplate'])->name('realisasi-wig.template')->middleware('role:Super Admin|Perencanaan UID');
     Route::post('/realisasi-wig/import', [\App\Http\Controllers\RealisasiWigController::class, 'import'])->name('realisasi-wig.import')->middleware('role:Super Admin|Perencanaan UID');

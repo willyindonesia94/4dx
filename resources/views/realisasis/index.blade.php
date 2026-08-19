@@ -24,9 +24,10 @@
                     @endif
                     @php
                         $userObj = auth()->user();
-                        $isUp3User = $userObj && $userObj->unit && strtoupper(trim((string)$userObj->unit->type)) === 'UP3';
+                        $roleNameLower = strtolower(trim((string)($userObj->role_name ?? '')));
+                        $isManager = str_contains($roleNameLower, 'manager up3') || str_contains($roleNameLower, 'manajer up3') || str_contains($roleNameLower, 'manager ulp') || str_contains($roleNameLower, 'manajer ulp') || str_contains($roleNameLower, 'perencanaan up3');
                     @endphp
-                    @if(!$isUp3User)
+                    @if(!$isManager)
                         <button @click="openModal = true" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-lg shadow transition-colors text-sm flex items-center justify-center gap-2 whitespace-nowrap">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                             Input Realisasi LM
@@ -86,101 +87,250 @@
                 </div>
                 @endif
 
-                <!-- Submit -->
-                <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg shadow transition-colors flex items-center gap-1.5">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
-                    Terapkan
-                </button>
+                @if(!$isUlpLevel && isset($up3Units) && $up3Units->count() > 0)
+                <!-- UP3 -->
+                <div class="flex flex-col gap-1 min-w-[180px] max-w-sm">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Filter Unit</label>
+                    <select name="up3_id" class="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-700 font-medium truncate">
+                        <option value="">— Semua Unit —</option>
+                        @foreach($up3Units as $u)
+                            <option value="{{ $u->id }}" {{ ($up3IdFilter ?? '') == $u->id ? 'selected' : '' }}>
+                                {{ $u->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                @endif
+
+                <!-- Submit Button Removed for Auto-submit -->
 
                 <!-- Info -->
+                @php
+                    $totalRealisasis = 0;
+                    if(isset($displayWigs)) {
+                        $totalRealisasis = $displayWigs->flatMap->masterLms->flatMap->realisasis->count();
+                    }
+                @endphp
                 <p class="text-xs text-gray-400 ml-auto self-center">
-                    <strong class="text-gray-700">{{ $realisasis->total() }}</strong> data ditemukan
+                    <strong class="text-gray-700">{{ $totalRealisasis }}</strong> data ditemukan
                 </p>
             </div>
         </form>
 
         <script>
-            // Sync tahun hidden field when bulan changes
+            // Sync tahun hidden field when bulan changes and auto-submit
             document.querySelector('select[name="bulan"]')?.addEventListener('change', function() {
                 const selected = this.options[this.selectedIndex];
                 const tahun = selected.getAttribute('data-tahun');
                 if (tahun) document.getElementById('tahunHidden').value = tahun;
+                this.form.submit();
+            });
+            
+            // Auto submit for other selects
+            document.querySelectorAll('select[name="lm_id_filter"], select[name="wig_id"], select[name="up3_id"]').forEach(function(select) {
+                select.addEventListener('change', function() {
+                    this.form.submit();
+                });
             });
         </script>
 
-        <div class="bg-white shadow-sm sm:rounded-lg">
-            <div class="p-4 sm:p-6 bg-white border-b border-gray-200 overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Tanggal Input</th>
-                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Unit</th>
-                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Target WIG</th>
-                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Lead Measure</th>
-                            <th class="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Capaian</th>
-                            @if(!$isUp3User)
-                            <th class="px-4 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
+        <div class="space-y-4">
+            @forelse($displayWigs as $wig)
+            <div class="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                <button @click="activeWig = activeWig === {{ $wig->id }} ? null : {{ $wig->id }}" class="w-full flex justify-between items-start px-6 py-4 bg-gray-50 hover:bg-gray-100 transition-colors focus:outline-none text-left">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-gray-500 mr-3 mt-0.5 transform transition-transform flex-shrink-0" :class="{'rotate-90': activeWig === {{ $wig->id }}}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900">{{ $wig->judul }}</h3>
+                            @if($wig->deskripsi)
+                                <p class="text-sm text-gray-500 mt-1 leading-relaxed">{{ $wig->deskripsi }}</p>
                             @endif
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @forelse($realisasis as $realisasi)
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {{ \Carbon\Carbon::parse($realisasi->tanggal_input)->locale('id')->translatedFormat('d M Y') }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                {{ $realisasi->unit->name ?? ($realisasi->user->name ?? '-') }}
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                                {{ $realisasi->lm->wig->judul ?? '-' }}
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                                {{ $realisasi->lm->judul_lm ?? '-' }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                                {{ number_format($realisasi->angka_realisasi, 2) }} 
-                                <span class="text-xs text-gray-500 font-normal">{{ $realisasi->lm->satuan->name ?? '' }}</span>
-                            </td>
-                            @if(!$isUp3User)
-                            <td class="px-4 sm:px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                                @php
-                                    $canEdit = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']) || \Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now());
-                                    $canDelete = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
-                                @endphp
-
-                                @if($canEdit)
-                                <button @click="openEditModal = true; editForm.id = {{ $realisasi->id }}; editForm.angka_realisasi = '{{ $realisasi->angka_realisasi }}'; editForm.keterangan_tambahan = '{{ $realisasi->keterangan_tambahan }}'; editForm.actionUrl = '{{ route('realisasis.update', $realisasi->id) }}'" class="text-indigo-600 hover:text-indigo-900 transition-colors">Edit</button>
-                                @endif
-
-                                @if($canDelete)
-                                <form action="{{ route('realisasis.destroy', $realisasi->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus realisasi ini?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-red-600 hover:text-red-900 transition-colors">Hapus</button>
-                                </form>
-                                @endif
-                            </td>
-                            @endif
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="{{ $isUp3User ? 5 : 6 }}" class="px-6 py-10 text-sm text-gray-400 text-center">
-                                <div class="flex flex-col items-center gap-2">
-                                    <svg class="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
-                                    <span>Belum ada data realisasi untuk periode <strong>{{ $namaBulan[$bulan] }} {{ $tahun }}</strong>.</span>
+                        </div>
+                    </div>
+                    <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded-full flex-shrink-0 mt-0.5">{{ $wig->masterLms->count() }} LMs</span>
+                </button>
+                
+                <div x-show="activeWig === {{ $wig->id }}" x-collapse class="border-t border-gray-200 bg-white">
+                    <ul class="divide-y divide-gray-100">
+                        @foreach($wig->masterLms as $lm)
+                        <li class="px-6 py-4 border-l-4 border-indigo-400" x-data="{ openLm: false }">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center pl-4 cursor-pointer" @click="openLm = !openLm">
+                                <div>
+                                    <h4 class="text-md font-semibold text-gray-800">{{ $lm->judul_lm }}</h4>
                                 </div>
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                                <div class="mt-2 sm:mt-0 flex items-center space-x-3">
+                                    <span class="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">{{ $lm->realisasis->count() }} Data Realisasi</span>
+                                    <svg class="w-4 h-4 text-gray-400 transform transition-transform" :class="{'rotate-180': openLm}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
+
+                            <div x-show="openLm" x-collapse class="mt-4 pl-4">
+                                <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                @if(isset($isSuperAdmin) && $isSuperAdmin)
+                                                <th class="px-4 py-3 w-10 text-center">
+                                                    <input type="checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                        @change="
+                                                            let checkboxes = document.querySelectorAll('.lm-checkbox-{{ $lm->id }}');
+                                                            let isChecked = $event.target.checked;
+                                                            checkboxes.forEach(cb => {
+                                                                if (cb.checked !== isChecked) {
+                                                                    cb.click();
+                                                                }
+                                                            });
+                                                        "
+                                                    >
+                                                </th>
+                                                @endif
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Input</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capaian</th>
+                                                @if(!isset($isUlpLevel) || !$isUlpLevel)
+                                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                                @endif
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            @foreach($lm->realisasis as $realisasi)
+                                            <tr class="hover:bg-gray-50 transition-colors">
+                                                @if(isset($isSuperAdmin) && $isSuperAdmin)
+                                                <td class="px-4 py-3 text-center">
+                                                    <input type="checkbox" value="{{ $realisasi->id }}" x-model="selectedRealisasis" class="lm-checkbox-{{ $lm->id }} rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                                                </td>
+                                                @endif
+                                                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                    {{ \Carbon\Carbon::parse($realisasi->tanggal_input)->locale('id')->translatedFormat('d M Y') }}
+                                                </td>
+                                                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                                                    {{ $realisasi->unit->name ?? ($realisasi->user->name ?? '-') }}
+                                                </td>
+                                                <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-900">
+                                                    {{ number_format($realisasi->angka_realisasi, 2) }} 
+                                                    <span class="text-xs text-gray-500 font-normal">{{ $lm->satuan->name ?? '' }}</span>
+                                                </td>
+                                                @if(!isset($isUlpLevel) || !$isUlpLevel)
+                                                <td class="px-4 py-3 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                                                    @php
+                                                        $canEdit = (isset($isSuperAdmin) && $isSuperAdmin) || \Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now());
+                                                        $canDelete = isset($isSuperAdmin) && $isSuperAdmin;
+                                                    @endphp
+
+                                                    @if($canEdit)
+                                                    <button @click="openEditModal = true; editForm.id = {{ $realisasi->id }}; editForm.angka_realisasi = '{{ $realisasi->angka_realisasi }}'; editForm.keterangan_tambahan = '{{ $realisasi->keterangan_tambahan }}'; editForm.actionUrl = '{{ route('realisasis.update', $realisasi->id) }}'" class="text-indigo-600 hover:text-indigo-900 transition-colors">Edit</button>
+                                                    @endif
+
+                                                    @if($canDelete)
+                                                    <form action="{{ route('realisasis.destroy', $realisasi->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus realisasi ini?');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="text-red-600 hover:text-red-900 transition-colors">Hapus</button>
+                                                    </form>
+                                                    @endif
+                                                </td>
+                                                @endif
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </li>
+                        @endforeach
+                    </ul>
+                </div>
             </div>
-            @if($realisasis->hasPages())
-            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                {{ $realisasis->links() }}
+            @empty
+            <div class="bg-white p-10 rounded-xl border border-gray-200 text-center shadow-sm">
+                <div class="flex flex-col items-center justify-center space-y-3">
+                    <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    <p class="text-gray-500 font-medium">Belum ada data realisasi untuk kriteria yang dipilih.</p>
+                </div>
             </div>
-            @endif
+            @endforelse
+        </div>
+
+        <!-- Floating Action Button for Bulk Delete -->
+        <div x-show="selectedRealisasis.length > 0" 
+             x-transition:enter="transition ease-out duration-300 transform"
+             x-transition:enter-start="opacity-0 translate-y-10"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-200 transform"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 translate-y-10"
+             class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-red-600 shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 z-50 border border-red-500" style="display: none;">
+            <span class="font-bold text-white text-sm"><span x-text="selectedRealisasis.length"></span> Terpilih</span>
+            <div class="h-5 w-px bg-red-400"></div>
+            <button @click="bulkDelete()" class="text-white hover:text-red-100 font-bold text-sm flex items-center transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                Hapus Sekaligus
+            </button>
+        </div>
+
+        <!-- Hidden Form for Bulk Action -->
+        <form id="bulkDeleteForm" action="{{ route('realisasis.bulk-destroy') }}" method="POST" class="hidden">
+            @csrf
+            @method('DELETE')
+            <input type="hidden" name="ids" id="bulkDeleteInput">
+        </form>
+
+        <!-- Custom Confirm Delete Modal -->
+        <div x-show="showConfirmModal"
+             x-cloak
+             class="fixed inset-0 z-[9999] flex items-center justify-center"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             style="display: none;">
+            <!-- Overlay -->
+            <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="showConfirmModal = false"></div>
+            <!-- Modal Box -->
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+                 x-transition:enter="transition ease-out duration-200 transform"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100">
+                <!-- Header -->
+                <div :class="confirmActionType === 'delete' ? 'bg-red-50 border-red-100' : 'bg-emerald-50 border-emerald-100'" class="border-b px-6 py-4 flex items-center gap-3">
+                    <div :class="confirmActionType === 'delete' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'" class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center">
+                        <svg x-show="confirmActionType === 'delete'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <svg x-show="confirmActionType !== 'delete'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base" x-text="confirmActionType === 'delete' ? 'Konfirmasi Hapus' : 'Konfirmasi'"></h3>
+                        <p class="text-xs text-slate-500">Perhatian — tindakan tidak dapat dibatalkan</p>
+                    </div>
+                </div>
+                <!-- Body -->
+                <div class="px-6 py-5">
+                    <p class="text-sm text-slate-600 leading-relaxed" x-html="confirmMessage"></p>
+                </div>
+                <!-- Footer -->
+                <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                    <button @click="showConfirmModal = false"
+                            class="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-100 transition-colors">
+                        Batal
+                    </button>
+                    <button @click="doConfirmedAction()"
+                            :class="confirmActionType === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'"
+                            class="px-4 py-2 rounded-lg text-white text-sm font-bold flex items-center gap-2 transition-colors shadow-sm">
+                        <svg x-show="confirmActionType === 'delete'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        <svg x-show="confirmActionType !== 'delete'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        <span x-text="confirmActionType === 'delete' ? 'Ya, Hapus' : 'Ya, Setujui'"></span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         </div>
@@ -450,6 +600,32 @@
                     const lms = this.filteredLms;
                     const lm = lms.find(l => String(l.id) === String(this.selectedLm));
                     return (lm && lm.satuan) ? lm.satuan.name : '';
+                },
+                activeWig: null,
+                selectedRealisasis: [],
+                showConfirmModal: false,
+                confirmMessage: '',
+                confirmIds: [],
+                confirmActionType: 'delete',
+                openConfirm(ids, message, actionType = 'delete') {
+                    this.confirmIds = ids;
+                    this.confirmMessage = message;
+                    this.confirmActionType = actionType;
+                    this.showConfirmModal = true;
+                },
+                bulkDelete() {
+                    if (this.selectedRealisasis.length === 0) return;
+                    this.openConfirm(
+                        this.selectedRealisasis,
+                        `Anda akan menghapus secara massal ${this.selectedRealisasis.length} data realisasi terpilih. Data yang dihapus tidak dapat dikembalikan. Lanjutkan?`,
+                        'delete'
+                    );
+                },
+                doConfirmedAction() {
+                    if (this.confirmActionType === 'delete') {
+                        document.getElementById('bulkDeleteInput').value = JSON.stringify(this.confirmIds);
+                        document.getElementById('bulkDeleteForm').submit();
+                    }
                 }
             }
         }

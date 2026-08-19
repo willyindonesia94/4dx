@@ -19,12 +19,13 @@ class CascadingController extends Controller
         $isPerencanaanUid = $user && (in_array($userRole, ['perencanaan uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Perencanaan UID'])));
         $isMsb = $userRole === 'sub bidang uid';
         
+        $skipMatrixFilter = $isSuperAdmin || $isPerencanaanUid || str_contains($userRole, 'gm') || str_contains($userRole, 'general manager') || str_contains($userRole, 'perencanaan') || str_contains($userRole, 'manager') || str_contains($userRole, 'manajer');
         $canApproveWig = $isSuperAdmin || $isMsb;
         
         $wigsQuery = MasterWig::where('is_approved', true)
             ->with(['satuan', 'breakdowns', 'breakdowns.unit', 'breakdowns.satuan']);
             
-        if (!$isSuperAdmin && !$isPerencanaanUid && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+        if (!$skipMatrixFilter && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
             $wigsQuery->where(function($q) use ($allowedDivisis) {
                 foreach ($allowedDivisis as $div) {
@@ -68,6 +69,7 @@ class CascadingController extends Controller
         $canBreakdownToUp3 = $isSuperAdmin || $isUid;
         $canBreakdownToUlp = $isSuperAdmin || $isUp3;
         
+        $skipMatrixFilter = $isSuperAdmin || str_contains($userRole, 'gm') || str_contains($userRole, 'general manager') || str_contains($userRole, 'perencanaan') || str_contains($userRole, 'manager') || str_contains($userRole, 'manajer');
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
         $wigsQuery = MasterWig::where('is_approved', true)
             ->with(['masterLms' => function($q) {
@@ -79,7 +81,7 @@ class CascadingController extends Controller
                   ->select('breakdown_lms.*');
             }, 'masterLms.breakdowns.unit', 'masterLms.breakdowns.satuan', 'masterLms.satuan']);
 
-        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+        if (!$skipMatrixFilter && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
             $wigsQuery->where(function($q) use ($allowedDivisis) {
                 foreach ($allowedDivisis as $div) {
