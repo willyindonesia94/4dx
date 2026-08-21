@@ -160,8 +160,13 @@ class RealizationController extends Controller
         }
 
         Realisasi::create($data);
+        $lm = MasterLm::find($request->lm_id);
 
-        return redirect()->route('realisasis.index')->with('success', 'Realisasi berhasil ditambahkan.');
+        $redirect = redirect()->back()->with('success', 'Realisasi berhasil ditambahkan.');
+        if ($lm && $lm->wig_id) {
+            $redirect->with('active_wig', $lm->wig_id)->with('expanded_lm', $lm->id);
+        }
+        return $redirect;
     }
 
     public function edit(Realisasi $realisasi)
@@ -199,15 +204,17 @@ class RealizationController extends Controller
 
         $realisasi->update($data);
 
-        return redirect()->route('realisasis.index')->with('success', 'Realisasi berhasil diperbarui.');
+        return redirect()->back()->with('success', 'Realisasi berhasil diperbarui.')->with('active_wig', $realisasi->lm->wig_id ?? null)->with('expanded_lm', $realisasi->lm_id);
     }
 
     public function destroy(Realisasi $realisasi)
     {
         $this->checkDeleteRule($realisasi);
         
+        $wig_id = $realisasi->lm->wig_id ?? null;
+        $lm_id = $realisasi->lm_id;
         $realisasi->delete();
-        return redirect()->route('realisasis.index')->with('success', 'Realisasi berhasil dihapus.');
+        return redirect()->back()->with('success', 'Realisasi berhasil dihapus.')->with('active_wig', $wig_id)->with('expanded_lm', $lm_id);
     }
 
     public function bulkDestroy(Request $request)
@@ -237,7 +244,14 @@ class RealizationController extends Controller
             return redirect()->back()->with('error', 'Tidak ada data yang berhasil dihapus (mungkin Anda tidak memiliki izin untuk menghapus data di luar hari ini).');
         }
 
-        return redirect()->back()->with('success', "Berhasil menghapus {$deletedCount} data realisasi LM.");
+        $first = Realisasi::with('lm')->whereIn('id', $ids)->first();
+        $wig_id = $first ? ($first->lm->wig_id ?? null) : null;
+        $lm_id = $first ? $first->lm_id : null;
+        $redirect = redirect()->back()->with('success', "Berhasil menghapus {$deletedCount} data realisasi LM.");
+        if ($wig_id) {
+            $redirect->with('active_wig', $wig_id)->with('expanded_lm', $lm_id);
+        }
+        return $redirect;
     }
 
     /**

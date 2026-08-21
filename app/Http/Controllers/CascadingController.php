@@ -227,7 +227,19 @@ class CascadingController extends Controller
             }
         }
 
-        return redirect()->back()->with('success', 'Breakdown LM berhasil ditambahkan ke Unit. ' . (!$is_approved ? 'Menunggu persetujuan.' : ''));
+        $lm = \App\Models\MasterLm::find($request->lm_id);
+        $wig_id = $lm ? $lm->wig_id : null;
+        $unit = \App\Models\MasterUnit::find($request->unit_id);
+        $unit_type = $unit ? strtolower($unit->type) : '';
+        if (in_array($unit_type, ['up2d', 'up2k'])) $unit_type = 'up3';
+
+        $redirect = redirect()->back()->with('success', 'Breakdown LM berhasil ditambahkan ke Unit. ' . (!$is_approved ? 'Menunggu persetujuan.' : ''));
+        if ($wig_id) {
+            $redirect->with('active_wig', $wig_id)
+                     ->with('expanded_lm', $request->lm_id)
+                     ->with('expanded_unit_type', $unit_type);
+        }
+        return $redirect;
     }
 
     public function updateBreakdown(Request $request, $id)
@@ -285,7 +297,17 @@ class CascadingController extends Controller
             ));
         }
 
-        return redirect()->back()->with('success', 'Breakdown LM berhasil diperbarui.');
+        $redirect = redirect()->back()->with('success', 'Breakdown LM berhasil diperbarui.');
+        $wig_id = $breakdown->lm->wig_id ?? null;
+        if ($wig_id) {
+            $unit_type = strtolower($breakdown->unit->type ?? '');
+            if (in_array($unit_type, ['up2d', 'up2k'])) $unit_type = 'up3';
+            
+            $redirect->with('active_wig', $wig_id)
+                     ->with('expanded_lm', $breakdown->lm_id)
+                     ->with('expanded_unit_type', $unit_type);
+        }
+        return $redirect;
     }
 
     public function destroyBreakdown($id)
@@ -309,9 +331,20 @@ class CascadingController extends Controller
             ));
         }
 
+        $wig_id = $breakdown->lm->wig_id ?? null;
+        $lm_id = $breakdown->lm_id;
+        $unit_type = strtolower($breakdown->unit->type ?? '');
+        if (in_array($unit_type, ['up2d', 'up2k'])) $unit_type = 'up3';
+        
         $breakdown->delete();
 
-        return redirect()->back()->with('success', 'Breakdown LM berhasil dihapus.');
+        $redirect = redirect()->back()->with('success', 'Breakdown LM berhasil dihapus.');
+        if ($wig_id) {
+            $redirect->with('active_wig', $wig_id)
+                     ->with('expanded_lm', $lm_id)
+                     ->with('expanded_unit_type', $unit_type);
+        }
+        return $redirect;
     }
 
     public function bulkDestroyLm(Request $request)
@@ -328,9 +361,14 @@ class CascadingController extends Controller
             return redirect()->back()->with('error', 'Anda tidak memiliki akses untuk menghapus target.');
         }
 
+        $first = \App\Models\BreakdownLm::with('lm')->whereIn('id', $ids)->first();
+        $wig_id = $first ? ($first->lm->wig_id ?? null) : null;
+        
         \App\Models\BreakdownLm::whereIn('id', $ids)->delete();
 
-        return redirect()->back()->with('success', count($ids) . ' target berhasil dihapus.');
+        $redirect = redirect()->back()->with('success', count($ids) . ' target berhasil dihapus.');
+        if ($wig_id) $redirect->with('active_wig', $wig_id);
+        return $redirect;
     }
 
     public function storeWigBreakdown(Request $request)
@@ -382,7 +420,7 @@ class CascadingController extends Controller
             ));
         }
 
-        return redirect()->back()->with('success', 'Breakdown WIG berhasil ditambahkan ke Unit. ' . (!$is_approved ? 'Menunggu persetujuan.' : ''));
+        return redirect()->back()->with('success', 'Breakdown WIG berhasil ditambahkan ke Unit. ' . (!$is_approved ? 'Menunggu persetujuan.' : ''))->with('active_wig', $request->wig_id);
     }
 
     public function updateWigBreakdown(Request $request, $id)
@@ -455,7 +493,7 @@ class CascadingController extends Controller
             ));
         }
 
-        return redirect()->back()->with('success', 'Breakdown WIG berhasil diperbarui.');
+        return redirect()->back()->with('success', 'Breakdown WIG berhasil diperbarui.')->with('active_wig', $breakdown->wig_id)->with('expanded_breakdown', $breakdown->id);
     }
 
     public function destroyWigBreakdown($id)
@@ -475,9 +513,10 @@ class CascadingController extends Controller
             ));
         }
 
+        $wig_id = $breakdown->wig_id;
         $breakdown->delete();
 
-        return redirect()->back()->with('success', 'Breakdown WIG berhasil dihapus.');
+        return redirect()->back()->with('success', 'Breakdown WIG berhasil dihapus.')->with('active_wig', $wig_id);
     }
 
     public function wigTemplate()
@@ -549,7 +588,7 @@ class CascadingController extends Controller
         $breakdown->update(['is_approved' => true]);
 
         // Delete from notifications table dynamically logic? Handled via dynamic UI.
-        return redirect()->back()->with('success', 'Cascading WIG berhasil disetujui.');
+        return redirect()->back()->with('success', 'Cascading WIG berhasil disetujui.')->with('active_wig', $breakdown->wig_id);
     }
 
     public function approveLmBreakdown($id)
@@ -557,7 +596,10 @@ class CascadingController extends Controller
         $breakdown = BreakdownLm::findOrFail($id);
         $breakdown->update(['is_approved' => true]);
 
-        return redirect()->back()->with('success', 'Cascading LM berhasil disetujui.');
+        $wig_id = $breakdown->lm->wig_id ?? null;
+        $redirect = redirect()->back()->with('success', 'Cascading LM berhasil disetujui.');
+        if ($wig_id) $redirect->with('active_wig', $wig_id);
+        return $redirect;
     }
 
     public function bulkApproveLm(Request $request)
@@ -567,10 +609,51 @@ class CascadingController extends Controller
             return redirect()->back()->with('error', 'Tidak ada data yang dipilih.');
         }
 
+        $first = BreakdownLm::with('lm')->whereIn('id', $ids)->first();
+        $wig_id = $first ? ($first->lm->wig_id ?? null) : null;
+        
         BreakdownLm::whereIn('id', $ids)->update(['is_approved' => true]);
 
-        return redirect()->back()->with('success', 'Cascading LM terpilih berhasil disetujui.');
+        $redirect = redirect()->back()->with('success', 'Cascading LM terpilih berhasil disetujui.');
+        if ($wig_id) $redirect->with('active_wig', $wig_id);
+        return $redirect;
     }
 
+    public function bulkDestroyWigBreakdown(Request $request)
+    {
+        $ids = json_decode($request->input('ids', '[]'), true);
+        if (empty($ids) || !is_array($ids)) {
+            return redirect()->back()->with('error', 'Tidak ada data yang dipilih.');
+        }
+
+        $role = auth()->user()->role_name ?? '';
+        $canEditDelete = !in_array(strtoupper($role), ['BIDANG UID', 'SUB BIDANG UID', 'MANAGER UP3', 'UP2K', 'UP2D', 'MANAGER ULP', 'GENERAL MANAGER UID']);
+        
+        if (!$canEditDelete) {
+            return redirect()->back()->with('error', 'Anda tidak memiliki akses untuk menghapus target.');
+        }
+
+        $first = \App\Models\BreakdownWig::whereIn('id', $ids)->first();
+        $wig_id = $first ? $first->wig_id : null;
+        
+        \App\Models\BreakdownWig::whereIn('id', $ids)->delete();
+
+        return redirect()->back()->with('success', count($ids) . ' target berhasil dihapus.')->with('active_wig', $wig_id);
+    }
+
+    public function bulkApproveWigBreakdown(Request $request)
+    {
+        $ids = json_decode($request->input('ids', '[]'), true);
+        if (empty($ids) || !is_array($ids)) {
+            return redirect()->back()->with('error', 'Tidak ada data yang dipilih.');
+        }
+
+        $first = \App\Models\BreakdownWig::whereIn('id', $ids)->first();
+        $wig_id = $first ? $first->wig_id : null;
+        
+        \App\Models\BreakdownWig::whereIn('id', $ids)->update(['is_approved' => true]);
+
+        return redirect()->back()->with('success', 'Cascading WIG terpilih berhasil disetujui.')->with('active_wig', $wig_id);
+    }
 
 }

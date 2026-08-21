@@ -153,7 +153,7 @@
                 <div x-show="activeWig === {{ $wig->id }}" x-collapse class="border-t border-gray-200 bg-white">
                     <ul class="divide-y divide-gray-100">
                         @foreach($wig->masterLms as $lm)
-                        <li class="px-6 py-4 border-l-4 border-indigo-400" x-data="{ openLm: false }">
+                        <li class="px-6 py-4 border-l-4 border-indigo-400" x-data="{ openLm: {{ session('expanded_lm', 'null') }} == {{ $lm->id }} ? true : false }">
                             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center pl-4 cursor-pointer" @click="openLm = !openLm">
                                 <div>
                                     <h4 class="text-md font-semibold text-gray-800">{{ $lm->judul_lm }}</h4>
@@ -222,10 +222,10 @@
                                                     @endif
 
                                                     @if($canDelete)
-                                                    <form action="{{ route('realisasis.destroy', $realisasi->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus realisasi ini?');">
+                                                    <form id="deleteForm-{{ $realisasi->id }}" action="{{ route('realisasis.destroy', $realisasi->id) }}" method="POST" class="inline m-0">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="text-red-600 hover:text-red-900 transition-colors">Hapus</button>
+                                                        <button type="button" @click="openConfirm([], 'Apakah Anda yakin ingin menghapus realisasi ini?', 'delete', 'deleteForm-{{ $realisasi->id }}')" class="text-red-600 hover:text-red-900 transition-colors">Hapus</button>
                                                     </form>
                                                     @endif
                                                 </td>
@@ -601,16 +601,18 @@
                     const lm = lms.find(l => String(l.id) === String(this.selectedLm));
                     return (lm && lm.satuan) ? lm.satuan.name : '';
                 },
-                activeWig: null,
+                activeWig: {{ session('active_wig', 'null') }},
                 selectedRealisasis: [],
                 showConfirmModal: false,
                 confirmMessage: '',
                 confirmIds: [],
                 confirmActionType: 'delete',
-                openConfirm(ids, message, actionType = 'delete') {
+                confirmFormId: null,
+                openConfirm(ids, message, actionType = 'delete', formId = null) {
                     this.confirmIds = ids;
                     this.confirmMessage = message;
                     this.confirmActionType = actionType;
+                    this.confirmFormId = formId;
                     this.showConfirmModal = true;
                 },
                 bulkDelete() {
@@ -623,8 +625,12 @@
                 },
                 doConfirmedAction() {
                     if (this.confirmActionType === 'delete') {
-                        document.getElementById('bulkDeleteInput').value = JSON.stringify(this.confirmIds);
-                        document.getElementById('bulkDeleteForm').submit();
+                        if (this.confirmFormId) {
+                            document.getElementById(this.confirmFormId).submit();
+                        } else {
+                            document.getElementById('bulkDeleteInput').value = JSON.stringify(this.confirmIds);
+                            document.getElementById('bulkDeleteForm').submit();
+                        }
                     }
                 }
             }

@@ -18,6 +18,10 @@ class MasterWig extends Model
             ->dontSubmitEmptyLogs();
     }
 
+    protected $guarded = [];
+
+    protected $hidden = ['breakdowns'];
+
     protected $casts = [
         'divisi' => 'array',
     ];

@@ -21,6 +21,8 @@ class BreakdownWig extends Model
 
     protected $guarded = [];
 
+    protected $hidden = ['wig'];
+
     public function unit()
     {
         return $this->belongsTo(MasterUnit::class, 'unit_id');

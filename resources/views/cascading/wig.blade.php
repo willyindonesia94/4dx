@@ -11,7 +11,7 @@
         $canCreateUp3Breakdown = in_array($role, ['Super Admin', 'superadmin', 'Perencanaan UID', 'perencanaan_uid']) || $isUid;
         $canEditDelete = !in_array(strtoupper($role), ['BIDANG UID', 'SUB BIDANG UID', 'MANAGER UP3', 'UP2K', 'UP2D', 'MANAGER ULP', 'GENERAL MANAGER UID']);
         
-        $highlightWigId = 'null';
+        $highlightWigId = session('active_wig', 'null');
         if(request('highlight_unit')) {
             foreach($wigs as $w) {
                 if($w->breakdowns && $w->breakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; })) {
@@ -25,6 +25,51 @@
     <div class="py-12" x-data="{ 
         activeWig: {{ $highlightWigId }}, 
         openBreakdownWigModal: false, 
+        confirmModalOpen: false,
+        confirmFormId: '',
+        confirmActionType: '',
+        openConfirm(formId, type) {
+            this.confirmFormId = formId;
+            this.confirmActionType = type;
+            this.confirmModalOpen = true;
+        },
+        selectedBreakdowns: [],
+        selectAllUID: {},
+        selectAllUP3: {},
+        get canBulkApprove() {
+            return this.selectedBreakdowns.length > 0;
+        },
+        toggleSelection(id) {
+            if (this.selectedBreakdowns.includes(id)) {
+                this.selectedBreakdowns = this.selectedBreakdowns.filter(i => i !== id);
+            } else {
+                this.selectedBreakdowns.push(id);
+            }
+        },
+        toggleSelectAll(ids, type, wigId) {
+            const key = type + wigId;
+            const isSelected = !this[type === 'uid' ? 'selectAllUID' : 'selectAllUP3'][key];
+            if (type === 'uid') this.selectAllUID[key] = isSelected;
+            else this.selectAllUP3[key] = isSelected;
+
+            if (isSelected) {
+                this.selectedBreakdowns = [...new Set([...this.selectedBreakdowns, ...ids])];
+            } else {
+                this.selectedBreakdowns = this.selectedBreakdowns.filter(id => !ids.includes(id));
+            }
+        },
+        bulkDeleteWig() {
+            this.confirmFormId = 'bulkDeleteFormWig';
+            this.confirmActionType = 'bulkDelete';
+            document.getElementById('bulkDeleteInputWig').value = JSON.stringify(this.selectedBreakdowns);
+            this.confirmModalOpen = true;
+        },
+        bulkApproveWig() {
+            if(confirm('Setujui ' + this.selectedBreakdowns.length + ' data sekaligus?')) {
+                document.getElementById('bulkApproveInputWig').value = JSON.stringify(this.selectedBreakdowns);
+                document.getElementById('bulkApproveFormWig').submit();
+            }
+        },
         formWigId: null, 
         formWigTitle: '', 
         formWigDeskripsi: '',
@@ -32,7 +77,7 @@
         formWigSatuanId: '',
         formTahun: new Date().getFullYear(),
         uidTargets: [],
-        expandedBreakdown: null,
+        expandedBreakdown: {{ session('expanded_breakdown', 'null') }},
         editMode: false,
         editBreakdownId: null,
         formUnitId: '',
@@ -170,6 +215,12 @@
                                             <table class="min-w-full text-xs text-left whitespace-nowrap">
                                                 <thead class="text-gray-500 border-b border-gray-200 bg-gray-50">
                                                     <tr>
+                                                        <th class="px-3 py-2 font-medium w-10 text-center">
+                                                            <input type="checkbox" 
+                                                                class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                                :checked="selectAllUID['uid{{ $wig->id }}']"
+                                                                @click="toggleSelectAll({{ json_encode($uidBreakdowns->pluck('id')->toArray()) }}, 'uid', {{ $wig->id }})">
+                                                        </th>
                                                         <th class="px-3 py-2 font-medium w-10"></th>
                                                         <th class="px-3 py-2 font-medium">Unit UID</th>
                                                         <th class="px-3 py-2 font-medium text-center">Tahun</th>
@@ -184,6 +235,13 @@
                                                         @click="expandedBreakdown = expandedBreakdown === {{ $bw->id }} ? null : {{ $bw->id }}"
                                                         @if($isHighlighted) x-init="setTimeout(() => { expandedBreakdown = {{ $bw->id }}; $el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 500);" @endif
                                                     >
+                                                        <td class="px-3 py-2 text-center" @click.stop>
+                                                            <input type="checkbox" 
+                                                                class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                                :value="{{ $bw->id }}"
+                                                                :checked="selectedBreakdowns.includes({{ $bw->id }})"
+                                                                @change="toggleSelection({{ $bw->id }})">
+                                                        </td>
                                                         <td class="px-3 py-2 text-center text-gray-400">
                                                             <svg class="w-4 h-4 transform transition-transform" :class="{'rotate-90': expandedBreakdown === {{ $bw->id }}}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                                                         </td>
@@ -205,10 +263,10 @@
                                                                 @endif
                                                                 <button type="button" @click='openEditModal({{ $bw->toJson() }}, { id: {{ $wig->id }}, judul: @json($wig->judul), deskripsi: @json($wig->deskripsi), satuan_id: "{{ $wig->satuan_id }}" }, "uid", [])' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
                                                                 @if($canEditDelete)
-                                                                <form action="{{ route('cascading.wig-breakdown.destroy', $bw->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Hapus breakdown WIG ini?');">
+                                                                <form id="delete-wig-{{ $bw->id }}" action="{{ route('cascading.wig-breakdown.destroy', $bw->id) }}" method="POST" class="inline m-0">
                                                                     @csrf
                                                                     @method('DELETE')
-                                                                    <button type="submit" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
+                                                                    <button type="button" @click="openConfirm('delete-wig-{{ $bw->id }}', 'delete')" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
                                                                 </form>
                                                                 @endif
                                                             </div>
@@ -216,7 +274,7 @@
                                                     </tr>
                                                     <!-- Expandable Row for Months -->
                                                     <tr x-show="expandedBreakdown === {{ $bw->id }}" class="bg-indigo-50/30 border-b border-indigo-100">
-                                                        <td colspan="5" class="px-6 py-4">
+                                                        <td colspan="6" class="px-6 py-4">
                                                             <h5 class="text-xs font-bold text-indigo-800 uppercase mb-3 flex items-center">
                                                                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                                                 Target Bulanan (Tahun {{ $bw->tahun }})
@@ -263,6 +321,12 @@
                                             <table class="min-w-full text-xs text-left whitespace-nowrap">
                                                 <thead class="text-gray-500 border-b border-gray-200 bg-gray-50">
                                                     <tr>
+                                                        <th class="px-3 py-2 font-medium w-10 text-center">
+                                                            <input type="checkbox" 
+                                                                class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                                :checked="selectAllUP3['up3{{ $wig->id }}']"
+                                                                @click="toggleSelectAll({{ json_encode($up3Breakdowns->pluck('id')->toArray()) }}, 'up3', {{ $wig->id }})">
+                                                        </th>
                                                         <th class="px-3 py-2 font-medium w-10"></th>
                                                         <th class="px-3 py-2 font-medium">Unit UP3</th>
                                                         <th class="px-3 py-2 font-medium text-center">Tahun</th>
@@ -277,6 +341,13 @@
                                                         @click="expandedBreakdown = expandedBreakdown === {{ $bw->id }} ? null : {{ $bw->id }}"
                                                         @if($isHighlighted) x-init="setTimeout(() => { expandedBreakdown = {{ $bw->id }}; $el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 500);" @endif
                                                     >
+                                                        <td class="px-3 py-2 text-center" @click.stop>
+                                                            <input type="checkbox" 
+                                                                class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                                :value="{{ $bw->id }}"
+                                                                :checked="selectedBreakdowns.includes({{ $bw->id }})"
+                                                                @change="toggleSelection({{ $bw->id }})">
+                                                        </td>
                                                         <td class="px-3 py-2 text-center text-gray-400">
                                                             <svg class="w-4 h-4 transform transition-transform" :class="{'rotate-90': expandedBreakdown === {{ $bw->id }}}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                                                         </td>
@@ -300,10 +371,10 @@
                                                                 <button type="button" @click='openEditModal({{ $bw->toJson() }}, { id: {{ $wig->id }}, judul: @json($wig->judul), deskripsi: @json($wig->deskripsi), satuan_id: "{{ $wig->satuan_id }}" }, "up3", @json($uidBreakdowns->values()))' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
                                                                 @endif
                                                                 @if($canEditDelete)
-                                                                <form action="{{ route('cascading.wig-breakdown.destroy', $bw->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Hapus breakdown WIG ini?');">
+                                                                <form id="delete-wig-{{ $bw->id }}" action="{{ route('cascading.wig-breakdown.destroy', $bw->id) }}" method="POST" class="inline m-0">
                                                                     @csrf
                                                                     @method('DELETE')
-                                                                    <button type="submit" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
+                                                                    <button type="button" @click="openConfirm('delete-wig-{{ $bw->id }}', 'delete')" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
                                                                 </form>
                                                                 @endif
                                                             </div>
@@ -311,7 +382,7 @@
                                                     </tr>
                                                     <!-- Expandable Row for Months -->
                                                     <tr x-show="expandedBreakdown === {{ $bw->id }}" class="bg-emerald-50/30 border-b border-emerald-100">
-                                                        <td colspan="5" class="px-6 py-4">
+                                                        <td colspan="6" class="px-6 py-4">
                                                             <h5 class="text-xs font-bold text-emerald-800 uppercase mb-3 flex items-center">
                                                                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                                                 Target Bulanan (Tahun {{ $bw->tahun }})
@@ -345,6 +416,51 @@
                             </div>
                         </div>
                         @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation Modal -->
+        <div x-show="confirmModalOpen" class="fixed inset-0 z-[110] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="display: none;">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="confirmModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div x-show="confirmModalOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                <h3 class="text-lg leading-6 font-bold text-gray-900" id="modal-title">
+                                    Konfirmasi Hapus Data
+                                </h3>
+                                <div class="mt-2 text-sm text-red-600 bg-red-50 p-3 rounded border border-red-100 flex items-start">
+                                    <svg class="w-4 h-4 mr-1.5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                    Perhatian &mdash; tindakan tidak dapat dibatalkan
+                                </div>
+                                <div class="mt-4">
+                                    <p class="text-sm text-gray-600" x-show="confirmActionType !== 'bulkDelete'">
+                                        Apakah Anda yakin ingin menghapus target ini secara permanen?
+                                    </p>
+                                    <p class="text-sm text-gray-600" x-show="confirmActionType === 'bulkDelete'">
+                                        Anda akan menghapus <strong x-text="selectedBreakdowns.length"></strong> target terpilih secara permanen. Tindakan ini tidak dapat dibatalkan. Lanjutkan?
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-100">
+                        <button type="button" @click="document.getElementById(confirmFormId).submit()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            Ya, Hapus
+                        </button>
+                        <button type="button" @click="confirmModalOpen = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
+                            Batal
+                        </button>
                     </div>
                 </div>
             </div>
@@ -482,6 +598,43 @@
                 </div>
             </div>
         </div>
+
+        <!-- Floating Action Button for Bulk Delete -->
+        <div x-show="selectedBreakdowns.length > 0" 
+             x-transition:enter="transition ease-out duration-300 transform"
+             x-transition:enter-start="opacity-0 translate-y-10"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-200 transform"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 translate-y-10"
+             class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-red-600 shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 z-50 border border-red-500" style="display: none;">
+            <span class="font-bold text-white text-sm"><span x-text="selectedBreakdowns.length"></span> Terpilih</span>
+            <div class="h-5 w-px bg-red-400"></div>
+            <button @click="bulkDeleteWig" class="text-white hover:text-red-100 font-bold text-sm flex items-center transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                Hapus Sekaligus
+            </button>
+            @if(isset($canApproveWig) && $canApproveWig)
+            <div class="h-5 w-px bg-red-400"></div>
+            <button @click="bulkApproveWig" class="text-white hover:text-emerald-100 font-bold text-sm flex items-center transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                Setujui Sekaligus
+            </button>
+            @endif
+        </div>
+
+        <!-- Hidden Bulk Delete Form -->
+        <form id="bulkDeleteFormWig" action="{{ route('cascading.wig-breakdown.bulk-destroy') }}" method="POST" class="hidden">
+            @csrf
+            @method('DELETE')
+            <input type="hidden" name="ids" id="bulkDeleteInputWig">
+        </form>
+
+        <!-- Hidden Bulk Approve Form -->
+        <form id="bulkApproveFormWig" action="{{ route('cascading.wig-breakdown.bulk-approve') }}" method="POST" class="hidden">
+            @csrf
+            <input type="hidden" name="ids" id="bulkApproveInputWig">
+        </form>
 
     </div>
 </x-app-layout>

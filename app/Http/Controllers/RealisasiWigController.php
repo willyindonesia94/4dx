@@ -118,7 +118,9 @@ class RealisasiWigController extends Controller
             $r->delete();
         }
 
-        return redirect()->back()->with('success', count($realisasis) . ' data realisasi WIG berhasil dihapus.');
+        $redirect = redirect()->back()->with('success', count($realisasis) . ' data realisasi WIG berhasil dihapus.');
+        if ($realisasis->first()) $redirect->with('active_wig', $realisasis->first()->wig_id);
+        return $redirect;
     }
 
     public function getTargetBulanan(Request $request)
@@ -223,7 +225,7 @@ class RealisasiWigController extends Controller
 
         RealisasiWig::create($data);
 
-        return redirect()->back()->with('success', 'Realisasi WIG berhasil ditambahkan.');
+        return redirect()->back()->with('success', 'Realisasi WIG berhasil ditambahkan.')->with('active_wig', $request->wig_id);
     }
 
     public function update(Request $request, RealisasiWig $realisasi_wig)
@@ -247,7 +249,7 @@ class RealisasiWigController extends Controller
 
         $realisasi_wig->update($data);
 
-        return redirect()->back()->with('success', 'Realisasi WIG berhasil diperbarui.');
+        return redirect()->back()->with('success', 'Realisasi WIG berhasil diperbarui.')->with('active_wig', $realisasi_wig->wig_id);
     }
 
     public function destroy(RealisasiWig $realisasi_wig)
@@ -258,8 +260,9 @@ class RealisasiWigController extends Controller
             Storage::disk('public')->delete($realisasi_wig->bukti_file);
         }
         
+        $wig_id = $realisasi_wig->wig_id;
         $realisasi_wig->delete();
-        return redirect()->back()->with('success', 'Realisasi WIG berhasil dihapus.');
+        return redirect()->back()->with('success', 'Realisasi WIG berhasil dihapus.')->with('active_wig', $wig_id);
     }
 
     private function authorizeSuperadmin()

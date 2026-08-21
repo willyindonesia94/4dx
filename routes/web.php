@@ -60,6 +60,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/cascading/wig-breakdown/{id}', [\App\Http\Controllers\CascadingController::class, 'updateWigBreakdown'])->name('cascading.wig-breakdown.update');
     Route::delete('/cascading/wig-breakdown/{id}', [\App\Http\Controllers\CascadingController::class, 'destroyWigBreakdown'])->name('cascading.wig-breakdown.destroy');
     Route::post('/cascading/wig-breakdown/{id}/approve', [\App\Http\Controllers\CascadingController::class, 'approveWigBreakdown'])->name('cascading.wig-breakdown.approve');
+    Route::delete('/cascading/wig-breakdown-bulk', [\App\Http\Controllers\CascadingController::class, 'bulkDestroyWigBreakdown'])->name('cascading.wig-breakdown.bulk-destroy');
+    Route::post('/cascading/wig-breakdown-bulk-approve', [\App\Http\Controllers\CascadingController::class, 'bulkApproveWigBreakdown'])->name('cascading.wig-breakdown.bulk-approve');
 
     
     // Master Data Tambahan

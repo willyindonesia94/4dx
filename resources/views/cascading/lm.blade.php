@@ -9,7 +9,7 @@
         $role = auth()->user()->role_name ?? '';
         $canEditDelete = !in_array(strtoupper($role), ['BIDANG UID', 'SUB BIDANG UID', 'MANAGER UP3', 'UP2K', 'UP2D', 'MANAGER ULP', 'GENERAL MANAGER UID']);
         
-        $highlightWigId = 'null';
+        $highlightWigId = session('active_wig', 'null');
         if(request('highlight_unit')) {
             foreach($wigs as $w) {
                 foreach($w->masterLms as $lm) {
@@ -61,18 +61,24 @@
         confirmMessage: "",
         confirmActionType: "delete",
         confirmIds: [],
-        openConfirm(ids, title, message, actionType = "delete") {
-            if (ids.length === 0) return;
+        confirmFormId: null,
+        openConfirm(ids, title, message, actionType = "delete", formId = null) {
+            if (ids.length === 0 && formId === null) return;
             this.confirmIds = ids;
             this.confirmTitle = title;
             this.confirmMessage = message;
             this.confirmActionType = actionType;
+            this.confirmFormId = formId;
             this.showConfirmModal = true;
         },
         doConfirmedAction() {
             if (this.confirmActionType === "delete") {
-                document.getElementById("bulkDeleteInput").value = JSON.stringify(this.confirmIds);
-                document.getElementById("bulkDeleteForm").submit();
+                if (this.confirmFormId) {
+                    document.getElementById(this.confirmFormId).submit();
+                } else {
+                    document.getElementById("bulkDeleteInput").value = JSON.stringify(this.confirmIds);
+                    document.getElementById("bulkDeleteForm").submit();
+                }
             } else if (this.confirmActionType === "approve") {
                 document.getElementById("bulkApproveInput").value = JSON.stringify(this.confirmIds);
                 document.getElementById("bulkApproveForm").submit();
@@ -241,8 +247,13 @@
                                                 $hasUidHighlight = request('highlight_unit') && $uidLmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
                                                 $hasUp3Highlight = request('highlight_unit') && $up3LmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
                                                 $hasUlpHighlight = request('highlight_unit') && $ulpLmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                                $expandedLm = session('expanded_lm', null);
+                                                $expandedUnitType = session('expanded_unit_type', null);
+                                                $shouldOpenUid = $hasUidHighlight || ($expandedLm == $lm->id && $expandedUnitType === 'uid');
+                                                $shouldOpenUp3 = $hasUp3Highlight || ($expandedLm == $lm->id && $expandedUnitType === 'up3');
+                                                $shouldOpenUlp = $hasUlpHighlight || ($expandedLm == $lm->id && $expandedUnitType === 'ulp');
                                             @endphp
-                                            <li class="px-6 py-4 border-l-4 border-blue-400" x-data="{ openUid: {{ $hasUidHighlight ? 'true' : 'false' }}, openUp3: {{ $hasUp3Highlight ? 'true' : 'false' }}, openUlp: {{ $hasUlpHighlight ? 'true' : 'false' }} }">
+                                            <li class="px-6 py-4 border-l-4 border-blue-400" x-data="{ openUid: {{ $shouldOpenUid ? 'true' : 'false' }}, openUp3: {{ $shouldOpenUp3 ? 'true' : 'false' }}, openUlp: {{ $shouldOpenUlp ? 'true' : 'false' }} }">
                                                 <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center pl-4">
                                                     <div>
                                                         <h4 class="text-md font-semibold text-gray-800">{{ $lm->judul_lm }}</h4>
@@ -407,10 +418,10 @@
                                                                                         @endif
                                                                                         <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ $lm->judul_lm }}", "uid")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
                                                                                         @if($canEditDelete)
-                                                                                        <form action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Hapus breakdown LM ini?');">
+                                                                                        <form id="deleteForm-{{ $breakdown->id }}" action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0">
                                                                                             @csrf
                                                                                             @method('DELETE')
-                                                                                            <button type="submit" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
+                                                                                            <button type="button" @click="openConfirm([], 'Konfirmasi Hapus Data', 'Apakah Anda yakin ingin menghapus target ini secara permanen?', 'delete', 'deleteForm-{{ $breakdown->id }}')" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
                                                                                         </form>
                                                                                         @endif
                                                                                     </div>
@@ -530,10 +541,10 @@
                                                                                         @endif
                                                                                         <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ $lm->judul_lm }}", "up3")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
                                                                                         @if($canEditDelete)
-                                                                                        <form action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Hapus breakdown LM ini?');">
+                                                                                        <form id="deleteForm-{{ $breakdown->id }}" action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0">
                                                                                             @csrf
                                                                                             @method('DELETE')
-                                                                                            <button type="submit" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
+                                                                                            <button type="button" @click="openConfirm([], 'Konfirmasi Hapus Data', 'Apakah Anda yakin ingin menghapus target ini secara permanen?', 'delete', 'deleteForm-{{ $breakdown->id }}')" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
                                                                                         </form>
                                                                                         @endif
                                                                                     </div>
@@ -658,10 +669,10 @@
                                                                                         @endif
                                                                                         <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ addslashes($lm->judul_lm) }}", "ulp", "{{ addslashes($myUp3TargetText) }}")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
                                                                                         @if($canEditDelete)
-                                                                                        <form action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Hapus breakdown LM ini?');">
+                                                                                        <form id="deleteForm-{{ $breakdown->id }}" action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0">
                                                                                             @csrf
                                                                                             @method('DELETE')
-                                                                                            <button type="submit" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
+                                                                                            <button type="button" @click="openConfirm([], 'Konfirmasi Hapus Data', 'Apakah Anda yakin ingin menghapus target ini secara permanen?', 'delete', 'deleteForm-{{ $breakdown->id }}')" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
                                                                                         </form>
                                                                                         @endif
                                                                                     </div>
