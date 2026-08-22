@@ -152,13 +152,13 @@
                     <div id="uploadMassalForm" class="hidden mb-8 bg-slate-50 border border-slate-200 rounded-xl p-6">
                         <h3 class="font-bold text-slate-800 text-lg mb-2">Upload Excel Massal WIG</h3>
                         <p class="text-sm text-slate-600 mb-4">Pastikan format kolom sesuai dengan template.</p>
-                        <form action="{{ route('cascading.wig.import') }}" method="POST" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                        <form action="{{ route('cascading.wig.import') }}" method="POST" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-4 items-start sm:items-center" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
                             @csrf
                             <div class="flex-1 w-full">
                                 <input type="file" name="file_excel" accept=".xlsx, .xls" required class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-200 rounded-md bg-white">
                             </div>
-                            <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-colors">
-                                Proses Upload
+                            <button type="submit" :disabled="isSubmitting" class="w-full sm:w-auto px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span x-text="isSubmitting ? 'Memproses...' : 'Proses Upload'"></span>
                             </button>
                         </form>
                     </div>

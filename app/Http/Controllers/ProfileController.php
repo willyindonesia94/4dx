@@ -30,10 +30,6 @@ class ProfileController extends Controller
     {
         $request->user()->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
-
         if ($request->hasFile('profile_photo')) {
             if ($request->user()->profile_photo) {
                 Storage::disk('public')->delete($request->user()->profile_photo);

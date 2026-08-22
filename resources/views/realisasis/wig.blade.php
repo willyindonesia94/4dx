@@ -510,7 +510,7 @@
                         </button>
                     </div>
                     
-                    <form action="{{ route('realisasi-wig.import') }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('realisasi-wig.import') }}" method="POST" enctype="multipart/form-data" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
                         @csrf
                         <div class="bg-white px-6 pt-5 pb-6">
                             <div class="space-y-6">
@@ -546,7 +546,9 @@
                         </div>
                         <div class="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 rounded-b-lg">
                             <button @click="openUploadModal = false" type="button" class="w-full sm:w-auto px-6 py-2.5 border border-slate-200 rounded-md bg-white text-slate-700 font-semibold shadow-sm hover:bg-slate-50 text-sm">Batal</button>
-                            <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-md shadow-lg shadow-emerald-200 hover:from-emerald-700 hover:to-teal-700 text-sm transition-colors">Import Data</button>
+                            <button type="submit" :disabled="isSubmitting" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-md shadow-lg shadow-emerald-200 hover:from-emerald-700 hover:to-teal-700 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span x-text="isSubmitting ? 'Memproses...' : 'Import Data'"></span>
+                            </button>
                         </div>
                     </form>
                 </div>

@@ -158,7 +158,7 @@
                     <div id="uploadTargetForm" class="hidden mb-8 bg-green-50 border border-green-200 rounded-xl p-6">
                         <h3 class="font-bold text-green-800 text-lg mb-2">Upload Excel Target Unit (Breakdown LM)</h3>
                         <p class="text-sm text-green-700 mb-4">Pastikan format kolom sesuai dengan <a href="{{ route('cascading.breakdown.template') }}" class="font-bold underline text-green-800 hover:text-green-950">template Excel</a> (ada Target Bulanan & Target Minggu 1-5). Pilih bulan dan tahun target tersebut akan diterapkan.</p>
-                        <form action="{{ route('cascading.breakdown.import') }}" method="POST" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-4 items-end">
+                        <form action="{{ route('cascading.breakdown.import') }}" method="POST" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-4 items-end" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
                             @csrf
                             <div>
                                 <label class="block text-xs font-semibold text-gray-700 mb-1">Bulan</label>
@@ -180,8 +180,8 @@
                                 <label class="block text-xs font-semibold text-gray-700 mb-1">File Excel</label>
                                 <input type="file" name="file_excel" accept=".xlsx, .xls" required class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200 border border-slate-300 rounded-md bg-white">
                             </div>
-                            <button type="submit" class="w-full sm:w-auto px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-colors">
-                                Proses Upload
+                            <button type="submit" :disabled="isSubmitting" class="w-full sm:w-auto px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span x-text="isSubmitting ? 'Memproses...' : 'Proses Upload'"></span>
                             </button>
                         </form>
                     </div>

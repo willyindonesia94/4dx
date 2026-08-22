@@ -32,6 +32,11 @@ class LmImportTemplateExport implements FromCollection, WithHeadings, WithMappin
         $periodeEnd = $periodeStart->copy()->endOfMonth();
 
         foreach ($lms as $lm) {
+            $wigJudul = $lm->wig->judul ?? '';
+            if (preg_match('/WIG\s*-?\s*1\b/i', $wigJudul) && preg_match('/LM\s*-?\s*(4|5)\b/i', $lm->judul_lm ?? '')) {
+                continue;
+            }
+
             $role = $lm->tujuan_unit_role;
             $unitType = '';
             

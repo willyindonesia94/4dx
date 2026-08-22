@@ -342,7 +342,7 @@
                         <!-- Profile Header -->
                         <div class="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
                             <p class="text-sm font-bold text-gray-900 truncate">{{ Auth::user()->name }}</p>
-                            <p class="text-xs font-medium text-gray-500 truncate">{{ Auth::user()->email }}</p>
+                            <p class="text-xs font-medium text-gray-500 truncate">{{ Auth::user()->username }}</p>
                             <span class="inline-block mt-2 px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-wider rounded-md border border-blue-100">
                                 {{ Auth::user()->roles->pluck('name')->first() ?? 'User' }}
                             </span>
@@ -539,7 +539,7 @@
                              @endif
                          </div>
                          <h3 class="text-xl font-extrabold text-gray-900 text-center leading-tight">{{ Auth::user()->name }}</h3>
-                         <p class="text-sm text-gray-500 mt-1">{{ Auth::user()->email }}</p>
+                         <p class="text-sm text-gray-500 mt-1">{{ Auth::user()->username }}</p>
                          <span class="mt-3 px-4 py-1 bg-blue-50 text-blue-700 text-xs font-black uppercase tracking-wider rounded-full border border-blue-100 shadow-sm">
                              {{ Auth::user()->roles->pluck('name')->first() ?? 'User' }}
                          </span>

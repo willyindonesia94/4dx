@@ -105,6 +105,13 @@ class BreakdownLmTemplateExport implements FromCollection, WithHeadings, ShouldA
                 return $numA <=> $numB;
             })->values();
 
+            // Pengecualian khusus: Hapus LM 4 dan LM 5 dari WIG 1
+            if (preg_match('/WIG\s*-?\s*1\b/i', $wig->judul ?? '')) {
+                $lms = $lms->reject(function($lm) {
+                    return preg_match('/LM\s*-?\s*(4|5)\b/i', $lm->judul_lm ?? '');
+                })->values();
+            }
+
             foreach ($lms as $lm) {
                 $hasData = true;
                 foreach ($availableUnits as $unit) {

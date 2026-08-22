@@ -18,7 +18,7 @@ class UsersImport implements ToCollection, WithHeadingRow
     {
         foreach ($rows as $row) {
             // Pastikan kolom wajib terisi
-            if (empty($row['nama']) || empty($row['email']) || empty($row['role_name']) || empty($row['nama_unit'])) {
+            if (empty($row['nama']) || empty($row['username']) || empty($row['role_name']) || empty($row['nama_unit'])) {
                 continue; // Skip jika data tidak lengkap
             }
 
@@ -50,7 +50,7 @@ class UsersImport implements ToCollection, WithHeadingRow
             }
 
             // Cek apakah user sudah ada
-            $user = User::where('email', $row['email'])->first();
+            $user = User::where('username', $row['username'])->first();
             
             $password = !empty($row['password']) ? Hash::make($row['password']) : Hash::make('pln12345');
 
@@ -58,6 +58,7 @@ class UsersImport implements ToCollection, WithHeadingRow
                 // Update user
                 $user->update([
                     'name' => $row['nama'],
+                    'username' => $row['username'],
                     'role_name' => $roleName,
                     'unit_id' => $unit->id,
                     'matrix_group_id' => $matrixGroupId,
@@ -74,7 +75,7 @@ class UsersImport implements ToCollection, WithHeadingRow
             // Create new user
             $newUser = new User([
                 'name' => $row['nama'],
-                'email' => $row['email'],
+                'username' => $row['username'],
                 'password' => $password,
                 'role_name' => $roleName,
                 'unit_id' => $unit->id,

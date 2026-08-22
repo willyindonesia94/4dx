@@ -19,9 +19,11 @@
                             </div>
                             
                             <div>
-                                <x-input-label for="email" :value="__('Email')" />
-                                <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" required />
+                                <x-input-label for="username" :value="__('Username')" />
+                                <x-text-input id="username" class="block mt-1 w-full" type="text" name="username" required />
                             </div>
+
+
 
                             <div>
                                 <x-input-label for="password" :value="__('Password')" />

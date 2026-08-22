@@ -30,7 +30,7 @@ class UserController extends Controller
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                  ->orWhere('username', 'like', "%{$search}%");
             });
         }
 
@@ -52,7 +52,7 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'username' => ['required', 'string', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role_name' => ['required', 'exists:roles,name'],
             'unit_id' => ['required', 'exists:master_units,id'],
@@ -61,7 +61,7 @@ class UserController extends Controller
 
         $user = User::create([
             'name' => $request->name,
-            'email' => $request->email,
+            'username' => $request->username,
             'password' => Hash::make($request->password),
             'role_name' => $request->role_name,
             'unit_id' => $request->unit_id,
@@ -86,7 +86,7 @@ class UserController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->id],
+            'username' => ['required', 'string', 'max:255', 'unique:users,username,'.$user->id],
             'role_name' => ['required', 'exists:roles,name'],
             'unit_id' => ['required', 'exists:master_units,id'],
             'matrix_group_id' => ['required', 'string'],
@@ -94,7 +94,7 @@ class UserController extends Controller
 
         $user->update([
             'name' => $request->name,
-            'email' => $request->email,
+            'username' => $request->username,
             'role_name' => $request->role_name,
             'unit_id' => $request->unit_id,
             'matrix_group_id' => $request->matrix_group_id,
@@ -133,7 +133,7 @@ class UserController extends Controller
             
             // Filter out empty rows
             $rows = array_filter($rows, function($row) {
-                return !empty($row['nama']) && !empty($row['email']) && !empty($row['role_name']);
+                return !empty($row['nama']) && !empty($row['username']) && !empty($row['role_name']);
             });
 
             return response()->json([
