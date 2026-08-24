@@ -22,7 +22,7 @@ class RealizationController extends Controller
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && $user->hasRole('Super Admin');
+        $isSuperAdmin = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
         $isUlpLevel = !$isSuperAdmin && $user && $user->unit && in_array(strtoupper(trim((string)$user->unit->type)), ['ULP', 'UP2D', 'UP2K']);
         
         $skipMatrixFilter = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'SRM Perencanaan UID', 'Asman Perencanaan UP3', 'Manager UP3', 'Manager ULP', 'General Manager UID']);

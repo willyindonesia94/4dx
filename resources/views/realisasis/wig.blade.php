@@ -10,7 +10,7 @@
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <p class="text-gray-600 text-sm sm:text-base">Berikut adalah daftar realisasi pencapaian WIG secara bulanan.</p>
                 <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto mt-3 sm:mt-0">
-                    @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
+                    @if(isset($isSuperAdmin) && $isSuperAdmin)
                         <div class="flex gap-2 w-full sm:w-auto">
                             <a href="{{ route('realisasi-wig.template') }}" class="w-1/2 sm:w-auto justify-center bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2.5 px-4 rounded-lg shadow-sm border border-indigo-200 transition-colors text-sm flex items-center whitespace-nowrap">
                                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
@@ -354,7 +354,7 @@
                             </button>
                         </div>
                         <div class="bg-white px-6 pt-5 pb-6 overflow-y-auto flex-1">
-                            @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
+                            @if(isset($isSuperAdmin) && $isSuperAdmin)
                             <div class="mb-5">
                                 <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Pilih Unit</label>
                                 <select name="unit_id" x-model="form.unit_id" @change="fetchTarget()" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm transition-colors">
@@ -382,7 +382,7 @@
                                         <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Bulan</label>
                                         <select name="bulan" x-model="form.bulan" @change="fetchTarget()" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm">
                                             @php $curMonth = (int)date('n'); @endphp
-                                            @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
+                                            @if(isset($isSuperAdmin) && $isSuperAdmin)
                                                 @foreach(range(1, 12) as $m)
                                                     <option value="{{ $m }}">{{ date('F', mktime(0, 0, 0, $m, 10)) }}</option>
                                                 @endforeach
@@ -395,7 +395,7 @@
                                         <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Tahun</label>
                                         <select name="tahun" x-model="form.tahun" @change="fetchTarget()" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm">
                                             @php $curYear = (int)date('Y'); @endphp
-                                            @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
+                                            @if(isset($isSuperAdmin) && $isSuperAdmin)
                                                 @foreach(range($curYear-1, $curYear+1) as $y)
                                                     <option value="{{ $y }}">{{ $y }}</option>
                                                 @endforeach
@@ -620,14 +620,14 @@
                 },
                 fetchTarget() {
                     if (!this.form.wig_id || !this.form.bulan || !this.form.tahun) return;
-                    @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
+                    @if(isset($isSuperAdmin) && $isSuperAdmin)
                         if (!this.form.unit_id) return;
                     @endif
 
                     this.isLoadingTarget = true;
                     
                     let url = `{{ route('realisasi-wig.target') }}?wig_id=${this.form.wig_id}&bulan=${this.form.bulan}&tahun=${this.form.tahun}`;
-                    @if(in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']))
+                    @if(isset($isSuperAdmin) && $isSuperAdmin)
                         url += `&unit_id=${this.form.unit_id}`;
                     @endif
                     
