@@ -22,11 +22,10 @@ class RealizationController extends Controller
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $roleNameLower = strtolower(trim((string)($user->role_name ?? '')));
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
+        $isSuperAdmin = $user && $user->hasRole('Super Admin');
         $isUlpLevel = !$isSuperAdmin && $user && $user->unit && in_array(strtoupper(trim((string)$user->unit->type)), ['ULP', 'UP2D', 'UP2K']);
         
-        $skipMatrixFilter = $isSuperAdmin || str_contains($roleNameLower, 'gm') || str_contains($roleNameLower, 'general manager') || str_contains($roleNameLower, 'perencanaan') || str_contains($roleNameLower, 'manager') || str_contains($roleNameLower, 'manajer');
+        $skipMatrixFilter = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'SRM Perencanaan UID', 'Asman Perencanaan UP3', 'Manager UP3', 'Manager ULP', 'General Manager UID']);
 
         // Base Query for WIGs to display (only approved WIGs and LMs)
         $displayWigsQuery = \App\Models\MasterWig::where('is_approved', true)->with(['masterLms' => function($q) {
@@ -104,10 +103,17 @@ class RealizationController extends Controller
             });
         }
         $wigs = $wigsQuery->get();
-        $availableLms = $wigs->pluck('masterLms')->flatten()->unique('id');
+        $availableLms = $wigs->pluck('masterLms')->flatten()->unique('id')->sort(function($a, $b) {
+            if ($a->wig_id === $b->wig_id) {
+                preg_match('/LM-?(\d+)/i', $a->judul_lm, $mA);
+                preg_match('/LM-?(\d+)/i', $b->judul_lm, $mB);
+                return (int)($mA[1] ?? 999) <=> (int)($mB[1] ?? 999);
+            }
+            return $a->wig_id <=> $b->wig_id;
+        })->values();
 
-        $isUid = !$isSuperAdmin && (str_contains($roleNameLower, 'uid') || (str_contains($roleNameLower, 'bidang') && !str_contains($roleNameLower, 'up3') && !str_contains($roleNameLower, 'up2')));
-        $isUp3 = !$isSuperAdmin && (($user && $user->unit && in_array(strtoupper(trim((string)$user->unit->type)), ['UP3', 'UP2D', 'UP2K'])) || str_contains($roleNameLower, 'up3') || str_contains($roleNameLower, 'up2d') || str_contains($roleNameLower, 'up2k'));
+        $isUid = !$isSuperAdmin && $user && $user->hasAnyRole(['Perencanaan UID', 'SRM Perencanaan UID', 'SRM Bidang UID', 'MSB UID', 'Admin Sub Bidang UID', 'General Manager UID']);
+        $isUp3 = !$isSuperAdmin && $user && $user->hasAnyRole(['Asman Perencanaan UP3', 'Asman Bidang UP3', 'Manager UP3', 'UP2D', 'UP2K']);
 
         $up3Units = collect();
         if ($isSuperAdmin || $isUid) {
@@ -130,13 +136,20 @@ class RealizationController extends Controller
     {
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
+        $isSuperAdmin = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
 
         $lmQuery = MasterLm::query();
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $lmQuery->whereHas('wig', fn($q) => $q->where('divisi', $userMatrixGroup));
         }
-        $lms = $lmQuery->get();
+        $lms = $lmQuery->get()->sort(function($a, $b) {
+            if ($a->wig_id === $b->wig_id) {
+                preg_match('/LM-?(\d+)/i', $a->judul_lm, $mA);
+                preg_match('/LM-?(\d+)/i', $b->judul_lm, $mB);
+                return (int)($mA[1] ?? 999) <=> (int)($mB[1] ?? 999);
+            }
+            return $a->wig_id <=> $b->wig_id;
+        });
 
         return view('realisasis.create', compact('lms'));
     }
@@ -149,6 +162,11 @@ class RealizationController extends Controller
             'bukti_file' => 'nullable|file|mimes:jpg,jpeg,png|max:2048',
             'keterangan_tambahan' => 'nullable|string|max:1000',
         ]);
+
+        $user = auth()->user();
+        if (!$user->hasAnyRole(['Team Leader ULP', 'Super Admin', 'Admin Unit', 'Perencanaan UID'])) {
+            return redirect()->back()->with('error', 'Hanya Pelaksana / Team Leader ULP yang dapat menginput realisasi LM harian.');
+        }
 
         $data = $request->except('bukti_file');
         $data['user_id'] = auth()->id();
@@ -175,13 +193,20 @@ class RealizationController extends Controller
         
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
+        $isSuperAdmin = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
 
         $lmQuery = MasterLm::query();
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $lmQuery->whereHas('wig', fn($q) => $q->where('divisi', $userMatrixGroup));
         }
-        $lms = $lmQuery->get();
+        $lms = $lmQuery->get()->sort(function($a, $b) {
+            if ($a->wig_id === $b->wig_id) {
+                preg_match('/LM-?(\d+)/i', $a->judul_lm, $mA);
+                preg_match('/LM-?(\d+)/i', $b->judul_lm, $mB);
+                return (int)($mA[1] ?? 999) <=> (int)($mB[1] ?? 999);
+            }
+            return $a->wig_id <=> $b->wig_id;
+        });
 
         return view('realisasis.edit', compact('realisasi', 'lms'));
     }
@@ -225,7 +250,7 @@ class RealizationController extends Controller
         }
 
         $user = auth()->user();
-        $isSuperAdmin = in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
+        $isSuperAdmin = $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
 
         $deletedCount = 0;
         foreach ($ids as $id) {
@@ -254,14 +279,9 @@ class RealizationController extends Controller
         return $redirect;
     }
 
-    /**
-     * CRITICAL RULE: Same Day Rule
-     * Users can only edit a record if today is the same day as tanggal_input.
-     * Superadmin can edit or delete anytime.
-     */
     private function checkEditRule(Realisasi $realisasi)
     {
-        if (in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID'])) {
+        if (auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID'])) {
             return; // Superadmin has full access
         }
 
@@ -272,7 +292,7 @@ class RealizationController extends Controller
 
     private function checkDeleteRule(Realisasi $realisasi)
     {
-        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID'])) {
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID'])) {
             abort(403, 'Akses Ditolak: Hanya Superadmin yang dapat menghapus data realisasi LM.');
         }
     }
@@ -360,7 +380,14 @@ class RealizationController extends Controller
         $sheet->getRowDimension(1)->setRowHeight(28);
 
         // Fetch all LMs to populate the template
-        $lms = \App\Models\MasterLm::with('wig')->orderBy('wig_id')->orderBy('id')->get();
+        $lms = \App\Models\MasterLm::with('wig')->get()->sort(function($a, $b) {
+            if ($a->wig_id === $b->wig_id) {
+                preg_match('/LM-?(\d+)/i', $a->judul_lm, $mA);
+                preg_match('/LM-?(\d+)/i', $b->judul_lm, $mB);
+                return (int)($mA[1] ?? 999) <=> (int)($mB[1] ?? 999);
+            }
+            return $a->wig_id <=> $b->wig_id;
+        });
         $rowNum = 2;
         $userEmail = auth()->user() ? (auth()->user()->email ?? '') : '';
         $today = date('Y-m-d');

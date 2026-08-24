@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\MasterWig;
+use App\Models\MasterUnit;
 use App\Models\BreakdownWig;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -14,49 +15,72 @@ class WigMassTemplateExport implements FromCollection, WithHeadings, ShouldAutoS
 {
     public function collection()
     {
-        // For the template, we can provide an empty structure or existing data.
-        // As per standard templates, it's usually empty with a dummy row or populated with existing breakdown.
-        // We'll export existing breakdown WIGs so the user can modify and reupload if they want.
         $breakdowns = BreakdownWig::with(['wig', 'unit', 'satuan'])->get();
+        $wigs = MasterWig::all()->sort(function($a, $b) {
+            preg_match('/WIG\s*-?\s*(\d+)/i', $a->judul ?? '', $mA);
+            preg_match('/WIG\s*-?\s*(\d+)/i', $b->judul ?? '', $mB);
+            $numA = isset($mA[1]) ? (int)$mA[1] : 999;
+            $numB = isset($mB[1]) ? (int)$mB[1] : 999;
+            if ($numA === $numB) {
+                return strnatcasecmp($a->judul ?? '', $b->judul ?? '');
+            }
+            return $numA <=> $numB;
+        })->values();
+
+        $uidUnit = MasterUnit::where('name', 'UID Jawa Barat')->first();
+        $up3Units = MasterUnit::where('type', 'UP3')->orderBy('name')->get();
+        $up2dUnit = MasterUnit::where('type', 'UP2D')->first();
+
         $rows = collect([]);
 
-        foreach ($breakdowns as $b) {
+        foreach ($wigs as $wig) {
             $no = '';
-            if (preg_match('/WIG\s*(\d+)/i', $b->wig->judul ?? '', $matches)) {
+            if (preg_match('/WIG\s*(\d+)/i', $wig->judul ?? '', $matches)) {
                 $no = 'WIG-' . $matches[1];
             }
 
-            $rows->push([
-                'Tenaga Listrik', // PRIMARY placeholder
-                '4DX',            // KM placeholder
-                $b->tahun,        // 20... -> tahun
-                $no,              // NO -> e.g. WIG-1
-                '4DX',            // TYPE
-                $b->wig->judul ?? '', // INDIKATOR KINERJA 2026
-                $b->wig->polaritas ?? '3',
-                $b->satuan->name ?? '',
-                $b->unit->name ?? '',
-                $b->target_jan,
-                $b->target_feb,
-                $b->target_mar,
-                $b->target_apr,
-                $b->target_mei,
-                $b->target_jun,
-                $b->target_jul,
-                $b->target_agu,
-                $b->target_sep,
-                $b->target_okt,
-                $b->target_nov,
-                $b->target_des,
-            ]);
-        }
-        
-        // Add one empty row for them to understand they can add more if empty
-        if ($rows->count() === 0) {
-            $rows->push([
-                'Tenaga Listrik', '4DX', '2026', 'WIG-1', '4DX', 'WIG 1 - PENJUALAN', '3', 'GWh', 'UID JABAR', 
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-            ]);
+            $unitsToProcess = collect([]);
+            if ($uidUnit) $unitsToProcess->push($uidUnit);
+            foreach ($up3Units as $up3) $unitsToProcess->push($up3);
+            
+            // Tambahkan UP2D hanya untuk WIG 4
+            if (preg_match('/WIG\s*-?\s*4\b/i', $wig->judul ?? '') && $up2dUnit) {
+                $unitsToProcess->push($up2dUnit);
+            }
+
+            foreach ($unitsToProcess as $unit) {
+                // Find existing breakdown
+                $b = $breakdowns->where('wig_id', $wig->id)->where('unit_id', $unit->id)->first();
+                
+                $satuan = $wig->satuan->name ?? '';
+                if ($b && $b->satuan) {
+                    $satuan = $b->satuan->name;
+                }
+
+                $rows->push([
+                    'Tenaga Listrik',
+                    '4DX',
+                    $b ? $b->tahun : date('Y'),
+                    $no,
+                    '4DX',
+                    $wig->judul ?? '',
+                    $wig->polaritas ?? '3',
+                    $satuan,
+                    $unit->name,
+                    $b ? $b->target_jan : 0,
+                    $b ? $b->target_feb : 0,
+                    $b ? $b->target_mar : 0,
+                    $b ? $b->target_apr : 0,
+                    $b ? $b->target_mei : 0,
+                    $b ? $b->target_jun : 0,
+                    $b ? $b->target_jul : 0,
+                    $b ? $b->target_agu : 0,
+                    $b ? $b->target_sep : 0,
+                    $b ? $b->target_okt : 0,
+                    $b ? $b->target_nov : 0,
+                    $b ? $b->target_des : 0,
+                ]);
+            }
         }
 
         return $rows;
@@ -65,34 +89,16 @@ class WigMassTemplateExport implements FromCollection, WithHeadings, ShouldAutoS
     public function headings(): array
     {
         return [
-            'PRIMARY',
-            'KM',
-            '20',
-            'NO',
-            'TYPE',
-            'INDIKATOR KINERJA 2026',
-            'POLARITAS',
-            'SATUAN',
-            'UNIT',
-            'TARGET JANUARI',
-            'TARGET FEBRUARI',
-            'TARGET MARET',
-            'TARGET APRIL',
-            'TARGET MEI',
-            'TARGET JUNI',
-            'TARGET JULI',
-            'TARGET AGUSTUS',
-            'TARGET SEPTEMBER',
-            'TARGET OKTOBER',
-            'TARGET NOVEMBER',
-            'TARGET DESEMBER'
+            'PRIMARY', 'KM', '20', 'NO', 'TYPE', 'INDIKATOR KINERJA 2026', 'POLARITAS', 'SATUAN', 'UNIT',
+            'TARGET JANUARI', 'TARGET FEBRUARI', 'TARGET MARET', 'TARGET APRIL', 'TARGET MEI', 'TARGET JUNI',
+            'TARGET JULI', 'TARGET AGUSTUS', 'TARGET SEPTEMBER', 'TARGET OKTOBER', 'TARGET NOVEMBER', 'TARGET DESEMBER'
         ];
     }
 
     public function styles(Worksheet $sheet)
     {
         return [
-            1    => ['font' => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']], 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF1F497D']]],
+            1 => ['font' => ['bold' => true, 'color' => ['argb' => 'FFFFFFFF']], 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['argb' => 'FF1F497D']]],
         ];
     }
 }

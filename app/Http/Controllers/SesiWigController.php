@@ -15,6 +15,31 @@ class SesiWigController extends Controller
 {
     public function index()
     {
+        $userRole = auth()->user()->role_name ?? (auth()->user()->roles->pluck('name')->first() ?? '');
+        $isSrmPerencanaan = str_contains(strtoupper($userRole), 'SRM PERENCANAAN');
+        
+        if ($isSrmPerencanaan) {
+            // Find current month and year
+            $currentMonth = date('n');
+            $currentYear = date('Y');
+            
+            // Find the closest session in the current month (or just the latest one)
+            $currentSesi = SesiWig::where('tahun', $currentYear)
+                                  ->where('bulan', $currentMonth)
+                                  ->where('tanggal_pelaksanaan', '>=', now())
+                                  ->orderBy('tanggal_pelaksanaan', 'asc')
+                                  ->first();
+                                  
+            if (!$currentSesi) {
+                // Fallback to the latest available session
+                $currentSesi = SesiWig::orderBy('tanggal_pelaksanaan', 'desc')->first();
+            }
+            
+            if ($currentSesi) {
+                return redirect()->route('sesi-wigs.show', $currentSesi->id);
+            }
+        }
+
         $sesis = SesiWig::orderBy('tanggal_pelaksanaan', 'desc')->get();
         return view('sesi-wigs.index', compact('sesis'));
     }
@@ -171,14 +196,13 @@ class SesiWigController extends Controller
         $wigUnitData = []; // Store Unit-level data for WIGs
         $up3List = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->orderBy('name')->get();
 
+        $targetBulan = $wig_bulan ? (int)$wig_bulan : $endDate->month;
+        $prevBulan = $targetBulan > 1 ? $targetBulan - 1 : 12;
+        $prevTahun = $targetBulan > 1 ? $endDate->year : $endDate->year - 1;
+
         // Calculate WIG Realization
         foreach ($wigs as $wig) {
             $isNonSummable = in_array($wig->satuan_id, $nonSummableSatuans);
-            $targetBulan = $wig_bulan ? (int)$wig_bulan : $endDate->month;
-            
-            // Previous month calculation
-            $prevBulan = $targetBulan > 1 ? $targetBulan - 1 : 12;
-            $prevTahun = $targetBulan > 1 ? $endDate->year : $endDate->year - 1;
             
             $colBln = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][$targetBulan];
             $colPrevBln = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][$prevBulan];
@@ -328,6 +352,25 @@ class SesiWigController extends Controller
         $up3s    = $up3sQuery->get();
         $units   = $unitsQuery->get();
 
+        $filteredUp3sByWig = [];
+        foreach ($wigs as $wig) {
+            $isWig4 = str_contains(strtolower($wig->judul), 'wig 4') || str_contains(strtolower($wig->judul), 'peningkatan kepuasan pelanggan');
+            $filtered = collect($up3s)->filter(function($u) use ($isWig4) {
+                $type = strtoupper(trim($u->type ?? ''));
+                if (in_array($type, ['UP2D', 'UP2K'])) {
+                    return $isWig4;
+                }
+                return true;
+            })->sortBy(function($u) {
+                $type = strtoupper(trim($u->type ?? ''));
+                if (in_array($type, ['UP2D', 'UP2K'])) {
+                    return 'Z_' . $u->name;
+                }
+                return 'A_' . $u->name;
+            })->values();
+            $filteredUp3sByWig[$wig->id] = $filtered;
+        }
+
         $leaderboardScores = \Illuminate\Support\Facades\DB::table('realisasis')
             ->where('tanggal_input', '<=', $endDate)
             ->select('unit_id', \Illuminate\Support\Facades\DB::raw('SUM(angka_realisasi) as score'))
@@ -453,7 +496,7 @@ class SesiWigController extends Controller
             }
         }
 
-        return view('sesi-wigs.show', compact('sesi_wig', 'previousSesi', 'wigs', 'lms', 'units', 'wig_bulan', 'lm_unit', 'leaderboard', 'lmMenangKalah', 'presenters', 'up3s', 'allUlps', 'sesi_wigs_matrix', 'sesi_wigs_month', 'matrixTargets', 'matrixRealisasi', 'matrixKomitmen', 'isUlpLevel', 'isUp3Level', 'userMatrixGroup', 'canEditSesiWig', 'wigUnitData', 'targetBulan', 'prevBulan'));
+        return view('sesi-wigs.show', compact('sesi_wig', 'previousSesi', 'wigs', 'lms', 'units', 'wig_bulan', 'lm_unit', 'leaderboard', 'lmMenangKalah', 'presenters', 'up3s', 'filteredUp3sByWig', 'allUlps', 'sesi_wigs_matrix', 'sesi_wigs_month', 'matrixTargets', 'matrixRealisasi', 'matrixKomitmen', 'isUlpLevel', 'isUp3Level', 'userMatrixGroup', 'canEditSesiWig', 'wigUnitData', 'targetBulan', 'prevBulan'));
     }
 
     public function drawPresenter(Request $request, SesiWig $sesi_wig)

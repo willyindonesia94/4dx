@@ -16,60 +16,66 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <x-input-label for="name" :value="__('Nama Lengkap')" />
-                                <x-text-input id="name" class="block mt-1 w-full" type="text" name="name" :value="$user->name" required autofocus />
+                                <x-text-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name', $user->name)" required autofocus />
+                                <x-input-error :messages="$errors->get('name')" class="mt-2" />
                             </div>
                             
                             <div>
                                 <x-input-label for="username" :value="__('Username')" />
-                                <x-text-input id="username" class="block mt-1 w-full" type="text" name="username" :value="$user->username" required />
+                                <x-text-input id="username" class="block mt-1 w-full" type="text" name="username" :value="old('username', $user->username)" required />
+                                <x-input-error :messages="$errors->get('username')" class="mt-2" />
                             </div>
-
-
 
                             <div>
                                 <x-input-label for="password" :value="__('Password (Kosongkan jika tidak diubah)')" />
                                 <x-text-input id="password" class="block mt-1 w-full" type="password" name="password" />
+                                <x-input-error :messages="$errors->get('password')" class="mt-2" />
                             </div>
                             
                             <div>
                                 <x-input-label for="password_confirmation" :value="__('Konfirmasi Password')" />
                                 <x-text-input id="password_confirmation" class="block mt-1 w-full" type="password" name="password_confirmation" />
+                                <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
                             </div>
 
                             <div>
                                 <x-input-label for="role_name" :value="__('Role Aplikasi')" />
                                 <select id="role_name" name="role_name" class="block mt-1 w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
                                     @foreach($roles as $role)
-                                        <option value="{{ $role->name }}" {{ $user->role_name === $role->name ? 'selected' : '' }}>{{ $role->name }}</option>
+                                        <option value="{{ $role->name }}" {{ old('role_name', $user->role_name) == $role->name ? 'selected' : '' }}>{{ $role->name }}</option>
                                     @endforeach
                                 </select>
+                                <x-input-error :messages="$errors->get('role_name')" class="mt-2" />
                             </div>
 
                             <div>
                                 <x-input-label for="unit_id" :value="__('Unit Kerja')" />
                                 <select id="unit_id" name="unit_id" class="block mt-1 w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
                                     @foreach($units as $unit)
-                                        <option value="{{ $unit->id }}" {{ $user->unit_id == $unit->id ? 'selected' : '' }}>{{ $unit->name }} ({{ $unit->type }})</option>
+                                        <option value="{{ $unit->id }}" {{ old('unit_id', $user->unit_id) == $unit->id ? 'selected' : '' }}>{{ $unit->name }} ({{ $unit->type }})</option>
                                     @endforeach
                                 </select>
+                                <x-input-error :messages="$errors->get('unit_id')" class="mt-2" />
                             </div>
 
                             <div class="md:col-span-2">
                                 <x-input-label for="matrix_group_id" :value="__('Matrix Group (Relasi Bidang)')" />
                                 <select id="matrix_group_id" name="matrix_group_id" class="block mt-1 w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm font-medium text-gray-800" required>
-                                    <option value="" disabled>-- Pilih Bidang / Matrix Group --</option>
-                                    <option value="ALL" {{ $user->matrix_group_id === 'ALL' ? 'selected' : '' }}>ALL (Semua Bidang / Tidak Dibatasi)</option>
-                                    @foreach($bidangs as $bidang)
-                                        <option value="{{ $bidang->name }}" {{ $user->matrix_group_id === $bidang->name ? 'selected' : '' }}>
-                                            {{ $bidang->name }} ({{ $bidang->level == 'UID_BIDANG' ? 'UID' : ($bidang->level == 'UID_SUBBIDANG' ? 'Sub UID' : ($bidang->level == 'UP3_BIDANG' ? 'UP3' : 'ULP')) }})
-                                        </option>
-                                    @endforeach
+                                    <option value="" disabled {{ !old('matrix_group_id', $user->matrix_group_id) ? 'selected' : '' }}>-- Pilih Bidang / Matrix Group --</option>
+                                    <option value="ALL" {{ old('matrix_group_id', $user->matrix_group_id) == 'ALL' ? 'selected' : '' }}>ALL (Semua Bidang / Tidak Dibatasi)</option>
+                                    <option value="NIAGA" {{ old('matrix_group_id', $user->matrix_group_id) == 'NIAGA' ? 'selected' : '' }}>NIAGA</option>
+                                    <option value="JARINGAN" {{ old('matrix_group_id', $user->matrix_group_id) == 'JARINGAN' ? 'selected' : '' }}>JARINGAN</option>
+                                    <option value="TE" {{ old('matrix_group_id', $user->matrix_group_id) == 'TE' ? 'selected' : '' }}>TE (Transaksi Energi)</option>
+                                    <option value="K3L" {{ old('matrix_group_id', $user->matrix_group_id) == 'K3L' ? 'selected' : '' }}>K3L</option>
                                 </select>
+                                <x-input-error :messages="$errors->get('matrix_group_id')" class="mt-2" />
                             </div>
                         </div>
 
+                        <input type="hidden" name="return_level" value="{{ request('level') }}">
+
                         <div class="flex items-center justify-end mt-6">
-                            <a href="{{ route('users.index') }}" class="text-sm text-gray-600 hover:text-gray-900 mr-4">Batal</a>
+                            <a href="{{ route('users.index', request('level') ? ['level' => request('level')] : []) }}" class="text-sm text-gray-600 hover:text-gray-900 mr-4">Batal</a>
                             <x-primary-button>
                                 {{ __('Perbarui Pengguna') }}
                             </x-primary-button>

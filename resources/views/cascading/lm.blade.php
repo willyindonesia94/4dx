@@ -6,8 +6,8 @@
     </x-slot>
 
     @php
-        $role = auth()->user()->role_name ?? '';
-        $canEditDelete = !in_array(strtoupper($role), ['BIDANG UID', 'SUB BIDANG UID', 'MANAGER UP3', 'UP2K', 'UP2D', 'MANAGER ULP', 'GENERAL MANAGER UID']);
+        $user = auth()->user();
+        $canEditDelete = $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3']);
         
         $highlightWigId = session('active_wig', 'null');
         if(request('highlight_unit')) {

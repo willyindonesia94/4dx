@@ -20,8 +20,8 @@ class BreakdownLmTemplateExport implements FromCollection, WithHeadings, ShouldA
         $userRole = $user ? strtolower(trim($user->role_name ?? '')) : '';
         $unitType = ($user && $user->unit) ? strtoupper(trim((string)$user->unit->type)) : '';
         $isSuperAdmin = $user && (in_array($userRole, ['super admin', 'superadmin', 'perencanaan uid']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin', 'Perencanaan UID'])));
-        $isUid = !$isSuperAdmin && ($unitType === 'UID' || str_contains($userRole, 'uid') || str_contains($userRole, 'bidang'));
         $isUp3 = !$isSuperAdmin && ($unitType === 'UP3' || str_contains($userRole, 'up3'));
+        $isUid = !$isSuperAdmin && !$isUp3 && ($unitType === 'UID' || str_contains($userRole, 'uid') || str_contains($userRole, 'bidang'));
 
         // Menyesuaikan daftar unit yang bisa di-breakdown oleh user saat ini
         $availableUnits = collect();
@@ -114,17 +114,43 @@ class BreakdownLmTemplateExport implements FromCollection, WithHeadings, ShouldA
 
             foreach ($lms as $lm) {
                 $hasData = true;
+
+                // 1. Tambahkan unit 'Induk' di paling atas
+                if ($isSuperAdmin || $isUid) {
+                    $uidUnit = \App\Models\MasterUnit::where('name', 'UID Jawa Barat')->first();
+                    $rows->push([
+                        $wig->judul ?? '1',
+                        $lm->judul_lm ?? '',
+                        $uidUnit ? $uidUnit->name : 'UID Jawa Barat',
+                        '', '', '', '', '', ''
+                    ]);
+                } elseif ($isUp3 && $user && $user->unit) {
+                    $rows->push([
+                        $wig->judul ?? '1',
+                        $lm->judul_lm ?? '',
+                        $user->unit->name,
+                        '', '', '', '', '', ''
+                    ]);
+                }
+
+                // 2. Tambahkan unit-unit breakdown utama (UP3 atau ULP)
                 foreach ($availableUnits as $unit) {
                     $rows->push([
                         $wig->judul ?? '1',
                         $lm->judul_lm ?? '',
                         $unit->name ?? '',
-                        '', // TARGET BULANAN (Siap diisi)
-                        '', // TARGET MINGGU-1
-                        '', // TARGET MINGGU-2
-                        '', // TARGET MINGGU-3
-                        '', // TARGET MINGGU-4
-                        '', // TARGET MINGGU-5
+                        '', '', '', '', '', ''
+                    ]);
+                }
+
+                // 3. Tambahkan UP2D paling bawah HANYA untuk WIG 4 dan HANYA jika bukan level UP3
+                if (($isSuperAdmin || $isUid) && preg_match('/WIG\s*-?\s*4\b/i', $wig->judul ?? '')) {
+                    $up2dUnit = \App\Models\MasterUnit::where('type', 'UP2D')->first();
+                    $rows->push([
+                        $wig->judul ?? '1',
+                        $lm->judul_lm ?? '',
+                        $up2dUnit ? $up2dUnit->name : 'UP2D',
+                        '', '', '', '', '', ''
                     ]);
                 }
             }

@@ -42,10 +42,14 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
                     }
                 });
             });
-        }
-        $lms = $lmsQuery->get();
-
-        // Filter Units by user hierarchy level
+        $lms = $lmsQuery->get()->sort(function($a, $b) {
+            if ($a->wig_id === $b->wig_id) {
+                preg_match('/LM-?(\d+)/i', $a->judul_lm, $mA);
+                preg_match('/LM-?(\d+)/i', $b->judul_lm, $mB);
+                return (int)($mA[1] ?? 999) <=> (int)($mB[1] ?? 999);
+            }
+            return $a->wig_id <=> $b->wig_id;
+        });
         $unitsQuery = MasterUnit::query();
         if (!$isSuperAdmin && $user && $user->unit) {
             $unitType = strtoupper(trim((string)$user->unit->type));

@@ -45,7 +45,7 @@
                         <span class="hidden sm:inline">Bulk Upload</span>
                         <span class="sm:hidden">Bulk</span>
                     </a>
-                    <a href="{{ route('users.create') }}" class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 sm:px-5 rounded-lg shadow flex items-center whitespace-nowrap">
+                    <a href="{{ route('users.create', $selectedLevel ? ['level' => $selectedLevel] : []) }}" class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 sm:px-5 rounded-lg shadow flex items-center whitespace-nowrap">
                         <span class="hidden sm:inline">+ Tambah Pengguna</span>
                         <span class="sm:hidden">+ Tambah</span>
                     </a>
@@ -83,8 +83,8 @@
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                                    <a href="{{ route('users.edit', $user->id) }}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
-                                    <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Hapus pengguna ini?');">
+                                    <a href="{{ route('users.edit', ['user' => $user->id] + ($selectedLevel ? ['level' => $selectedLevel] : [])) }}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                                    <form action="{{ route('users.destroy', ['user' => $user->id] + ($selectedLevel ? ['level' => $selectedLevel] : [])) }}" method="POST" class="inline-block" onsubmit="return confirm('Hapus pengguna ini?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="text-red-600 hover:text-red-900">Hapus</button>
@@ -103,9 +103,26 @@
                 </div>
             </div>
 
-            <!-- Pagination Links -->
-            <div class="mt-4">
-                {{ $users->links() }}
+            <!-- Pagination Links & Filter -->
+            <div class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <form action="{{ route('users.index') }}" method="GET" class="flex items-center gap-2 text-sm text-gray-600 bg-white px-3 py-2 rounded-lg shadow-sm border border-gray-200">
+                    @if(request('level'))
+                        <input type="hidden" name="level" value="{{ request('level') }}">
+                    @endif
+                    @if(request('search'))
+                        <input type="hidden" name="search" value="{{ request('search') }}">
+                    @endif
+                    <label for="per_page_bottom" class="font-medium whitespace-nowrap">Tampilkan:</label>
+                    <select name="per_page" id="per_page_bottom" onchange="this.form.submit()" class="pl-2 pr-8 py-1 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="20" {{ request('per_page', 20) == 20 ? 'selected' : '' }}>20 Baris</option>
+                        <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50 Baris</option>
+                        <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100 Baris</option>
+                    </select>
+                </form>
+
+                <div class="w-full sm:flex-1">
+                    {{ $users->links() }}
+                </div>
             </div>
 
             <!-- Bulk Upload Modal -->

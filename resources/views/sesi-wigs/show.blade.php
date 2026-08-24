@@ -14,6 +14,44 @@ $formatLmValue = function($value, $satuan) {
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
             
+            <!-- Filter Navigasi Sesi WIG -->
+            <div class="bg-white px-6 py-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span class="font-bold text-gray-700">Pilih Sesi WIG:</span>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                    @php
+                        $allSesis = \App\Models\SesiWig::orderBy('tanggal_pelaksanaan', 'desc')->get();
+                        $groupedSesis = $allSesis->groupBy(function($s) {
+                            return strtoupper(\Carbon\Carbon::create(null, $s->bulan, 1)->locale('id')->translatedFormat('F') . ' ' . $s->tahun);
+                        });
+                        $currentMonthKey = strtoupper(\Carbon\Carbon::create(null, $sesi_wig->bulan, 1)->locale('id')->translatedFormat('F') . ' ' . $sesi_wig->tahun);
+                    @endphp
+                    
+                    <select onchange="window.location.href=this.value" class="rounded-lg border-gray-300 text-sm focus:ring-indigo-500 focus:border-indigo-500 shadow-sm w-full sm:w-64 font-medium text-gray-700">
+                        <option disabled>Pilih Bulan...</option>
+                        @foreach($groupedSesis as $monthKey => $sesisGroup)
+                            @php
+                                $firstSesiInMonth = $sesisGroup->last();
+                            @endphp
+                            <option value="{{ route('sesi-wigs.show', $firstSesiInMonth->id) }}" {{ $monthKey === $currentMonthKey ? 'selected' : '' }}>
+                                {{ $monthKey }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <select onchange="window.location.href=this.value" class="rounded-lg border-gray-300 text-sm focus:ring-indigo-500 focus:border-indigo-500 shadow-sm w-full sm:w-72 font-medium text-gray-700">
+                        <option disabled>Pilih Sesi pada {{ $currentMonthKey }}...</option>
+                        @foreach($groupedSesis[$currentMonthKey]->sortBy('tanggal_pelaksanaan') ?? collect() as $s)
+                            <option value="{{ route('sesi-wigs.show', $s->id) }}" {{ $s->id == $sesi_wig->id ? 'selected' : '' }}>
+                                {{ $s->nama_sesi }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
             <!-- Session Info Banner -->
             <div class="bg-gradient-to-r from-blue-900 to-indigo-800 overflow-hidden shadow-xl sm:rounded-2xl relative border border-blue-800">
                 <div class="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-white opacity-5 rounded-full transform scale-150 pointer-events-none"></div>
@@ -340,7 +378,7 @@ $formatLmValue = function($value, $satuan) {
                                                         <td class="px-2 py-1.5 text-right font-bold">{{ number_format($pctUid, 2) }}%</td>
                                                     </tr>
                                                     <!-- UP3 Rows -->
-                                                    @foreach($up3s as $up3)
+                                                    @foreach($filteredUp3sByWig[$wig->id] as $up3)
                                                         @php
                                                             $uData = $wigUnitData[$wig->id][$up3->id] ?? null;
                                                         @endphp
@@ -467,7 +505,7 @@ $formatLmValue = function($value, $satuan) {
                                                         
                                                         // Fallback target jika kosong
                                                         if ($uidTarget == 0) {
-                                                            foreach($up3s as $up3Unit) {
+                                                            foreach($filteredUp3sByWig[$wig->id] as $up3Unit) {
                                                                 $uidTarget += $matrixTargets[$lm->id][$up3Unit->id][$sw->id] ?? 0;
                                                             }
                                                             if ($isPercent && $up3Count > 0) {
@@ -477,7 +515,7 @@ $formatLmValue = function($value, $satuan) {
                                                         
                                                         // Fallback realisasi jika kosong (biasanya UP3 mengisi masing-masing sehingga unit 1 kosong)
                                                         if ($uidRealisasi == 0) {
-                                                            foreach($up3s as $up3Unit) {
+                                                            foreach($filteredUp3sByWig[$wig->id] as $up3Unit) {
                                                                 $uidRealisasi += $matrixRealisasi[$lm->id][$up3Unit->id][$sw->id] ?? 0;
                                                             }
                                                             if ($isPercent && $up3Count > 0) {
@@ -507,7 +545,7 @@ $formatLmValue = function($value, $satuan) {
                                                             $prevUidRealisasi = $matrixRealisasi[$lm->id][1][$prevSw->id] ?? 0;
                                                             
                                                             if ($prevUidTarget == 0) {
-                                                                foreach($up3s as $up3Unit) {
+                                                                foreach($filteredUp3sByWig[$wig->id] as $up3Unit) {
                                                                     $prevUidTarget += $matrixTargets[$lm->id][$up3Unit->id][$prevSw->id] ?? 0;
                                                                 }
                                                                 if ($isPercent && $up3Count > 0) {
@@ -516,7 +554,7 @@ $formatLmValue = function($value, $satuan) {
                                                             }
                                                             
                                                             if ($prevUidRealisasi == 0) {
-                                                                foreach($up3s as $up3Unit) {
+                                                                foreach($filteredUp3sByWig[$wig->id] as $up3Unit) {
                                                                     $prevUidRealisasi += $matrixRealisasi[$lm->id][$up3Unit->id][$prevSw->id] ?? 0;
                                                                 }
                                                                 if ($isPercent && $up3Count > 0) {
@@ -548,7 +586,7 @@ $formatLmValue = function($value, $satuan) {
                                                 @endforeach
                                             </tr>
                                             @endif
-                                            @foreach($up3s as $up3)
+                                            @foreach($filteredUp3sByWig[$wig->id] as $up3)
                                                 @php
                                                     $ulps = $allUlps->where('parent_id', $up3->id);
                                                     $isExpanded = false;
@@ -651,18 +689,16 @@ $formatLmValue = function($value, $satuan) {
                                                                 <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
                                                                 </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
-                                                                @if($canEditUp3Komitmen)
                                                                 <button type="button" 
-                                                                    @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3Target }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}' } }))"
+                                                                    @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3Target }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', readonly: {{ $canEditUp3Komitmen ? 'false' : 'true' }} } }))"
                                                                     class="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
-                                                                    title="{{ $hasKom ? 'Edit Form Komitmen' : 'Isi Form Komitmen' }}">
-                                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M12 4v16m8-8H4' }}"></path></svg>
+                                                                    title="{{ $hasKom ? ($canEditUp3Komitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUp3Komitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
+                                                                    @if($canEditUp3Komitmen)
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M12 4v16m8-8H4' }}"></path></svg>
+@else
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+@endif
                                                                 </button>
-                                                                @else
-                                                                <div class="inline-flex items-center justify-center w-6 h-6 rounded-full shadow-sm {{ $hasKom ? 'bg-green-100 text-green-600 border border-green-200' : 'bg-gray-100 text-gray-500 border border-gray-200' }}" title="{{ $hasKom ? 'Ada Komitmen' : 'Belum Ada Komitmen' }}">
-                                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M20 12H4' }}"></path></svg>
-                                                                </div>
-                                                                @endif
                                                         </td>
                                                         <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ $formatLmValue($up3Realisasi, $lm->satuan->name ?? '') }}</td>
                                                         <td class="px-2 py-2 border border-gray-300 text-right font-bold {{ $up3BgColor }}">{{ $up3Pencapaian }}%</td>
@@ -776,18 +812,16 @@ $formatLmValue = function($value, $satuan) {
                                                                     @endif
                                                                 </td>
                                                                 <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
-                                                                    @if($canEditSesiWig)
                                                                     <button type="button" 
-                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $target }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}' } }))"
+                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $target }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', readonly: {{ $canEditSesiWig ? 'false' : 'true' }} } }))"
                                                                         class="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
-                                                                        title="{{ $hasKom ? 'Edit Form Komitmen' : 'Isi Form Komitmen' }}">
-                                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M12 4v16m8-8H4' }}"></path></svg>
+                                                                        title="{{ $hasKom ? ($canEditSesiWig ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditSesiWig ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
+                                                                        @if($canEditSesiWig)
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M12 4v16m8-8H4' }}"></path></svg>
+@else
+    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+@endif
                                                                     </button>
-                                                                    @else
-                                                                    <div class="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full shadow-sm {{ $hasKom ? 'bg-green-100 text-green-600 border border-green-200' : 'bg-gray-100 text-gray-500 border border-gray-200' }}" title="{{ $hasKom ? 'Ada Komitmen' : 'Belum Ada Komitmen' }}">
-                                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M20 12H4' }}"></path></svg>
-                                                                    </div>
-                                                                    @endif
                                                             </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-right">{{ $formatLmValue($realisasi, $lm->satuan->name ?? '') }}</td>
                                                             <td class="px-2 py-2 border border-gray-300 text-right font-bold {{ $bgColor }}">
@@ -1330,19 +1364,19 @@ $formatLmValue = function($value, $satuan) {
                                             <tr>
                                                 <td class="py-2 px-2 text-center font-bold text-slate-400 border-r border-slate-200" x-text="index + 1"></td>
                                                 <td class="py-1 px-2 border-r border-slate-200">
-                                                    <textarea x-model="a.aksi" class="w-full p-1 border-0 bg-transparent resize-none focus:ring-0 text-sm h-10" placeholder="..."></textarea>
+                                                    <textarea x-model="a.aksi" :disabled="params.readonly" class="w-full p-1 border-0 bg-transparent resize-none focus:ring-0 text-sm h-10" placeholder="..."></textarea>
                                                 </td>
                                                 <td class="py-1 px-2 border-r border-slate-200">
-                                                    <input type="text" x-model="a.target" class="w-full p-1 border-0 bg-transparent focus:ring-0 text-sm" placeholder="...">
+                                                    <input type="text" x-model="a.target" :disabled="params.readonly" class="w-full p-1 border-0 bg-transparent focus:ring-0 text-sm" placeholder="...">
                                                 </td>
                                                 <td class="py-1 px-2 border-r border-slate-200">
-                                                    <input type="date" x-model="a.deadline" class="w-full p-1 border-0 bg-transparent focus:ring-0 text-xs text-slate-700">
+                                                    <input type="date" x-model="a.deadline" :disabled="params.readonly" class="w-full p-1 border-0 bg-transparent focus:ring-0 text-xs text-slate-700">
                                                 </td>
                                                 <td class="py-1 px-2">
-                                                    <textarea x-model="a.detail_komitmen" class="w-full p-1 border-0 bg-transparent resize-none focus:ring-0 text-sm h-10" placeholder="..."></textarea>
+                                                    <textarea x-model="a.detail_komitmen" :disabled="params.readonly" class="w-full p-1 border-0 bg-transparent resize-none focus:ring-0 text-sm h-10" placeholder="..."></textarea>
                                                 </td>
                                                 <td class="py-2 px-2 text-center text-red-400 hover:text-red-600">
-                                                    <button type="button" @click="form.aksi_konkrits.splice(index, 1)" tabindex="-1" title="Hapus Baris">
+                                                    <button type="button" x-show="!params.readonly" @click="form.aksi_konkrits.splice(index, 1)" tabindex="-1" title="Hapus Baris">
                                                         <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                                     </button>
                                                 </td>
@@ -1352,7 +1386,7 @@ $formatLmValue = function($value, $satuan) {
                                 </table>
                             </div>
                             <div class="bg-slate-50 border-t border-slate-200 p-2 text-center">
-                                <button type="button" @click="form.aksi_konkrits.push({aksi: '', target: '', deadline: '', detail_komitmen: ''})" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto">
+                                <button type="button" x-show="!params.readonly" @click="form.aksi_konkrits.push({aksi: '', target: '', deadline: '', detail_komitmen: ''})" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                                     Tambah Aksi Konkrit
                                 </button>

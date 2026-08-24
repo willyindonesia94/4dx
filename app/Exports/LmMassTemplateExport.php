@@ -19,7 +19,11 @@ class LmMassTemplateExport implements FromCollection, WithHeadings, ShouldAutoSi
 
         foreach ($wigs as $wig) {
             if ($wig->masterLms->count() > 0) {
-                foreach ($wig->masterLms as $lm) {
+                $sortedLms = $wig->masterLms->sortBy(function($lm) {
+                    preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
+                    return (int)($m[1] ?? 999);
+                });
+                foreach ($sortedLms as $lm) {
                     $rows->push([
                         $wig->judul,
                         $lm->judul_lm,

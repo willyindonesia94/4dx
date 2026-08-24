@@ -20,10 +20,9 @@ class RealisasiWigController extends Controller
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $roleNameLower = strtolower(trim((string)($user->role_name ?? '')));
-        $isSuperAdmin = $user && in_array($user->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']);
+        $isSuperAdmin = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
 
-        $skipMatrixFilter = $isSuperAdmin || str_contains($roleNameLower, 'gm') || str_contains($roleNameLower, 'general manager') || str_contains($roleNameLower, 'perencanaan') || str_contains($roleNameLower, 'manager') || str_contains($roleNameLower, 'manajer');
+        $skipMatrixFilter = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'SRM Perencanaan UID', 'Asman Perencanaan UP3', 'Manager UP3', 'Manager ULP', 'General Manager UID']);
 
         // Query MasterWig with realisasis
         $wigsQuery = MasterWig::with(['satuan', 'realisasis' => function($q) use ($bulanFilter, $tahunFilter, $up3Filter, $isSuperAdmin, $user) {
@@ -177,8 +176,12 @@ class RealisasiWigController extends Controller
             'keterangan_tambahan' => 'nullable|string|max:1000',
         ]);
 
-        // UP3 restriction: only current month
-        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID'])) {
+        $user = auth()->user();
+        if (!$user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Admin Sub Bidang UID'])) {
+            return redirect()->back()->with('error', 'Hanya Admin Sub Bidang UID yang dapat menginput Realisasi WIG.');
+        }
+
+        if (!$user->hasAnyRole(['Super Admin', 'Perencanaan UID'])) {
             $currentMonth = (int)date('n');
             $currentYear = (int)date('Y');
             if ((int)$request->bulan !== $currentMonth || (int)$request->tahun !== $currentYear) {
@@ -186,9 +189,9 @@ class RealisasiWigController extends Controller
             }
         }
 
-        $unitId = in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID']) 
+        $unitId = $user->hasAnyRole(['Super Admin', 'Perencanaan UID']) 
                   ? $request->unit_id 
-                  : auth()->user()->unit_id;
+                  : $user->unit_id;
         
         if (!$unitId) {
             return redirect()->back()->with('error', 'Unit belum dipilih atau tidak valid.');
@@ -267,8 +270,8 @@ class RealisasiWigController extends Controller
 
     private function authorizeSuperadmin()
     {
-        if (!in_array(auth()->user()->role_name, ['Super Admin', 'superadmin', 'Perencanaan UID'])) {
-            abort(403, 'Akses Ditolak: Hanya Superadmin yang dapat mengedit/menghapus Realisasi WIG.');
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Admin Sub Bidang UID'])) {
+            abort(403, 'Akses Ditolak: Hanya Admin Sub Bidang UID atau Superadmin yang dapat mengedit/menghapus Realisasi WIG.');
         }
     }
     public function downloadTemplate(Request $request)

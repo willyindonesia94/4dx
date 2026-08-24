@@ -34,9 +34,10 @@ class UserController extends Controller
             });
         }
 
-        $users = $query->paginate(20)->withQueryString();
+        $perPage = $request->query('per_page', 20);
+        $users = $query->paginate($perPage)->withQueryString();
         
-        return view('users.index', compact('users', 'levels', 'selectedLevel', 'search'));
+        return view('users.index', compact('users', 'levels', 'selectedLevel', 'search', 'perPage'));
     }
 
     public function create()
@@ -70,7 +71,10 @@ class UserController extends Controller
 
         $user->assignRole($request->role_name);
 
-        return redirect()->route('users.index')->with('success', 'Pengguna berhasil ditambahkan.');
+        $level = $request->input('return_level');
+        $params = $level ? ['level' => $level] : [];
+
+        return redirect()->route('users.index', $params)->with('success', 'Pengguna berhasil ditambahkan.');
     }
 
     public function edit(User $user)
@@ -107,17 +111,23 @@ class UserController extends Controller
 
         $user->syncRoles([$request->role_name]);
 
-        return redirect()->route('users.index')->with('success', 'Data pengguna berhasil diperbarui.');
+        $level = $request->input('return_level');
+        $params = $level ? ['level' => $level] : [];
+
+        return redirect()->route('users.index', $params)->with('success', 'Data pengguna berhasil diperbarui.');
     }
 
     public function destroy(User $user)
     {
+        $level = request()->query('level');
+        $params = $level ? ['level' => $level] : [];
+
         if ($user->id === auth()->id()) {
-            return redirect()->route('users.index')->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+            return redirect()->route('users.index', $params)->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
         }
 
         $user->delete();
-        return redirect()->route('users.index')->with('success', 'Pengguna berhasil dihapus.');
+        return redirect()->route('users.index', $params)->with('success', 'Pengguna berhasil dihapus.');
     }
 
     public function previewImport(Request $request)

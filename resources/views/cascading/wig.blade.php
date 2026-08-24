@@ -6,10 +6,10 @@
     </x-slot>
 
     @php
-        $role = auth()->user()->role_name ?? '';
-        $isUid = auth()->user()->unit && auth()->user()->unit->type === 'UID';
-        $canCreateUp3Breakdown = in_array($role, ['Super Admin', 'superadmin', 'Perencanaan UID', 'perencanaan_uid']) || $isUid;
-        $canEditDelete = !in_array(strtoupper($role), ['BIDANG UID', 'SUB BIDANG UID', 'MANAGER UP3', 'UP2K', 'UP2D', 'MANAGER ULP', 'GENERAL MANAGER UID']);
+        $user = auth()->user();
+        $isUid = $user->unit && $user->unit->type === 'UID';
+        $canCreateUp3Breakdown = $user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || $isUid;
+        $canEditDelete = $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
         
         $highlightWigId = session('active_wig', 'null');
         if(request('highlight_unit')) {

@@ -13,6 +13,11 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        $userRole = auth()->user()->role_name ?? (auth()->user()->roles->pluck('name')->first() ?? '');
+        if (str_contains(strtoupper($userRole), 'SRM PERENCANAAN')) {
+            return redirect()->route('sesi-wigs.index');
+        }
+
         $selectedDivisi = $request->query('divisi');
         $selectedUp3    = $request->query('up3_id');
         $selectedUlp    = $request->query('ulp_id');

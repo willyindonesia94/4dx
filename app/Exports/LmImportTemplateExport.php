@@ -24,7 +24,14 @@ class LmImportTemplateExport implements FromCollection, WithHeadings, WithMappin
 
     public function collection()
     {
-        $lms = MasterLm::with(['wig', 'satuan'])->get();
+        $lms = MasterLm::with(['wig', 'satuan'])->get()->sort(function($a, $b) {
+            if ($a->wig_id === $b->wig_id) {
+                preg_match('/LM-?(\d+)/i', $a->judul_lm, $mA);
+                preg_match('/LM-?(\d+)/i', $b->judul_lm, $mB);
+                return (int)($mA[1] ?? 999) <=> (int)($mB[1] ?? 999);
+            }
+            return $a->wig_id <=> $b->wig_id;
+        });
         $units = MasterUnit::all();
         $rows = collect([]);
 

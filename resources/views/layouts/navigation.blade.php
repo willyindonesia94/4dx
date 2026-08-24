@@ -16,8 +16,10 @@
                         $userRole = auth()->user()->role_name ?? (auth()->user()->roles->pluck('name')->first() ?? '');
                         $isUlp = str_contains(strtoupper($userRole), 'ULP') || (auth()->user()->unit && strtoupper(auth()->user()->unit->type) === 'ULP');
                         $isUp3 = str_contains(strtoupper($userRole), 'UP3') || str_contains(strtoupper($userRole), 'UP2D') || str_contains(strtoupper($userRole), 'UP2K') || (auth()->user()->unit && in_array(strtoupper(auth()->user()->unit->type), ['UP3', 'UP2D', 'UP2K']));
+                        $isSrmPerencanaan = str_contains(strtoupper($userRole), 'SRM PERENCANAAN');
                     @endphp
 
+                    @if(!$isSrmPerencanaan)
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
@@ -39,11 +41,13 @@
                     <x-nav-link :href="route('realisasis.index')" :active="request()->routeIs('realisasis.*')">
                         {{ __('Realisasi LM') }}
                     </x-nav-link>
+                    @endif
                     
                     <x-nav-link :href="route('sesi-wigs.index')" :active="request()->routeIs('sesi-wigs.*')">
                         {{ __('Sesi WIG') }}
                     </x-nav-link>
 
+                    @if(!$isSrmPerencanaan)
                     @hasanyrole('Super Admin|Perencanaan UID')
                     <div class="hidden sm:flex sm:items-center">
                         <x-dropdown align="right" width="48">
@@ -89,6 +93,7 @@
                     <x-nav-link :href="route('laporan.index')" :active="request()->routeIs('laporan.*')">
                         {{ __('Laporan') }}
                     </x-nav-link>
+                    @endif
                 </div>
             </div>
 
