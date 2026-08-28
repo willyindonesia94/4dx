@@ -18,10 +18,14 @@ class CascadingController extends Controller
         $isSuperAdmin = $user && $user->hasRole('Super Admin');
         $isPerencanaanUid = $user && $user->hasRole('Perencanaan UID');
         $isMsb = $user && $user->hasRole('MSB UID');
+        $isAsmanPerencanaanUp3 = $user && $user->hasRole('Asman Perencanaan UP3');
+        $isAsmanBidangUp3 = $user && $user->hasRole('Asman Bidang UP3');
         
         $skipMatrixFilter = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'SRM Perencanaan UID', 'Manager UP3', 'Manager ULP', 'General Manager UID']);
-        // MSB UID dengan matrix_group_id = 'ALL' juga skip filter (bisa lihat semua WIG)
-        $skipMatrixFilter = $skipMatrixFilter || ($isMsb && strtoupper($userMatrixGroup) === 'ALL');
+        // MSB UID atau Asman Perencanaan UP3 dengan matrix_group_id = 'ALL' juga skip filter
+        $skipMatrixFilter = $skipMatrixFilter
+            || ($isMsb && strtoupper($userMatrixGroup) === 'ALL')
+            || ($isAsmanPerencanaanUp3 && strtoupper($userMatrixGroup) === 'ALL');
         $canApproveWig = $isSuperAdmin || $isMsb;
         
         $wigsQuery = MasterWig::where('is_approved', true)
@@ -306,7 +310,45 @@ class CascadingController extends Controller
         $breakdown->save();
 
         if (!$isSuperAdmin && !$isMsb && !$isAsmanBidangUp3) {
-            $approvers = \App\Models\User::role(['Super Admin', 'MSB UID', 'Asman Bidang UP3', 'UP2K', 'UP2D'])->get();
+            // Ambil divisi WIG terkait untuk filter approver
+            $lm = \App\Models\MasterLm::find($breakdown->lm_id);
+            $wig = $lm ? \App\Models\MasterWig::find($lm->wig_id) : null;
+            $wigDivisis = $wig ? (is_array($wig->divisi) ? $wig->divisi : [$wig->divisi]) : [];
+            $breakdownUnitId = $breakdown->unit_id;
+            $breakdownUnit = $breakdown->unit;
+            // Cari unit UP3 induk jika unit adalah ULP
+            $parentUp3Id = null;
+            if ($breakdownUnit && strtoupper(trim($breakdownUnit->type)) === 'ULP') {
+                $parentUp3Id = $breakdownUnit->parent_id;
+            } elseif ($breakdownUnit && in_array(strtoupper(trim($breakdownUnit->type)), ['UP3', 'UP2D', 'UP2K'])) {
+                $parentUp3Id = $breakdownUnit->id;
+            }
+
+            // MSB sesuai bidang WIG
+            $msbApprovers = \App\Models\User::role(['MSB UID'])->get()
+                ->filter(function($u) use ($wigDivisis) {
+                    $mg = trim((string)($u->matrix_group_id ?? ''));
+                    if (empty($mg) || strtoupper($mg) === 'ALL') return true;
+                    $allowed = \App\Models\MasterBidang::getRelatedDivisions($mg);
+                    return !empty(array_intersect($wigDivisis, $allowed));
+                });
+
+            // Asman Bidang UP3 di UP3 yang sama dan sesuai bidang
+            $asmanApprovers = \App\Models\User::role(['Asman Bidang UP3'])
+                ->when($parentUp3Id, fn($q) => $q->where('unit_id', $parentUp3Id))
+                ->get()
+                ->filter(function($u) use ($wigDivisis) {
+                    $mg = trim((string)($u->matrix_group_id ?? ''));
+                    if (empty($mg) || strtoupper($mg) === 'ALL') return true;
+                    $allowed = \App\Models\MasterBidang::getRelatedDivisions($mg);
+                    return !empty(array_intersect($wigDivisis, $allowed));
+                });
+
+            $approvers = $msbApprovers->merge($asmanApprovers)->unique('id');
+            if ($approvers->isEmpty()) {
+                $approvers = \App\Models\User::role(['Super Admin'])->get();
+            }
+
             \Illuminate\Support\Facades\Notification::send($approvers, new \App\Notifications\RequiresApprovalNotification(
                 'Perubahan Cascading LM', 
                 'Cascading LM Diubah', 
@@ -339,7 +381,44 @@ class CascadingController extends Controller
         $isAsmanBidangUp3 = $user && $user->hasRole('Asman Bidang UP3');
 
         if (!$isSuperAdmin && !$isMsb && !$isAsmanBidangUp3) {
-            $approvers = \App\Models\User::role(['Super Admin', 'MSB UID', 'Asman Bidang UP3', 'UP2K', 'UP2D'])->get();
+            // Ambil divisi WIG terkait untuk filter approver
+            $lm = \App\Models\MasterLm::find($breakdown->lm_id);
+            $wig = $lm ? \App\Models\MasterWig::find($lm->wig_id) : null;
+            $wigDivisis = $wig ? (is_array($wig->divisi) ? $wig->divisi : [$wig->divisi]) : [];
+            $breakdownUnit = $breakdown->unit;
+            // Cari unit UP3 induk jika unit adalah ULP
+            $parentUp3Id = null;
+            if ($breakdownUnit && strtoupper(trim($breakdownUnit->type)) === 'ULP') {
+                $parentUp3Id = $breakdownUnit->parent_id;
+            } elseif ($breakdownUnit && in_array(strtoupper(trim($breakdownUnit->type)), ['UP3', 'UP2D', 'UP2K'])) {
+                $parentUp3Id = $breakdownUnit->id;
+            }
+
+            // MSB sesuai bidang WIG
+            $msbApprovers = \App\Models\User::role(['MSB UID'])->get()
+                ->filter(function($u) use ($wigDivisis) {
+                    $mg = trim((string)($u->matrix_group_id ?? ''));
+                    if (empty($mg) || strtoupper($mg) === 'ALL') return true;
+                    $allowed = \App\Models\MasterBidang::getRelatedDivisions($mg);
+                    return !empty(array_intersect($wigDivisis, $allowed));
+                });
+
+            // Asman Bidang UP3 di UP3 yang sama dan sesuai bidang
+            $asmanApprovers = \App\Models\User::role(['Asman Bidang UP3'])
+                ->when($parentUp3Id, fn($q) => $q->where('unit_id', $parentUp3Id))
+                ->get()
+                ->filter(function($u) use ($wigDivisis) {
+                    $mg = trim((string)($u->matrix_group_id ?? ''));
+                    if (empty($mg) || strtoupper($mg) === 'ALL') return true;
+                    $allowed = \App\Models\MasterBidang::getRelatedDivisions($mg);
+                    return !empty(array_intersect($wigDivisis, $allowed));
+                });
+
+            $approvers = $msbApprovers->merge($asmanApprovers)->unique('id');
+            if ($approvers->isEmpty()) {
+                $approvers = \App\Models\User::role(['Super Admin'])->get();
+            }
+
             \Illuminate\Support\Facades\Notification::send($approvers, new \App\Notifications\RequiresApprovalNotification(
                 'Penghapusan Cascading LM', 
                 'Cascading LM Dihapus', 
