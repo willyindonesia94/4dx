@@ -20,6 +20,8 @@ class CascadingController extends Controller
         $isMsb = $user && $user->hasRole('MSB UID');
         
         $skipMatrixFilter = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'SRM Perencanaan UID', 'Manager UP3', 'Manager ULP', 'General Manager UID']);
+        // MSB UID dengan matrix_group_id = 'ALL' juga skip filter (bisa lihat semua WIG)
+        $skipMatrixFilter = $skipMatrixFilter || ($isMsb && strtoupper($userMatrixGroup) === 'ALL');
         $canApproveWig = $isSuperAdmin || $isMsb;
         
         $wigsQuery = MasterWig::where('is_approved', true)
@@ -72,6 +74,8 @@ class CascadingController extends Controller
         $canBreakdownToUlp = $isSuperAdmin || $isAsmanPerencanaanUp3;
         
         $skipMatrixFilter = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'SRM Perencanaan UID', 'Asman Perencanaan UP3', 'Manager UP3', 'Manager ULP', 'General Manager UID']);
+        // MSB UID dengan matrix_group_id = 'ALL' juga skip filter (bisa lihat semua LM)
+        $skipMatrixFilter = $skipMatrixFilter || ($isMsb && strtoupper($userMatrixGroup) === 'ALL');
         
         $wigsQuery = MasterWig::where('is_approved', true)
             ->with(['masterLms' => function($q) {
@@ -226,6 +230,29 @@ class CascadingController extends Controller
         $unit = \App\Models\MasterUnit::find($request->unit_id);
         $unit_type = $unit ? strtolower($unit->type) : '';
         if (in_array($unit_type, ['up2d', 'up2k'])) $unit_type = 'up3';
+
+        // Kirim notifikasi ke MSB yang sesuai bidang jika perlu approval
+        if (!$is_approved) {
+            $wig = $wig_id ? \App\Models\MasterWig::find($wig_id) : null;
+            $wigDivisis = $wig ? (is_array($wig->divisi) ? $wig->divisi : [$wig->divisi]) : [];
+
+            $approvers = \App\Models\User::role(['MSB UID'])
+                ->get()
+                ->filter(function($u) use ($wigDivisis) {
+                    $matrixGroup = trim((string)($u->matrix_group_id ?? ''));
+                    if (empty($matrixGroup) || strtoupper($matrixGroup) === 'ALL') return true;
+                    $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($matrixGroup);
+                    return !empty(array_intersect($wigDivisis, $allowedDivisis));
+                });
+
+            if ($approvers->isNotEmpty()) {
+                \Illuminate\Support\Facades\Notification::send($approvers, new \App\Notifications\RequiresApprovalNotification(
+                    'Persetujuan Cascading LM Baru',
+                    'Cascading LM Baru',
+                    "Cascading LM \"" . ($lm->judul_lm ?? '-') . "\" untuk unit " . ($unit->name ?? '-') . " telah dibuat oleh " . $user->name . " dan membutuhkan persetujuan."
+                ));
+            }
+        }
 
         $redirect = redirect()->back()->with('success', 'Breakdown LM berhasil ditambahkan ke Unit. ' . (!$is_approved ? 'Menunggu persetujuan.' : ''));
         if ($wig_id) {
@@ -382,12 +409,23 @@ class CascadingController extends Controller
         $breakdown = \App\Models\BreakdownWig::create($data);
 
         if (!$is_approved) {
-            $approvers = \App\Models\User::role(['MSB UID', 'Asman Bidang UP3', 'UP2K', 'UP2D'])
-                ->where('unit_id', $request->unit_id)
-                ->get();
-            
+            // Ambil divisi WIG yang terkait untuk menentukan MSB yang berwenang
+            $wig = \App\Models\MasterWig::find($request->wig_id);
+            $wigDivisis = $wig ? (is_array($wig->divisi) ? $wig->divisi : [$wig->divisi]) : [];
+
+            // Cari MSB yang matrix_group_id-nya cocok dengan divisi WIG
+            $approvers = \App\Models\User::role(['MSB UID'])
+                ->get()
+                ->filter(function($u) use ($wigDivisis) {
+                    $matrixGroup = trim((string)($u->matrix_group_id ?? ''));
+                    if (empty($matrixGroup) || strtoupper($matrixGroup) === 'ALL') return true;
+                    $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($matrixGroup);
+                    return !empty(array_intersect($wigDivisis, $allowedDivisis));
+                });
+
+            // Jika tidak ada MSB yang cocok, fallback ke Super Admin
             if ($approvers->isEmpty()) {
-                $approvers = \App\Models\User::role(['Super Admin', 'MSB UID'])->get();
+                $approvers = \App\Models\User::role(['Super Admin'])->get();
             }
 
             \Illuminate\Support\Facades\Notification::send($approvers, new \App\Notifications\RequiresApprovalNotification(
