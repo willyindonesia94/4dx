@@ -113,7 +113,7 @@ class CascadingController extends Controller
         $availableUnits = collect();
         if ($isSuperAdmin || $isPerencanaanUid) {
             $availableUnits = MasterUnit::orderBy('type')->get();
-        } elseif ($isAsmanPerencanaanUp3) {
+        } elseif ($isUp3) {
             if ($user->unit_id) {
                 $userUnit = MasterUnit::find($user->unit_id);
                 if ($userUnit && in_array(strtoupper(trim($userUnit->type)), ['UP2D', 'UP2K'])) {

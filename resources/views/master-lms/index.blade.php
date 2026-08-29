@@ -91,7 +91,7 @@
                     @endphp
                     @if($wigLms->count() > 0)
                     @php
-                        $hasHighlight = request('highlight_lm') && $wigLms->contains('id', request('highlight_lm'));
+                        $hasHighlight = (request('highlight_lm') && $wigLms->contains('id', request('highlight_lm'))) || request('status') === 'draft';
                     @endphp
                     <div x-data="{ expanded: {{ $hasHighlight ? 'true' : 'false' }} }" class="bg-white shadow-sm sm:rounded-xl border border-slate-200 overflow-hidden">
                         <div @click="expanded = !expanded" class="cursor-pointer bg-slate-50 hover:bg-slate-100 px-6 py-4 flex justify-between items-center transition-colors">

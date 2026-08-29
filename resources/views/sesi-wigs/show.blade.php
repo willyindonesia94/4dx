@@ -591,7 +591,7 @@ $formatLmValue = function($value, $satuan) {
                                                     $ulps = $allUlps->where('parent_id', $up3->id);
                                                     $isExpanded = false;
                                                     $user = auth()->user();
-                                                    if ($user && ($isUlpLevel || $user->hasRole('Staff ULP') || $ulps->contains('id', $user->unit_id))) {
+                                                    if ($user && ($isUlpLevel || $user->hasRole('Staff ULP') || $ulps->contains('id', $user->unit_id) || $user->unit_id == $up3->id)) {
                                                         $isExpanded = true;
                                                     }
                                                 @endphp

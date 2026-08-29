@@ -19,6 +19,15 @@
                     }
                 }
             }
+        } elseif(request('status') === 'draft') {
+            foreach($wigs as $w) {
+                foreach($w->masterLms as $lm) {
+                    if($lm->breakdowns && $lm->breakdowns->contains('is_approved', false)) {
+                        $highlightWigId = $w->id;
+                        break 2;
+                    }
+                }
+            }
         }
     @endphp
 
@@ -244,9 +253,15 @@
                                                     return true;
                                                 }) : collect();
                                                 
-                                                $hasUidHighlight = request('highlight_unit') && $uidLmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
-                                                $hasUp3Highlight = request('highlight_unit') && $up3LmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
-                                                $hasUlpHighlight = request('highlight_unit') && $ulpLmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                                if (request('status') === 'draft') {
+                                                    $hasUidHighlight = $uidLmBreakdowns->contains('is_approved', false);
+                                                    $hasUp3Highlight = $up3LmBreakdowns->contains('is_approved', false);
+                                                    $hasUlpHighlight = $ulpLmBreakdowns->contains('is_approved', false);
+                                                } else {
+                                                    $hasUidHighlight = request('highlight_unit') && $uidLmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                                    $hasUp3Highlight = request('highlight_unit') && $up3LmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                                    $hasUlpHighlight = request('highlight_unit') && $ulpLmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                                }
                                                 $expandedLm = session('expanded_lm', null);
                                                 $expandedUnitType = session('expanded_unit_type', null);
                                                 $shouldOpenUid = $hasUidHighlight || ($expandedLm == $lm->id && $expandedUnitType === 'uid');
@@ -345,7 +360,7 @@
                                                                         @endphp
                                                                         @foreach($groupedUid as $month => $items)
                                                                         @php
-                                                                            $hasMonthHighlight = request('highlight_unit') && $items->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                                                            $hasMonthHighlight = (request('status') === 'draft' && $items->contains('is_approved', false)) || (request('highlight_unit') && $items->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; }));
                                                                         @endphp
                                                                         <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'false' }} }" class="divide-y divide-indigo-50 bg-white border-b border-indigo-100/50">
                                                                             <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
@@ -479,7 +494,7 @@
                                                                         @endphp
                                                                         @foreach($groupedUp3 as $month => $items)
                                                                         @php
-                                                                            $hasMonthHighlight = request('highlight_unit') && $items->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                                                            $hasMonthHighlight = (request('status') === 'draft' && $items->contains('is_approved', false)) || (request('highlight_unit') && $items->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; }));
                                                                         @endphp
                                                                         <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'false' }} }" class="divide-y divide-emerald-50 bg-white border-b border-emerald-100/50">
                                                                             <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
@@ -603,7 +618,7 @@
                                                                         @endphp
                                                                         @foreach($groupedUlp as $month => $items)
                                                                         @php
-                                                                            $hasMonthHighlight = request('highlight_unit') && $items->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
+                                                                            $hasMonthHighlight = (request('status') === 'draft' && $items->contains('is_approved', false)) || (request('highlight_unit') && $items->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; }));
                                                                         @endphp
                                                                         <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'false' }} }" class="divide-y divide-amber-50 bg-white border-b border-amber-100/50">
                                                                             <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">

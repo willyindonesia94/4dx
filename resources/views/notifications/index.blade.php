@@ -60,14 +60,33 @@
                                             </div>
                                         </div>
                                     </div>
-                                    @if(!$notification->read_at)
-                                        <form method="POST" action="{{ route('notifications.read', $notification->id) }}" class="flex-shrink-0">
-                                            @csrf
-                                            <button type="submit" class="text-xs font-bold bg-white text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-300 px-4 py-2 rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-blue-500/20">
-                                                Tandai Dibaca
-                                            </button>
-                                        </form>
-                                    @endif
+                                    <div class="flex items-center gap-2 flex-shrink-0">
+                                        @php
+                                            $notifUrl = null;
+                                            $notifType = $notification->data['type_item'] ?? '';
+                                            $notifTitle = $notification->data['title'] ?? '';
+                                            if (str_contains($notifType, 'Cascading LM') || str_contains($notifTitle, 'Cascading LM')) {
+                                                $notifUrl = route('cascading.lm.index', ['status' => 'draft']);
+                                            } elseif (str_contains($notifType, 'Cascading WIG') || str_contains($notifTitle, 'Cascading WIG')) {
+                                                $notifUrl = route('cascading.wig.index', ['status' => 'draft']);
+                                            } elseif (str_contains($notifType, 'Master LM') || str_contains($notifTitle, 'Master LM')) {
+                                                $notifUrl = route('master-lms.index', ['status' => 'draft']);
+                                            } elseif (str_contains($notifType, 'Master WIG') || str_contains($notifTitle, 'Master WIG')) {
+                                                $notifUrl = route('master-wigs.index', ['status' => 'draft']);
+                                            }
+                                        @endphp
+                                        @if($notifUrl && !$notification->read_at)
+                                            <a href="{{ $notifUrl }}" class="text-xs font-bold bg-white text-orange-600 hover:text-orange-800 border border-orange-200 hover:border-orange-300 px-4 py-2 rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-orange-500/20">Lihat Detail</a>
+                                        @endif
+                                        @if(!$notification->read_at)
+                                            <form method="POST" action="{{ route('notifications.read', $notification->id) }}" class="m-0">
+                                                @csrf
+                                                <button type="submit" class="text-xs font-bold bg-white text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-300 px-4 py-2 rounded-lg shadow-sm transition-all focus:ring-2 focus:ring-blue-500/20">
+                                                    Tandai Dibaca
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                         @empty

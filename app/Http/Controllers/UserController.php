@@ -15,9 +15,16 @@ class UserController extends Controller
     {
         $selectedLevel = $request->query('level');
         $search = $request->query('search');
-        $levels = ['Super Admin', 'UID', 'UP3', 'UP2K', 'UP2D', 'ULP'];
+        $levels = ['UID', 'UP3', 'UP2K', 'UP2D', 'ULP'];
+        if (auth()->user()->hasRole('Super Admin')) {
+            array_unshift($levels, 'Super Admin');
+        }
 
         $query = User::with('unit');
+        
+        if (!auth()->user()->hasRole('Super Admin')) {
+            $query->where('role_name', '!=', 'Super Admin');
+        }
         
         if ($selectedLevel) {
             if ($selectedLevel === 'Super Admin') {
