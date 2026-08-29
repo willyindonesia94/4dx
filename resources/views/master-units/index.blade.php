@@ -24,6 +24,31 @@
                         <form action="{{ route('master-units.index') }}" method="GET" class="relative w-full sm:w-auto">
                             <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari Unit..." class="w-full sm:w-64 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" autofocus onfocus="var val = this.value; this.value = ''; this.value = val;" oninput="performAjaxSearch(this, 'ajax-container')">
                         </form>
+                        <!-- Dropdown Opsi Excel -->
+                        <div x-data="{ openDropdown: false }" class="relative w-full sm:w-auto">
+                            <button type="button" @click="openDropdown = !openDropdown" @click.away="openDropdown = false" class="w-full sm:w-auto justify-center bg-white hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-4 rounded-lg shadow-sm border border-slate-300 flex items-center whitespace-nowrap transition-colors">
+                                <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                <span>Opsi Excel</span>
+                                <svg class="w-4 h-4 ml-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            
+                            <div x-show="openDropdown" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95" class="absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" style="display: none;">
+                                <div class="py-1">
+                                    <a :href="'{{ route('master-units.export') }}?type=' + activeTab" class="text-slate-700 px-4 py-2 text-sm hover:bg-indigo-50 hover:text-indigo-700 flex items-center transition-colors">
+                                        <svg class="w-4 h-4 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                        Export Data (Sesuai Tab)
+                                    </a>
+                                    <a href="{{ route('master-units.template') }}" class="text-slate-700 px-4 py-2 text-sm hover:bg-green-50 hover:text-green-700 flex items-center transition-colors">
+                                        <svg class="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                        Download Template
+                                    </a>
+                                    <button @click="openImportModal = true; openDropdown = false" class="text-slate-700 w-full text-left px-4 py-2 text-sm hover:bg-orange-50 hover:text-orange-700 flex items-center transition-colors">
+                                        <svg class="w-4 h-4 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                        Upload Excel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                         <button @click="openCreate()" class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 sm:px-5 rounded-lg shadow flex items-center whitespace-nowrap">
                             <span class="hidden sm:inline">+ Tambah Unit</span>
                             <span class="sm:hidden">+ Tambah</span>
@@ -146,12 +171,41 @@
                 </div>
             </div>
         </div>
+        <!-- Import Modal -->
+        <div x-show="openImportModal" class="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="display: none;">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="openImportModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+                
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                
+                <div x-show="openImportModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-slate-100">
+                    <form action="{{ route('master-units.preview') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div class="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-4 flex items-center justify-between">
+                            <h3 class="text-lg font-bold text-white tracking-wide" id="modal-title">Upload Excel Master Unit</h3>
+                        </div>
+                        <div class="bg-white px-6 pt-5 pb-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2">Pilih File Excel (.xlsx, .xls, .csv)</label>
+                                <input type="file" name="file" accept=".xlsx, .xls, .csv" required class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-colors">
+                                <p class="mt-2 text-xs text-slate-500">Pastikan format kolom sesuai dengan template yang disediakan.</p>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 px-6 py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 rounded-b-lg">
+                            <button @click="openImportModal = false" type="button" class="w-full sm:w-auto inline-flex justify-center rounded-md border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm">Batal</button>
+                            <button type="submit" class="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:text-sm">Upload</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
         function unitForm() {
             return {
                 openModal: false,
+                openImportModal: false,
                 isEdit: false,
                 formId: null,
                 formName: '',

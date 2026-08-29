@@ -67,6 +67,10 @@ Route::middleware('auth')->group(function () {
     // Master Data Tambahan
     Route::resource('master-bidangs', \App\Http\Controllers\MasterBidangController::class)->except(['create', 'edit', 'show']);
     Route::resource('master-satuans', \App\Http\Controllers\MasterSatuanController::class)->except(['create', 'edit', 'show']);
+    Route::get('/master-units/download-template', [\App\Http\Controllers\MasterUnitController::class, 'downloadTemplate'])->name('master-units.template');
+    Route::get('/master-units/export', [\App\Http\Controllers\MasterUnitController::class, 'export'])->name('master-units.export');
+    Route::post('/master-units/preview', [\App\Http\Controllers\MasterUnitController::class, 'previewImport'])->name('master-units.preview');
+    Route::post('/master-units/import-confirm', [\App\Http\Controllers\MasterUnitController::class, 'confirmImport'])->name('master-units.import.confirm');
     Route::resource('master-units', \App\Http\Controllers\MasterUnitController::class)->except(['create', 'edit', 'show']);
 
     // Sesi WIG & Realizations
