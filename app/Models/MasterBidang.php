@@ -44,8 +44,22 @@ class MasterBidang extends Model
         
         $target = trim($matrixGroup);
         $results = [$target];
-        
-        $node = self::where('name', $target)->first();
+
+        // MAPPING PENYEDERHANAAN
+        $mapping = [
+            'NIAGA' => 'Strategi Pemasaran (MSB)',
+            'JARINGAN' => 'Pengendalian Operasi dan Pemeliharaan (MSB)',
+            'TE' => 'EPM (MSB)',
+            'K3L' => 'K3L',
+        ];
+
+        if (isset($mapping[strtoupper($target)])) {
+            $mappedName = $mapping[strtoupper($target)];
+            $results[] = $mappedName;
+            $node = self::where('name', $mappedName)->first();
+        } else {
+            $node = self::where('name', $target)->first();
+        }
         if (!$node) return $results;
 
         // Dapatkan semua ancestor (induk), tapi kecualikan UID_BIDANG sesuai request

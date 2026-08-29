@@ -34,7 +34,7 @@
     <div class="py-12" x-data='{ 
         activeWig: {{ $highlightWigId }}, openBreakdownModal: false, editMode: false, editBreakdownId: null,
         formLmId: null, formLmTitle: "", formType: "uid", formUp3Target: "", availableUnitsData: @json($availableUnits),
-        formUnitId: "", formBidang: "", formAngkaTarget: null, formSatuanId: "", formBulan: "", formTahun: "",
+        formUnitId: "", formBidang: "", formAngkaTarget: null, formSatuanId: "", formSatuanName: "", formBulan: "", formTahun: "",
         targetM1: null, targetM2: null, targetM3: null, targetM4: null, targetM5: null, isAutoFill: true,
         selectedBreakdowns: [],
         selectAll(items) {
@@ -115,19 +115,19 @@
                 "approve"
             );
         },
-        openEditModal(bw, title, type, up3Target = "") {
+        openEditModal(bw, title, type, satuanName = "", up3Target = "") {
             this.editMode = true; this.editBreakdownId = bw.id; this.formLmId = bw.lm_id; this.formLmTitle = title;
             this.formType = type; this.formUp3Target = up3Target; this.formUnitId = bw.unit_id; this.formBidang = bw.bidang || ""; 
-            this.formAngkaTarget = bw.angka_target; this.formSatuanId = bw.satuan_id; 
+            this.formAngkaTarget = bw.angka_target; this.formSatuanId = bw.satuan_id; this.formSatuanName = satuanName;
             let d = bw.periode_start ? new Date(bw.periode_start) : new Date();
             this.formBulan = d.getMonth() + 1; 
             this.formTahun = d.getFullYear();
             this.openBreakdownModal = true;
         },
-        openAddModal(id, title, type, up3Target = "") {
+        openAddModal(id, title, type, satuanId = "", satuanName = "", up3Target = "") {
             this.editMode = false; this.editBreakdownId = null; this.formLmId = id; this.formLmTitle = title;
             this.formType = type; this.formUp3Target = up3Target; this.formUnitId = ""; this.formBidang = ""; this.formAngkaTarget = null;
-            this.formSatuanId = ""; 
+            this.formSatuanId = satuanId; this.formSatuanName = satuanName;
             let d = new Date();
             this.formBulan = d.getMonth() + 1; 
             this.formTahun = d.getFullYear();
@@ -329,7 +329,7 @@
                                                             </div>
                                                             <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
                                                                 @if(!empty($canBreakdownToUid))
-                                                                <button @click.stop="openAddModal({{ $lm->id }}, '{{ $lm->judul_lm }}', 'uid')" class="text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-2 rounded transition-colors shadow-sm">+ Breakdown UID</button>
+                                                                <button @click.stop="openAddModal({{ $lm->id }}, '{{ addslashes($lm->judul_lm) }}', 'uid', '{{ $lm->satuan_id ?? '' }}', '{{ addslashes($lm->satuan->name ?? '') }}')" class="text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-2 rounded transition-colors shadow-sm">+ Breakdown UID</button>
                                                                 @endif
                                                                 <svg class="w-4 h-4 text-indigo-500 transform transition-transform" :class="{'rotate-180': openUid}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                                             </div>
@@ -431,7 +431,7 @@
                                                                                             <button type="submit" class="text-emerald-500 hover:text-emerald-700 font-bold transition-colors text-xs">Setujui</button>
                                                                                         </form>
                                                                                         @endif
-                                                                                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ $lm->judul_lm }}", "uid")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
+                                                                                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ addslashes($lm->judul_lm) }}", "uid", "{{ addslashes($lm->satuan->name ?? '') }}")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
                                                                                         @if($canEditDelete)
                                                                                         <form id="deleteForm-{{ $breakdown->id }}" action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0">
                                                                                             @csrf
@@ -463,7 +463,7 @@
                                                             </div>
                                                             <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
                                                                 @if(!empty($canBreakdownToUp3))
-                                                                <button @click.stop="openAddModal({{ $lm->id }}, '{{ $lm->judul_lm }}', 'up3')" class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1 px-2 rounded transition-colors shadow-sm">+ Breakdown UP3</button>
+                                                                <button @click.stop="openAddModal({{ $lm->id }}, '{{ addslashes($lm->judul_lm) }}', 'up3', '{{ $lm->satuan_id ?? '' }}', '{{ addslashes($lm->satuan->name ?? '') }}')" class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1 px-2 rounded transition-colors shadow-sm">+ Breakdown UP3</button>
                                                                 @endif
                                                                 <svg class="w-4 h-4 text-emerald-500 transform transition-transform" :class="{'rotate-180': openUp3}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                                             </div>
@@ -554,7 +554,7 @@
                                                                                             <button type="submit" class="text-emerald-500 hover:text-emerald-700 font-bold transition-colors text-xs">Setujui</button>
                                                                                         </form>
                                                                                         @endif
-                                                                                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ $lm->judul_lm }}", "up3")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
+                                                                                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ addslashes($lm->judul_lm) }}", "up3", "{{ addslashes($lm->satuan->name ?? '') }}")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
                                                                                         @if($canEditDelete)
                                                                                         <form id="deleteForm-{{ $breakdown->id }}" action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0">
                                                                                             @csrf
@@ -587,7 +587,7 @@
                                                             </div>
                                                             <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
                                                                 @if(!empty($canBreakdownToUlp))
-                                                                <button @click.stop="openAddModal({{ $lm->id }}, '{{ addslashes($lm->judul_lm) }}', 'ulp', '{{ addslashes($myUp3TargetText) }}')" class="text-[10px] bg-amber-600 hover:bg-amber-700 text-white font-bold py-1 px-2 rounded transition-colors shadow-sm">+ Breakdown ULP</button>
+                                                                <button @click.stop="openAddModal({{ $lm->id }}, '{{ addslashes($lm->judul_lm) }}', 'ulp', '{{ $lm->satuan_id ?? '' }}', '{{ addslashes($lm->satuan->name ?? '') }}', '{{ addslashes($myUp3TargetText) }}')" class="text-[10px] bg-amber-600 hover:bg-amber-700 text-white font-bold py-1 px-2 rounded transition-colors shadow-sm">+ Breakdown ULP</button>
                                                                 @endif
                                                                 <svg class="w-4 h-4 text-amber-500 transform transition-transform" :class="{'rotate-180': openUlp}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                                             </div>
@@ -682,7 +682,7 @@
                                                                                             <button type="submit" class="text-emerald-500 hover:text-emerald-700 font-bold transition-colors text-xs">Setujui</button>
                                                                                         </form>
                                                                                         @endif
-                                                                                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ addslashes($lm->judul_lm) }}", "ulp", "{{ addslashes($myUp3TargetText) }}")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
+                                                                                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ addslashes($lm->judul_lm) }}", "ulp", "{{ addslashes($lm->satuan->name ?? '') }}", "{{ addslashes($myUp3TargetText) }}")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
                                                                                         @if($canEditDelete)
                                                                                         <form id="deleteForm-{{ $breakdown->id }}" action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0">
                                                                                             @csrf
@@ -802,11 +802,8 @@
                                     </div>
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Satuan</label>
-                                        <select name="satuan_id" x-model="formSatuanId" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700">
-                                            @foreach($satuans as $satuan)
-                                                <option value="{{ $satuan->id }}">{{ $satuan->name }}</option>
-                                            @endforeach
-                                        </select>
+                                        <input type="hidden" name="satuan_id" x-model="formSatuanId">
+                                        <input type="text" x-model="formSatuanName" readonly class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-100 text-slate-500 shadow-sm text-sm cursor-not-allowed">
                                     </div>
                                 </div>
 

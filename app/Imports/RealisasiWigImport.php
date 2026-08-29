@@ -73,6 +73,11 @@ class RealisasiWigImport implements ToCollection
             }
             
             if ($unit && $wig) {
+                $user = auth()->user();
+                if ($user && $user->hasRole('Asman Perencanaan UP3') && $user->unit_id != $unit->id) {
+                    continue; // Skip if they try to upload for a unit other than their own
+                }
+                
                 // Loop through 12 months
                 for ($bulanNumeric = 1; $bulanNumeric <= 12; $bulanNumeric++) {
                     $colKey = 'realisasi_' . $bulanNumeric;

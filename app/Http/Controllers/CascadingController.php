@@ -240,7 +240,26 @@ class CascadingController extends Controller
             $wig = $wig_id ? \App\Models\MasterWig::find($wig_id) : null;
             $wigDivisis = $wig ? (is_array($wig->divisi) ? $wig->divisi : [$wig->divisi]) : [];
 
-            $approvers = \App\Models\User::role(['MSB UID'])
+            $breakdownUnit = $unit;
+            $parentUp3Id = null;
+            if ($breakdownUnit && strtoupper(trim($breakdownUnit->type)) === 'ULP') {
+                $parentUp3Id = $breakdownUnit->parent_id;
+            } elseif ($breakdownUnit && in_array(strtoupper(trim($breakdownUnit->type)), ['UP3', 'UP2D', 'UP2K'])) {
+                $parentUp3Id = $breakdownUnit->id;
+            }
+
+            $msbApprovers = \App\Models\User::role(['MSB UID'])
+                ->get()
+                ->filter(function($u) use ($wigDivisis) {
+                    if (strtoupper(trim($u->username)) === 'MSB.PERENCANAAN' || strtoupper(trim($u->name)) === 'MSB PERENCANAAN') return false;
+                    $matrixGroup = trim((string)($u->matrix_group_id ?? ''));
+                    if (empty($matrixGroup) || strtoupper($matrixGroup) === 'ALL') return true;
+                    $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($matrixGroup);
+                    return !empty(array_intersect($wigDivisis, $allowedDivisis));
+                });
+
+            $asmanApprovers = \App\Models\User::role(['Asman Bidang UP3'])
+                ->when($parentUp3Id, fn($q) => $q->where('unit_id', $parentUp3Id))
                 ->get()
                 ->filter(function($u) use ($wigDivisis) {
                     $matrixGroup = trim((string)($u->matrix_group_id ?? ''));
@@ -248,6 +267,11 @@ class CascadingController extends Controller
                     $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($matrixGroup);
                     return !empty(array_intersect($wigDivisis, $allowedDivisis));
                 });
+
+            $approvers = $msbApprovers->merge($asmanApprovers)->unique('id');
+            if ($approvers->isEmpty()) {
+                $approvers = \App\Models\User::role(['Super Admin'])->get();
+            }
 
             if ($approvers->isNotEmpty()) {
                 \Illuminate\Support\Facades\Notification::send($approvers, new \App\Notifications\RequiresApprovalNotification(
@@ -327,6 +351,7 @@ class CascadingController extends Controller
             // MSB sesuai bidang WIG
             $msbApprovers = \App\Models\User::role(['MSB UID'])->get()
                 ->filter(function($u) use ($wigDivisis) {
+                    if (strtoupper(trim($u->username)) === 'MSB.PERENCANAAN' || strtoupper(trim($u->name)) === 'MSB PERENCANAAN') return false;
                     $mg = trim((string)($u->matrix_group_id ?? ''));
                     if (empty($mg) || strtoupper($mg) === 'ALL') return true;
                     $allowed = \App\Models\MasterBidang::getRelatedDivisions($mg);
@@ -397,6 +422,7 @@ class CascadingController extends Controller
             // MSB sesuai bidang WIG
             $msbApprovers = \App\Models\User::role(['MSB UID'])->get()
                 ->filter(function($u) use ($wigDivisis) {
+                    if (strtoupper(trim($u->username)) === 'MSB.PERENCANAAN' || strtoupper(trim($u->name)) === 'MSB PERENCANAAN') return false;
                     $mg = trim((string)($u->matrix_group_id ?? ''));
                     if (empty($mg) || strtoupper($mg) === 'ALL') return true;
                     $allowed = \App\Models\MasterBidang::getRelatedDivisions($mg);
@@ -496,6 +522,7 @@ class CascadingController extends Controller
             $approvers = \App\Models\User::role(['MSB UID'])
                 ->get()
                 ->filter(function($u) use ($wigDivisis) {
+                    if (strtoupper(trim($u->username)) === 'MSB.PERENCANAAN' || strtoupper(trim($u->name)) === 'MSB PERENCANAAN') return false;
                     $matrixGroup = trim((string)($u->matrix_group_id ?? ''));
                     if (empty($matrixGroup) || strtoupper($matrixGroup) === 'ALL') return true;
                     $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($matrixGroup);
@@ -546,7 +573,9 @@ class CascadingController extends Controller
         $breakdown->save();
 
         if (!$isSuperAdmin && !$isMsb) {
-            $approvers = \App\Models\User::role(['Super Admin', 'MSB UID'])->get();
+            $approvers = \App\Models\User::role(['Super Admin', 'MSB UID'])->get()->filter(function($u) {
+                return strtoupper(trim($u->username)) !== 'MSB.PERENCANAAN' && strtoupper(trim($u->name)) !== 'MSB PERENCANAAN';
+            });
             \Illuminate\Support\Facades\Notification::send($approvers, new \App\Notifications\RequiresApprovalNotification(
                 !$breakdown->is_approved ? 'Persetujuan Cascading WIG' : 'Perubahan Cascading WIG', 
                 !$breakdown->is_approved ? 'Menunggu Persetujuan' : 'Cascading WIG Diubah', 
@@ -568,7 +597,9 @@ class CascadingController extends Controller
         $isMsb = $user && $user->hasRole('MSB UID');
 
         if (!$isSuperAdmin && !$isMsb) {
-            $approvers = \App\Models\User::role(['Super Admin', 'MSB UID'])->get();
+            $approvers = \App\Models\User::role(['Super Admin', 'MSB UID'])->get()->filter(function($u) {
+                return strtoupper(trim($u->username)) !== 'MSB.PERENCANAAN' && strtoupper(trim($u->name)) !== 'MSB PERENCANAAN';
+            });
             \Illuminate\Support\Facades\Notification::send($approvers, new \App\Notifications\RequiresApprovalNotification(
                 'Penghapusan Cascading WIG', 
                 'Cascading WIG Dihapus', 

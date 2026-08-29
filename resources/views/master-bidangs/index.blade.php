@@ -117,6 +117,7 @@
                                 <thead class="bg-slate-50/80 border-b border-slate-200">
                                     <tr>
                                         <th class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-1/3">Nama Sub-Bidang</th>
+                                        <th class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Matrix Group (Bidang)</th>
                                         <th class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Induk (Bidang UID)</th>
                                         <th class="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Bidang UP3 Terhubung</th>
                                         <th class="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Aksi</th>
@@ -128,6 +129,19 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-800 flex items-center gap-2">
                                             <div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
                                             {{ $item->name }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-purple-700">
+                                            @if($item->name == 'Strategi Pemasaran (MSB)')
+                                                NIAGA
+                                            @elseif($item->name == 'Pengendalian Operasi dan Pemeliharaan (MSB)')
+                                                JARINGAN
+                                            @elseif($item->name == 'EPM (MSB)')
+                                                TE
+                                            @elseif($item->name == 'K3L')
+                                                K3L
+                                            @else
+                                                -
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-700">
                                             {{ $item->parent ? $item->parent->name : '-' }}
@@ -147,7 +161,7 @@
                                     </tr>
                                     @empty
                                     <tr>
-                                        <td colspan="4" class="px-6 py-12 text-sm text-slate-500 text-center">Belum ada Sub-Bidang UID terdaftar.</td>
+                                        <td colspan="5" class="px-6 py-12 text-sm text-slate-500 text-center">Belum ada Sub-Bidang UID terdaftar.</td>
                                     </tr>
                                     @endforelse
                                 </tbody>

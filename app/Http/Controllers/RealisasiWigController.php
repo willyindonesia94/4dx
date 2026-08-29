@@ -276,16 +276,46 @@ class RealisasiWigController extends Controller
     }
     public function downloadTemplate(Request $request)
     {
-        $this->authorizeSuperadmin();
+        $user = auth()->user();
+        if (!$user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3'])) {
+            abort(403, 'Akses Ditolak');
+        }
         
         $tahun = $request->query('tahun', date('Y'));
         
         $wigs = MasterWig::all();
-        $up3s = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->get();
+        if ($user->hasRole('Asman Perencanaan UP3') && $user->unit_id) {
+            $up3s = \App\Models\MasterUnit::where('id', $user->unit_id)->get();
+        } else {
+            $up3s = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->get();
+        }
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Template Realisasi WIG ' . $tahun);
+
+        // Style untuk Header
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+                'size' => 11,
+            ],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '3730A3'], // Indigo / Blue 800
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => 'CCCCCC'],
+                ],
+            ],
+        ];
 
         $months = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
         $monthCols = ['target_jan', 'target_feb', 'target_mar', 'target_apr', 'target_mei', 'target_jun', 'target_jul', 'target_agu', 'target_sep', 'target_okt', 'target_nov', 'target_des'];
@@ -299,6 +329,9 @@ class RealisasiWigController extends Controller
             $sheet->setCellValue($col . '1', $header);
             $col++;
         }
+        
+        $sheet->getStyle('A1:AD1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(28);
 
         $row = 2;
         foreach ($up3s as $up3) {
@@ -328,8 +361,18 @@ class RealisasiWigController extends Controller
                     $c++;
                 }
                 
+                // Style Data Row
+                $sheet->getStyle('A' . $row . ':AD' . $row)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('555555'));
+                $sheet->getRowDimension($row)->setRowHeight(22);
+                
                 $row++;
             }
+        }
+        
+        // Auto Fit Lebar Kolom
+        $columns = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AC','AD'];
+        foreach ($columns as $columnID) {
+            $sheet->getColumnDimension($columnID)->setAutoSize(true);
         }
         
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
@@ -343,7 +386,9 @@ class RealisasiWigController extends Controller
 
     public function import(Request $request)
     {
-        $this->authorizeSuperadmin();
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3'])) {
+            abort(403, 'Akses Ditolak');
+        }
         
         $request->validate([
             'file_import' => 'required|mimes:xlsx,xls,csv',
