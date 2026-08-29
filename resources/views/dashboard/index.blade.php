@@ -591,9 +591,14 @@
 
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                        subdomains: 'abcd',
+                        subdomains: 'abc',
                         maxZoom: 20
                     }).addTo(this.map);
+                    
+                    // Prevent grey boxes by forcing size recalculation
+                    setTimeout(() => {
+                        this.map.invalidateSize();
+                    }, 500);
 
                     if (this.wigs.length > 0) {
                         this.selectWig(this.wigs[0].id);
