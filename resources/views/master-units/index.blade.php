@@ -165,8 +165,8 @@
                 initMap() {
                     if (!this.mapInstance) {
                         this.mapInstance = L.map('unitMap').setView([-6.9147, 107.6098], 8); // Default Bandung
-                        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                            attribution: '&copy; OpenStreetMap contributors'
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                         }).addTo(this.mapInstance);
 
                         this.mapInstance.on('click', (e) => {
