@@ -69,8 +69,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('master-satuans', \App\Http\Controllers\MasterSatuanController::class)->except(['create', 'edit', 'show']);
     Route::get('/master-units/download-template', [\App\Http\Controllers\MasterUnitController::class, 'downloadTemplate'])->name('master-units.template');
     Route::get('/master-units/export', [\App\Http\Controllers\MasterUnitController::class, 'export'])->name('master-units.export');
-    Route::post('/master-units/preview', [\App\Http\Controllers\MasterUnitController::class, 'previewImport'])->name('master-units.preview');
-    Route::post('/master-units/import-confirm', [\App\Http\Controllers\MasterUnitController::class, 'confirmImport'])->name('master-units.import.confirm');
+    Route::post('/master-units/import', [\App\Http\Controllers\MasterUnitController::class, 'import'])->name('master-units.import');
     Route::resource('master-units', \App\Http\Controllers\MasterUnitController::class)->except(['create', 'edit', 'show']);
 
     // Sesi WIG & Realizations
