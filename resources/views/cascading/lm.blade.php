@@ -150,6 +150,7 @@
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <p class="text-gray-600">Berikut adalah daftar Lead Measures (LM) yang dikelompokkan berdasarkan Master WIG induknya beserta penjabarannya ke unit operasional.</p>
                         
+                        @unless($user->hasRole('Asman Bidang UP3'))
                         <!-- Mass Upload Buttons -->
                         <div class="flex flex-col sm:flex-row gap-3">
                             <a href="{{ route('cascading.breakdown.template') }}" class="whitespace-nowrap justify-center inline-flex items-center px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-md text-sm font-semibold transition-colors shadow-sm">
@@ -161,8 +162,10 @@
                                 Upload Target Unit
                             </button>
                         </div>
+                        @endunless
                     </div>
 
+                    @unless($user->hasRole('Asman Bidang UP3'))
                     <!-- Upload Target Form (Hidden by default) -->
                     <div id="uploadTargetForm" class="hidden mb-8 bg-green-50 border border-green-200 rounded-xl p-6">
                         <h3 class="font-bold text-green-800 text-lg mb-2">Upload Excel Target Unit (Breakdown LM)</h3>
@@ -194,6 +197,7 @@
                             </button>
                         </form>
                     </div>
+                    @endunless
 
                     @if(session('success'))
                     <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-md shadow-sm">
