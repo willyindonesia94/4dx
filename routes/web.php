@@ -49,6 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/cascading/lm/template', [\App\Http\Controllers\CascadingController::class, 'lmTemplate'])->name('cascading.lm.template');
     Route::post('/cascading/lm/import', [\App\Http\Controllers\CascadingController::class, 'lmImport'])->name('cascading.lm.import');
     Route::get('/cascading/lm/breakdown/template', [\App\Http\Controllers\CascadingController::class, 'breakdownLmTemplate'])->name('cascading.breakdown.template');
+    Route::get('/cascading/lm/breakdown/template-k3l', [\App\Http\Controllers\CascadingController::class, 'breakdownLmTemplateK3L'])->name('cascading.breakdown.template-k3l');
     Route::post('/cascading/lm/breakdown/import', [\App\Http\Controllers\CascadingController::class, 'importBreakdownLm'])->name('cascading.breakdown.import');
     Route::post('/cascading/breakdown', [\App\Http\Controllers\CascadingController::class, 'storeBreakdown'])->name('cascading.breakdown.store');
     Route::delete('/cascading/breakdown-lm/bulk', [\App\Http\Controllers\CascadingController::class, 'bulkDestroyLm'])->name('cascading.breakdown.bulk-destroy');
@@ -86,6 +87,7 @@ Route::middleware('auth')->group(function () {
     
 
     Route::get('/realisasis/template', [\App\Http\Controllers\RealizationController::class, 'downloadTemplate'])->name('realisasis.template')->middleware('role:Super Admin|Perencanaan UID|Asman Perencanaan UP3|Asman Bidang UP3');
+    Route::get('/realisasis/template-k3l', [\App\Http\Controllers\RealizationController::class, 'downloadTemplateK3L'])->name('realisasis.template-k3l')->middleware('role:Super Admin|Perencanaan UID|Asman Perencanaan UP3|Asman Bidang UP3|Bidang K3L (MSB)');
     Route::post('/realisasis/import', [\App\Http\Controllers\RealizationController::class, 'import'])->name('realisasis.import')->middleware('role:Super Admin|Perencanaan UID|Asman Perencanaan UP3|Asman Bidang UP3');
     Route::delete('/realisasis/bulk-destroy', [\App\Http\Controllers\RealizationController::class, 'bulkDestroy'])->name('realisasis.bulk-destroy');
     Route::resource('realisasis', \App\Http\Controllers\RealizationController::class)->except(['show']);

@@ -150,26 +150,32 @@
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <p class="text-gray-600">Berikut adalah daftar Lead Measures (LM) yang dikelompokkan berdasarkan Master WIG induknya beserta penjabarannya ke unit operasional.</p>
                         
-                        @unless($user->hasRole('Asman Bidang UP3'))
+                        @if(!$user->hasRole('Asman Bidang UP3') || strtoupper(trim((string)$user->matrix_group_id)) === 'K3L')
                         <!-- Mass Upload Buttons -->
                         <div class="flex flex-col sm:flex-row gap-3">
                             <a href="{{ route('cascading.breakdown.template') }}" class="whitespace-nowrap justify-center inline-flex items-center px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-md text-sm font-semibold transition-colors shadow-sm">
                                 <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                                 Template Target Unit
                             </a>
+                            @if(auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Bidang K3L (MSB)') || strtoupper(trim((string)auth()->user()->matrix_group_id)) === 'K3L')
+                            <a href="{{ route('cascading.breakdown.template-k3l') }}" class="whitespace-nowrap justify-center inline-flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md text-sm font-semibold transition-colors shadow-sm">
+                                <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                Template K3L (Seluruh ULP)
+                            </a>
+                            @endif
                             <button onclick="document.getElementById('uploadTargetForm').classList.toggle('hidden')" class="whitespace-nowrap justify-center inline-flex items-center px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-bold transition-colors shadow-sm">
                                 <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                                 Upload Target Unit
                             </button>
                         </div>
-                        @endunless
+                        @endif
                     </div>
 
-                    @unless($user->hasRole('Asman Bidang UP3'))
+                    @if(!$user->hasRole('Asman Bidang UP3') || strtoupper(trim((string)$user->matrix_group_id)) === 'K3L')
                     <!-- Upload Target Form (Hidden by default) -->
                     <div id="uploadTargetForm" class="hidden mb-8 bg-green-50 border border-green-200 rounded-xl p-6">
                         <h3 class="font-bold text-green-800 text-lg mb-2">Upload Excel Target Unit (Breakdown LM)</h3>
-                        <p class="text-sm text-green-700 mb-4">Pastikan format kolom sesuai dengan <a href="{{ route('cascading.breakdown.template') }}" class="font-bold underline text-green-800 hover:text-green-950">template Excel</a> (ada Target Bulanan & Target Minggu 1-5). Pilih bulan dan tahun target tersebut akan diterapkan.</p>
+                        <p class="text-sm text-green-700 mb-4">Pastikan format kolom sesuai dengan template Excel (ada Target Bulanan & Target Minggu 1-5). Pilih bulan dan tahun target tersebut akan diterapkan.</p>
                         <form action="{{ route('cascading.breakdown.import') }}" method="POST" enctype="multipart/form-data" class="flex flex-col sm:flex-row gap-4 items-end" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
                             @csrf
                             <div>
@@ -197,7 +203,7 @@
                             </button>
                         </form>
                     </div>
-                    @endunless
+                    @endif
 
                     @if(session('success'))
                     <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-md shadow-sm">

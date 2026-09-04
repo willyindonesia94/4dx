@@ -7,20 +7,24 @@
 
     <div class="py-12" x-data="realisasiForm()">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <p class="text-gray-600 text-sm sm:text-base">Berikut adalah daftar realisasi pencapaian Lead Measures yang telah diinput.</p>
-                <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto mt-3 sm:mt-0">
-                    @if(auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin') || auth()->user()->role_name === 'Perencanaan UID' || auth()->user()->hasRole('Perencanaan UID') || auth()->user()->hasRole('Asman Perencanaan UP3') || auth()->user()->hasRole('Asman Bidang UP3'))
-                        <div class="flex gap-2 w-full sm:w-auto">
-                            <a href="{{ route('realisasis.template') }}" class="w-1/2 sm:w-auto justify-center bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2.5 px-4 rounded-lg shadow-sm border border-indigo-200 transition-colors text-sm flex items-center whitespace-nowrap">
-                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                Template
-                            </a>
-                            <button @click="openUploadModal = true" class="w-1/2 sm:w-auto justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition-colors text-sm flex items-center whitespace-nowrap">
-                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                                Upload Massal
-                            </button>
-                        </div>
+            <div class="flex flex-wrap justify-between items-center gap-4 mb-6 w-full">
+                <p class="text-gray-600 text-sm sm:text-base flex-1 min-w-[250px]">Berikut adalah daftar realisasi pencapaian Lead Measures yang telah diinput.</p>
+                <div class="flex flex-wrap items-center justify-end gap-2 shrink-0">
+                    @if(auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin') || auth()->user()->role_name === 'Perencanaan UID' || auth()->user()->hasRole('Perencanaan UID') || auth()->user()->hasRole('Asman Perencanaan UP3') || auth()->user()->hasRole('Asman Bidang UP3') || auth()->user()->hasRole('Bidang K3L (MSB)'))
+                        <a href="{{ route('realisasis.template') }}" class="w-full sm:w-auto justify-center bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2.5 px-4 rounded-lg shadow-sm border border-indigo-200 transition-colors text-sm flex items-center whitespace-nowrap">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Template
+                        </a>
+                        @if(auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Bidang K3L (MSB)') || strtoupper(trim((string)auth()->user()->matrix_group_id)) === 'K3L')
+                        <a href="{{ route('realisasis.template-k3l') }}" class="w-full sm:w-auto justify-center bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-2.5 px-4 rounded-lg shadow-sm border border-emerald-200 transition-colors text-sm flex items-center whitespace-nowrap">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Template K3L (Seluruh ULP)
+                        </a>
+                        @endif
+                        <button @click="openUploadModal = true" class="w-full sm:w-auto justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition-colors text-sm flex items-center whitespace-nowrap">
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            Upload Massal
+                        </button>
                     @endif
                     @php
                         $userObj = auth()->user();
@@ -213,7 +217,8 @@
                                                 @if(!isset($isUlpLevel) || !$isUlpLevel)
                                                 <td class="px-4 py-3 whitespace-nowrap text-center text-sm font-medium space-x-2">
                                                     @php
-                                                        $canEdit = (isset($isSuperAdmin) && $isSuperAdmin) || \Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now());
+                                                        $isAsmanUP3 = auth()->user()->hasAnyRole(['Asman Bidang UP3']);
+                                                        $canEdit = (isset($isSuperAdmin) && $isSuperAdmin) || $isAsmanUP3 || \Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now());
                                                         $canDelete = isset($isSuperAdmin) && $isSuperAdmin;
                                                     @endphp
 
@@ -341,7 +346,7 @@
                 <div x-show="openUploadModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
                 <div x-show="openUploadModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100 max-h-[90vh] flex flex-col">
-                    <form action="{{ route('realisasis.import') }}" method="POST" enctype="multipart/form-data" class="flex flex-col" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
+                    <form action="{{ route('realisasis.import') }}" method="POST" enctype="multipart/form-data" class="flex flex-col max-h-[90vh]" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
                         @csrf
                         <div class="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-4 flex items-center justify-between">
                             <h3 class="text-lg font-bold text-white tracking-wide" id="modal-title">Upload Massal Realisasi Harian</h3>
@@ -452,7 +457,7 @@
                 
                 <!-- Modal Panel -->
                 <div x-show="openModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100 max-h-[90vh] flex flex-col">
-                    <form action="{{ route('realisasis.store') }}" method="POST" enctype="multipart/form-data" class="flex flex-col max-h-[90vh]">
+                    <form action="{{ route('realisasis.store') }}" method="POST" enctype="multipart/form-data" class="flex flex-col max-h-[90vh]" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
                         @csrf
                         <div class="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-4 flex items-center justify-between">
                             <h3 class="text-lg font-bold text-white tracking-wide" id="modal-title">Input Realisasi Harian</h3>
@@ -479,7 +484,7 @@
                                     <select name="lm_id" x-model="selectedLm" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700">
                                         <option value="">-- Pilih LM --</option>
                                         <template x-for="lm in filteredLms" :key="lm.id">
-                                            <option :value="lm.id" x-text="lm.judul_lm"></option>
+                                            <option :value="lm.id" :disabled="inputtedLms.includes(lm.id)" x-text="lm.judul_lm + (inputtedLms.includes(lm.id) ? ' (Sudah Diinput Hari Ini)' : '')"></option>
                                         </template>
                                     </select>
                                 </div>
@@ -515,8 +520,8 @@
                             <button @click="openModal = false" type="button" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-slate-200 px-6 py-2.5 bg-white text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-300">
                                 Batal
                             </button>
-                            <button type="submit" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-transparent px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:-translate-y-0.5">
-                                Kirim Realisasi
+                            <button type="submit" :disabled="isSubmitting" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-transparent px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span x-text="isSubmitting ? 'Memproses...' : 'Kirim Realisasi'"></span>
                             </button>
                         </div>
                     </form>
@@ -585,6 +590,7 @@
                 selectedWig: '',
                 selectedLm: '',
                 wigs: @json($wigs ?? []),
+                inputtedLms: @json($inputtedLmIdsToday ?? []),
                 init() {
                     if (this.wigs && this.wigs.length === 1) {
                         this.selectedWig = String(this.wigs[0].id);

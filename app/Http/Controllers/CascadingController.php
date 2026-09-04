@@ -68,10 +68,12 @@ class CascadingController extends Controller
         $isAsmanPerencanaanUp3 = $user && $user->hasRole('Asman Perencanaan UP3');
         $isAsmanBidangUp3 = $user && $user->hasRole('Asman Bidang UP3');
         
-        $isUid = !$isSuperAdmin && ($unitType === 'UID' || $user->hasAnyRole(['Perencanaan UID', 'SRM Perencanaan UID', 'SRM Bidang UID', 'MSB UID', 'Admin Sub Bidang UID', 'General Manager UID']));
-        $isUp3 = !$isSuperAdmin && (in_array($unitType, ['UP3', 'UP2D', 'UP2K']) || $user->hasAnyRole(['Asman Perencanaan UP3', 'Asman Bidang UP3', 'Manager UP3', 'UP2D', 'UP2K']));
+        $isK3L = strtoupper($userMatrixGroup) === 'K3L';
         
-        $canApproveLm = $isSuperAdmin || $isMsb || $isAsmanBidangUp3;
+        $isUid = !$isSuperAdmin && ($unitType === 'UID' || $isK3L || $user->hasAnyRole(['Perencanaan UID', 'SRM Perencanaan UID', 'SRM Bidang UID', 'MSB UID', 'Admin Sub Bidang UID', 'General Manager UID']));
+        $isUp3 = !$isSuperAdmin && !$isK3L && (in_array($unitType, ['UP3', 'UP2D', 'UP2K']) || $user->hasAnyRole(['Asman Perencanaan UP3', 'Asman Bidang UP3', 'Manager UP3', 'UP2D', 'UP2K']));
+        
+        $canApproveLm = $isSuperAdmin || $isMsb || $isAsmanBidangUp3 || $isK3L;
         
         $canBreakdownToUid = $isSuperAdmin || $isPerencanaanUid;
         $canBreakdownToUp3 = $isSuperAdmin || $isPerencanaanUid;
@@ -138,7 +140,8 @@ class CascadingController extends Controller
         $user = Auth::user();
         if (!$user) return false;
         $isSuperAdmin = $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
-        $isUp3 = !$isSuperAdmin && $user->hasAnyRole(['Asman Perencanaan UP3', 'Asman Bidang UP3', 'Manager UP3', 'UP2D', 'UP2K']);
+        $isK3L = strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L';
+        $isUp3 = !$isSuperAdmin && !$isK3L && $user->hasAnyRole(['Asman Perencanaan UP3', 'Asman Bidang UP3', 'Manager UP3', 'UP2D', 'UP2K']);
 
         if ($isUp3 && $user->unit_id) {
             $userUnit = MasterUnit::find($user->unit_id);
@@ -641,6 +644,8 @@ class CascadingController extends Controller
     }
 
     public function breakdownLmTemplate() { return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\BreakdownLmTemplateExport, 'Template_Upload_Target_Unit.xlsx'); }
+    
+    public function breakdownLmTemplateK3L() { return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\BreakdownLmTemplateK3LExport, 'Template_Upload_Target_K3L_Semua_ULP.xlsx'); }
     
     public function importBreakdownLm(\Illuminate\Http\Request $request)
     {

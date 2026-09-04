@@ -60,15 +60,18 @@ class RealizationController extends Controller
 
             // Hierarki Unit Kerja Filter
             if (!$isSuperAdmin && $user && $user->unit) {
-                $unitType = strtoupper(trim((string)$user->unit->type));
-                if (in_array($unitType, ['ULP', 'UP2D', 'UP2K'])) {
-                    $q->where('unit_id', $user->unit_id);
-                } elseif ($unitType === 'UP3') {
-                    $q->whereIn('unit_id', function($subq) use ($user) {
-                        $subq->select('id')->from('master_units')
-                          ->where('id', $user->unit_id)
-                          ->orWhere('parent_id', $user->unit_id);
-                    });
+                // K3L User bypasses unit restriction to see ALL ULPs
+                if (strtoupper(trim((string)$user->matrix_group_id)) !== 'K3L') {
+                    $unitType = strtoupper(trim((string)$user->unit->type));
+                    if (in_array($unitType, ['ULP', 'UP2D', 'UP2K'])) {
+                        $q->where('unit_id', $user->unit_id);
+                    } elseif ($unitType === 'UP3') {
+                        $q->whereIn('unit_id', function($subq) use ($user) {
+                            $subq->select('id')->from('master_units')
+                              ->where('id', $user->unit_id)
+                              ->orWhere('parent_id', $user->unit_id);
+                        });
+                    }
                 }
             }
 
@@ -116,7 +119,8 @@ class RealizationController extends Controller
         $isUp3 = !$isSuperAdmin && $user && $user->hasAnyRole(['Asman Perencanaan UP3', 'Asman Bidang UP3', 'Manager UP3', 'UP2D', 'UP2K']);
 
         $up3Units = collect();
-        if ($isSuperAdmin || $isUid) {
+        // K3L can see all UP3s
+        if ($isSuperAdmin || $isUid || strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L') {
             $up3Units = MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->orderBy('name')->get();
         } elseif ($isUp3 && $user->unit_id) {
             $userUnitType = strtoupper(trim((string)$user->unit->type));
@@ -129,7 +133,16 @@ class RealizationController extends Controller
                     })->orderBy('type')->orderBy('name')->get();
             }
         }
-        return view('realisasis.index', compact('displayWigs', 'wigs', 'bulan', 'tahun', 'wigId', 'lmIdFilter', 'up3IdFilter', 'up3Units', 'isUlpLevel', 'availableLms', 'isSuperAdmin'));
+        $inputtedLmIdsToday = [];
+        $unitType = strtoupper(trim((string)($user->unit->type ?? '')));
+        if ($unitType === 'ULP' && $user->unit_id) {
+            $inputtedLmIdsToday = \App\Models\Realisasi::where('unit_id', $user->unit_id)
+                ->whereDate('tanggal_input', now()->toDateString())
+                ->pluck('lm_id')
+                ->toArray();
+        }
+
+        return view('realisasis.index', compact('displayWigs', 'wigs', 'bulan', 'tahun', 'wigId', 'lmIdFilter', 'up3IdFilter', 'up3Units', 'isUlpLevel', 'availableLms', 'isSuperAdmin', 'inputtedLmIdsToday'));
     }
 
     public function create()
@@ -172,6 +185,19 @@ class RealizationController extends Controller
         $data['user_id'] = auth()->id();
         $data['unit_id'] = auth()->user()->unit_id;
         $data['tanggal_input'] = now();
+
+        // ULP Restriction: Max 1 input per day per LM
+        $unitType = strtoupper(trim((string)($user->unit->type ?? '')));
+        if ($unitType === 'ULP') {
+            $existing = \App\Models\Realisasi::where('lm_id', $request->lm_id)
+                ->where('unit_id', $data['unit_id'])
+                ->whereDate('tanggal_input', $data['tanggal_input']->toDateString())
+                ->exists();
+
+            if ($existing) {
+                return redirect()->back()->with('error', 'Anda hanya dapat menginput realisasi 1 kali dalam sehari untuk LM yang sama.');
+            }
+        }
 
         if ($request->hasFile('bukti_file')) {
             $data['bukti_file'] = $request->file('bukti_file')->store('bukti_realisasi', 'public');
@@ -281,8 +307,8 @@ class RealizationController extends Controller
 
     private function checkEditRule(Realisasi $realisasi)
     {
-        if (auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID'])) {
-            return; // Superadmin has full access
+        if (auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3'])) {
+            return; // Superadmin & Asman UP3 have full access
         }
 
         if (!Carbon::parse($realisasi->tanggal_input)->isSameDay(now())) {
@@ -423,22 +449,151 @@ class RealizationController extends Controller
             $sheet->getRowDimension(2)->setRowHeight(22);
         }
 
-        // Auto Fit Lebar Kolom
-        foreach (range('A', 'F') as $columnID) {
-            $sheet->getColumnDimension($columnID)->setAutoSize(true);
+        // Auto-size columns
+        foreach (range('A', 'F') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
+        // Freeze baris header
+        $sheet->freezePane('A2');
+
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $fileName = 'Template_Upload_Realisasi_LM.xlsx';
 
-        ob_start();
-        $writer->save('php://output');
-        $content = ob_get_clean();
-
-        $responseHeaders = [
+        return response()->streamDownload(function() use ($writer) {
+            $writer->save('php://output');
+        }, $fileName, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="template_upload_realisasi_lm.xlsx"',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
+
+    /**
+     * Download template Excel KHUSUS Bidang K3L (Semua ULP dalam 1 template dengan format Scoreboard Bidang)
+     */
+    public function downloadTemplateK3L()
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Template Realisasi K3L');
+
+        // Style untuk Header
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+                'size' => 11,
+            ],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '3730A3'], // Indigo / Blue 800
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => 'CCCCCC'],
+                ],
+            ],
         ];
 
-        return response($content, 200, $responseHeaders);
+        // Header Row - Persis Sesuai Format Scoreboard Bidang
+        $headers = [
+            'A1' => 'NO',
+            'B1' => 'UNIT',
+            'C1' => 'INDIKATOR KINERJA',
+            'D1' => 'WIG',
+            'E1' => 'REALISASI MINGGU-1',
+            'F1' => 'REALISASI MINGGU-2',
+            'G1' => 'REALISASI MINGGU-3',
+            'H1' => 'REALISASI MINGGU-4',
+            'I1' => 'REALISASI MINGGU-5',
+        ];
+
+        foreach ($headers as $cell => $value) {
+            $sheet->setCellValue($cell, $value);
+        }
+
+        $sheet->getStyle('A1:I1')->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(28);
+
+        // Fetch all LMs belonging to K3L
+        // (WIG yang divisinya adalah K3L atau related to K3L)
+        // Kita cari WIG yang divisinya mengandung 'K3L'
+        $k3lWigs = \App\Models\MasterWig::where('divisi', 'LIKE', '%K3L%')->pluck('id');
+        
+        $lms = \App\Models\MasterLm::with('wig')->whereIn('wig_id', $k3lWigs)->get()->sort(function($a, $b) {
+            if ($a->wig_id === $b->wig_id) {
+                preg_match('/LM-?(\d+)/i', $a->judul_lm, $mA);
+                preg_match('/LM-?(\d+)/i', $b->judul_lm, $mB);
+                return (int)($mA[1] ?? 999) <=> (int)($mB[1] ?? 999);
+            }
+            return $a->wig_id <=> $b->wig_id;
+        });
+
+        // Jika tidak ada LM K3L secara spesifik, fallback ambil semua LM
+        if ($lms->count() == 0) {
+            $lms = \App\Models\MasterLm::with('wig')->get();
+        }
+
+        // Ambil semua ULP
+        $ulps = \App\Models\MasterUnit::where('type', 'ULP')->orderBy('name')->get();
+
+        $rowNum = 2;
+        $no = 1;
+
+        if ($lms->count() > 0 && $ulps->count() > 0) {
+            foreach ($lms as $lm) {
+                foreach ($ulps as $ulp) {
+                    $sheet->setCellValue('A' . $rowNum, $no);
+                    $sheet->setCellValue('B' . $rowNum, $ulp->name);
+                    $sheet->setCellValue('C' . $rowNum, $lm->judul_lm);
+                    $sheet->setCellValue('D' . $rowNum, $lm->wig ? $lm->wig->judul : '');
+                    
+                    // Kolom realisasi dikosongkan untuk diisi
+                    $sheet->setCellValue('E' . $rowNum, '');
+                    $sheet->setCellValue('F' . $rowNum, '');
+                    $sheet->setCellValue('G' . $rowNum, '');
+                    $sheet->setCellValue('H' . $rowNum, '');
+                    $sheet->setCellValue('I' . $rowNum, '');
+
+                    // Style
+                    $sheet->getStyle('A' . $rowNum . ':D' . $rowNum)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('555555'));
+                    $sheet->getStyle('A' . $rowNum . ':B' . $rowNum)->getFont()->setBold(true);
+                    
+                    foreach (range('E', 'I') as $col) {
+                        $sheet->getStyle($col . $rowNum)->getNumberFormat()->setFormatCode('#,##0.00');
+                        $sheet->getStyle($col . $rowNum)->getFill()
+                            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                            ->getStartColor()->setARGB('FFFDFD'); // Latar agak putih/kuning muda untuk tanda input
+                    }
+
+                    $sheet->getRowDimension($rowNum)->setRowHeight(22);
+                    $rowNum++;
+                    $no++;
+                }
+            }
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'I') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Freeze baris header dan 2 kolom pertama
+        $sheet->freezePane('C2');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $fileName = 'Template_Upload_K3L_Semua_ULP.xlsx';
+
+        return response()->streamDownload(function() use ($writer) {
+            $writer->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
     }
 }
