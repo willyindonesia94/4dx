@@ -55,7 +55,14 @@ class BreakdownLm extends Model
             return "Target Total Bulanan";
         }
 
-        $master = MasterPeriode::where('tahun', $this->tahun)->where('bulan', $this->bulan)->first();
+        static $periodeCache = [];
+        $cacheKey = $this->tahun . '_' . $this->bulan;
+
+        if (!array_key_exists($cacheKey, $periodeCache)) {
+            $periodeCache[$cacheKey] = MasterPeriode::where('tahun', $this->tahun)->where('bulan', $this->bulan)->first();
+        }
+
+        $master = $periodeCache[$cacheKey];
         if ($master) {
             $s = $this->periode_start;
             if ($master->start_m1 == $s) return "Minggu 1";

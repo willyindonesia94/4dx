@@ -83,15 +83,36 @@ class CascadingController extends Controller
         // MSB UID dengan matrix_group_id = 'ALL' juga skip filter (bisa lihat semua LM)
         $skipMatrixFilter = $skipMatrixFilter || ($isMsb && strtoupper($userMatrixGroup) === 'ALL');
         
+        $tahun = request('tahun', date('Y'));
+        $up3IdFilter = request('up3_id');
+        
         $wigsQuery = MasterWig::where('is_approved', true)
             ->with(['masterLms' => function($q) {
                 $q->where('is_approved', true);
-            }, 'masterLms.breakdowns' => function($q) {
-                $q->join('master_units', 'breakdown_lms.unit_id', '=', 'master_units.id')
-                  ->orderByRaw("CASE WHEN UPPER(TRIM(master_units.type)) IN ('UP2D', 'UP2K') THEN 2 ELSE 1 END")
+            }, 'masterLms.breakdowns' => function($q) use ($tahun, $isUp3, $user, $up3IdFilter) {
+                $q->with('unit', 'satuan')
+                  ->join('master_units', 'breakdown_lms.unit_id', '=', 'master_units.id')
+                  ->where('breakdown_lms.tahun', $tahun);
+                  
+                if (!empty($isUp3) && !empty($user->unit_id)) {
+                    $q->where(function($subq) use ($user) {
+                        $subq->where('master_units.type', '!=', 'ULP')
+                             ->orWhere('master_units.parent_id', $user->unit_id)
+                             ->orWhere('master_units.id', $user->unit_id);
+                    });
+                } else if ($up3IdFilter) {
+                    $q->where(function($subq) use ($up3IdFilter) {
+                        $subq->where('master_units.type', '!=', 'ULP')
+                             ->orWhere('master_units.parent_id', $up3IdFilter);
+                    });
+                } else {
+                    $q->where('master_units.type', '!=', 'ULP');
+                }
+
+                $q->orderByRaw("CASE WHEN UPPER(TRIM(master_units.type)) IN ('UP2D', 'UP2K') THEN 2 ELSE 1 END")
                   ->orderBy('master_units.name', 'asc')
                   ->select('breakdown_lms.*');
-            }, 'masterLms.breakdowns.unit', 'masterLms.breakdowns.satuan', 'masterLms.satuan']);
+            }, 'masterLms.satuan']);
 
         if (!$skipMatrixFilter && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);

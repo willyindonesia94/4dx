@@ -173,7 +173,7 @@
                                     <table class="min-w-full divide-y divide-gray-200">
                                         <thead class="bg-gray-50">
                                             <tr>
-                                                @if(isset($isSuperAdmin) && $isSuperAdmin)
+                                                @if((isset($isSuperAdmin) && $isSuperAdmin) || auth()->user()->hasRole('Perencanaan UID'))
                                                 <th class="px-4 py-3 w-10 text-center">
                                                     <input type="checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                                         @change="
@@ -199,7 +199,7 @@
                                         <tbody class="bg-white divide-y divide-gray-200">
                                             @foreach($lm->realisasis as $realisasi)
                                             <tr class="hover:bg-gray-50 transition-colors">
-                                                @if(isset($isSuperAdmin) && $isSuperAdmin)
+                                                @if((isset($isSuperAdmin) && $isSuperAdmin) || auth()->user()->hasRole('Perencanaan UID'))
                                                 <td class="px-4 py-3 text-center">
                                                     <input type="checkbox" value="{{ $realisasi->id }}" x-model="selectedRealisasis" class="lm-checkbox-{{ $lm->id }} rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
                                                 </td>
@@ -219,7 +219,7 @@
                                                     @php
                                                         $isAsmanUP3 = auth()->user()->hasAnyRole(['Asman Bidang UP3']);
                                                         $canEdit = (isset($isSuperAdmin) && $isSuperAdmin) || $isAsmanUP3 || \Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now());
-                                                        $canDelete = isset($isSuperAdmin) && $isSuperAdmin;
+                                                        $canDelete = (isset($isSuperAdmin) && $isSuperAdmin) || auth()->user()->hasRole('Perencanaan UID');
                                                     @endphp
 
                                                     @if($canEdit)

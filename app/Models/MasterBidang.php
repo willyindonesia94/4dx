@@ -62,12 +62,10 @@ class MasterBidang extends Model
         }
         if (!$node) return $results;
 
-        // Dapatkan semua ancestor (induk), tapi kecualikan UID_BIDANG sesuai request
+        // Dapatkan semua ancestor (induk). Batasan UID_BIDANG dihapus agar SRM bisa melihat WIG bidangnya sendiri.
         $curr = $node->parent;
         while ($curr) {
-            if ($curr->level !== 'UID_BIDANG') {
-                $results[] = $curr->name;
-            }
+            $results[] = $curr->name;
             $curr = $curr->parent;
         }
 

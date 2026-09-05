@@ -465,6 +465,52 @@ class SesiWigController extends Controller
 
         $sesi_wigs_month = $sesi_wigs_matrix;
 
+        // --- Aggregation (Rollup) ULP -> UP3 -> UID ---
+        foreach ($lms as $lm) {
+            $isNonSummable = in_array($lm->satuan_id, $nonSummableSatuans);
+            foreach ($sesi_wigs_matrix as $sw) {
+                // Rollup ULP to UP3
+                foreach ($up3s as $up3) {
+                    $ulpsOfUp3 = $allUlps->where('parent_id', $up3->id);
+                    if ($ulpsOfUp3->isNotEmpty()) {
+                        $sumTarget = 0; $sumReal = 0;
+                        $countUlpTarget = 0; $countUlpReal = 0;
+                        
+                        foreach ($ulpsOfUp3 as $ulp) {
+                            $t = $matrixTargets[$lm->id][$ulp->id][$sw->id] ?? 0;
+                            $r = $matrixRealisasi[$lm->id][$ulp->id][$sw->id] ?? 0;
+                            if ($t > 0) { $sumTarget += $t; $countUlpTarget++; }
+                            if ($r > 0) { $sumReal += $r; $countUlpReal++; }
+                        }
+                        
+                        if (!isset($matrixTargets[$lm->id][$up3->id][$sw->id]) || $matrixTargets[$lm->id][$up3->id][$sw->id] == 0) {
+                            $matrixTargets[$lm->id][$up3->id][$sw->id] = $isNonSummable && $countUlpTarget > 0 ? ($sumTarget / $countUlpTarget) : $sumTarget;
+                        }
+                        if (!isset($matrixRealisasi[$lm->id][$up3->id][$sw->id]) || $matrixRealisasi[$lm->id][$up3->id][$sw->id] == 0) {
+                            $matrixRealisasi[$lm->id][$up3->id][$sw->id] = $isNonSummable && $countUlpReal > 0 ? ($sumReal / $countUlpReal) : $sumReal;
+                        }
+                    }
+                }
+                
+                // Rollup UP3 to UID
+                $sumTargetUid = 0; $sumRealUid = 0;
+                $countUp3Target = 0; $countUp3Real = 0;
+                foreach ($up3s as $up3) {
+                    $t = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
+                    $r = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
+                    if ($t > 0) { $sumTargetUid += $t; $countUp3Target++; }
+                    if ($r > 0) { $sumRealUid += $r; $countUp3Real++; }
+                }
+                
+                if (!isset($matrixTargets[$lm->id][1][$sw->id]) || $matrixTargets[$lm->id][1][$sw->id] == 0) {
+                    $matrixTargets[$lm->id][1][$sw->id] = $isNonSummable && $countUp3Target > 0 ? ($sumTargetUid / $countUp3Target) : $sumTargetUid;
+                }
+                if (!isset($matrixRealisasi[$lm->id][1][$sw->id]) || $matrixRealisasi[$lm->id][1][$sw->id] == 0) {
+                    $matrixRealisasi[$lm->id][1][$sw->id] = $isNonSummable && $countUp3Real > 0 ? ($sumRealUid / $countUp3Real) : $sumRealUid;
+                }
+            }
+        }
+
         // Calculate MenangKalah dynamically from Matrix data for THIS SESSION ($sesi_wig->id)
         $lmMenangKalah = [];
         foreach ($lms as $lm) {
