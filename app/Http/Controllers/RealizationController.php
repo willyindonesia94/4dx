@@ -401,14 +401,13 @@ class RealizationController extends Controller
             ],
         ];
 
-        // Header Row - Persis Sesuai Urutan Form UI Realisasi Harian
         $headers = [
             'A1' => 'judul_wig',
             'B1' => 'judul_lm',
             'C1' => 'angka_realisasi',
             'D1' => 'tanggal_input',
             'E1' => 'bukti_keterangan',
-            'F1' => 'email_penginput',
+            'F1' => 'nama_ulp',
         ];
 
         foreach ($headers as $cell => $value) {
@@ -428,25 +427,37 @@ class RealizationController extends Controller
             return $a->wig_id <=> $b->wig_id;
         });
         $rowNum = 2;
-        $userEmail = auth()->user() ? (auth()->user()->email ?? '') : '';
+        $user = auth()->user();
+        $ulps = collect([(object)['name' => '']]); // default
+        if ($user && $user->unit_id) {
+            $unit = \App\Models\MasterUnit::find($user->unit_id);
+            if ($unit && $unit->type === 'UP3') {
+                $ulps = \App\Models\MasterUnit::where('parent_id', $unit->id)->where('type', 'ULP')->orderBy('name')->get();
+            } else if ($unit && $unit->type === 'ULP') {
+                $ulps = collect([$unit]);
+            }
+        }
+        
         $today = date('Y-m-d');
 
         if ($lms->count() > 0) {
             foreach ($lms as $lm) {
-                $sheet->setCellValue('A' . $rowNum, $lm->wig ? $lm->wig->judul : '');
-                $sheet->setCellValue('B' . $rowNum, $lm->judul_lm);
-                $sheet->setCellValue('C' . $rowNum, '');
-                $sheet->setCellValue('D' . $rowNum, $today);
-                $sheet->setCellValue('E' . $rowNum, '');
-                $sheet->setCellValue('F' . $rowNum, $userEmail);
+                foreach ($ulps as $ulp) {
+                    $sheet->setCellValue('A' . $rowNum, $lm->wig ? $lm->wig->judul : '');
+                    $sheet->setCellValue('B' . $rowNum, $lm->judul_lm);
+                    $sheet->setCellValue('C' . $rowNum, '');
+                    $sheet->setCellValue('D' . $rowNum, $today);
+                    $sheet->setCellValue('E' . $rowNum, '');
+                    $sheet->setCellValue('F' . $rowNum, $ulp->name ?? '');
 
-                // Style Contoh Data
-                $sheet->getStyle('A' . $rowNum . ':F' . $rowNum)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('555555'));
-                $sheet->getStyle('C' . $rowNum)->getNumberFormat()->setFormatCode('#,##0.00');
-                $sheet->getStyle('D' . $rowNum)->getNumberFormat()->setFormatCode('yyyy-mm-dd');
-                $sheet->getRowDimension($rowNum)->setRowHeight(22);
-                
-                $rowNum++;
+                    // Style Contoh Data
+                    $sheet->getStyle('A' . $rowNum . ':F' . $rowNum)->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('555555'));
+                    $sheet->getStyle('C' . $rowNum)->getNumberFormat()->setFormatCode('#,##0.00');
+                    $sheet->getStyle('D' . $rowNum)->getNumberFormat()->setFormatCode('yyyy-mm-dd');
+                    $sheet->getRowDimension($rowNum)->setRowHeight(22);
+                    
+                    $rowNum++;
+                }
             }
         } else {
             // Fallback jika belum ada LM
@@ -455,7 +466,7 @@ class RealizationController extends Controller
             $sheet->setCellValue('C2', 15.50);
             $sheet->setCellValue('D2', $today);
             $sheet->setCellValue('E2', 'https://link-bukti.com / Laporan Kunjungan Pelanggan');
-            $sheet->setCellValue('F2', $userEmail);
+            $sheet->setCellValue('F2', $ulps->first()->name ?? '');
             $sheet->getStyle('A2:F2')->getFont()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('555555'));
             $sheet->getStyle('C2')->getNumberFormat()->setFormatCode('#,##0.00');
             $sheet->getStyle('D2')->getNumberFormat()->setFormatCode('yyyy-mm-dd');

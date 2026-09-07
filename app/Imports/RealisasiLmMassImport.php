@@ -36,7 +36,7 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                 // Cari kolom berdasarkan kata kunci agar robust
                 $judulWig = null;
                 $judulLm = null;
-                $nip = null;
+                $namaUlp = null;
                 $tanggal = null;
                 $angka = 0;
                 $bukti = null;
@@ -47,7 +47,7 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                     $cleanKey = strtolower(trim((string)$key));
                     if (str_contains($cleanKey, "wig")) $judulWig = $val;
                     if (str_contains($cleanKey, "lm") || str_contains($cleanKey, "lead") || str_contains($cleanKey, "measure")) $judulLm = $val;
-                    if (str_contains($cleanKey, "nip") || str_contains($cleanKey, "email") || str_contains($cleanKey, "user") || str_contains($cleanKey, "pengguna") || str_contains($cleanKey, "penginput")) $nip = $val;
+                    if (str_contains($cleanKey, "ulp") || str_contains($cleanKey, "unit")) $namaUlp = $val;
                     if (str_contains($cleanKey, "tanggal") || str_contains($cleanKey, "date") || str_contains($cleanKey, "waktu")) $tanggal = $val;
                     if (str_contains($cleanKey, "angka") || str_contains($cleanKey, "realisasi") || str_contains($cleanKey, "capaian")) $angka = $val;
                     if (str_contains($cleanKey, "bukti") || str_contains($cleanKey, "link") || str_contains($cleanKey, "keterangan") || str_contains($cleanKey, "catatan")) $bukti = $val;
@@ -73,19 +73,20 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                     if (!$lm) continue;
                 }
 
-                // Cari User: Jika ada NIP dicari di database, jika kosong otomatis gunakan auth user saat ini
-                $user = null;
-                if ($nip) {
-                    $searchNip = trim((string)$nip);
-                    $user = User::where("nip", $searchNip)
-                                ->orWhere("email", $searchNip)
-                                ->orWhere("name", "like", "%" . $searchNip . "%")
-                                ->first();
-                }
-                if (!$user) {
-                    $user = auth()->user();
-                }
+                $user = auth()->user();
                 if (!$user) continue;
+
+                // Tentukan ULP unit berdasarkan namaUlp, atau fallback ke unit user saat ini
+                $unit_id = $user->unit_id;
+                if ($namaUlp) {
+                    $searchUlp = trim((string)$namaUlp);
+                    $ulp = \App\Models\MasterUnit::where('name', 'like', '%' . $searchUlp . '%')
+                                ->where('type', 'ULP')
+                                ->first();
+                    if ($ulp) {
+                        $unit_id = $ulp->id;
+                    }
+                }
 
                 // Format angka realisasi
                 $angkaStr = (string)$angka;
@@ -117,7 +118,7 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                                 "tanggal_input" => $currentDate,
                             ],
                             [
-                                "unit_id"             => $user->unit_id,
+                                "unit_id"             => $unit_id,
                                 "angka_realisasi"     => $angkaPerHari,
                                 "bukti_file"          => $buktiFile,
                                 "keterangan_tambahan" => $buktiText . " (Prorata)",
@@ -151,7 +152,7 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                             "tanggal_input" => $parsedDate,
                         ],
                         [
-                            "unit_id"             => $user->unit_id,
+                            "unit_id"             => $unit_id,
                             "angka_realisasi"     => $angkaRealisasi,
                             "bukti_file"          => $buktiFile,
                             "keterangan_tambahan" => $buktiText,
