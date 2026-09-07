@@ -722,17 +722,21 @@ $formatLmValue = function($value, $satuan) {
                                                                 <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
                                                                 </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
-                                                                <button type="button" 
-                                                                    @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3Target }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUp3Komitmen ? 'false' : 'true' }} } }))"
-                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
-                                                                    title="{{ $hasKom ? ($canEditUp3Komitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUp3Komitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
-                                                                    @if($canEditUp3Komitmen)
-    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M12 4v16m8-8H4' }}"></path></svg>
-@else
-    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-@endif
-                                                                </button>
-                                                        </td>
+                                                                @if($canEditUp3Komitmen || $hasKom)
+                                                                    <button type="button" 
+                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3Target }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUp3Komitmen ? 'false' : 'true' }} } }))"
+                                                                        class="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
+                                                                        title="{{ $hasKom ? ($canEditUp3Komitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUp3Komitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
+                                                                        @if($canEditUp3Komitmen)
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M12 4v16m8-8H4' }}"></path></svg>
+                                                                        @else
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                                                        @endif
+                                                                    </button>
+                                                                @else
+                                                                    <span class="text-gray-400">-</span>
+                                                                @endif
+                                                            </td>
                                                         <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ $formatLmValue($up3Realisasi, $lm->satuan->name ?? '') }}</td>
                                                         <td class="px-2 py-2 border border-gray-300 text-right font-bold {{ $up3BgColor }}">{{ $up3Pencapaian }}%</td>
                                                         <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 text-xs font-semibold text-gray-700">
@@ -847,16 +851,20 @@ $formatLmValue = function($value, $satuan) {
                                                                     @endif
                                                                 </td>
                                                                 <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
-                                                                <button type="button" 
-                                                                    @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $target }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUlpKomitmen ? 'false' : 'true' }} } }))"
+                                                                @if($canEditUlpKomitmen || $hasKom)
+                                                                    <button type="button" 
+                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $target }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUlpKomitmen ? 'false' : 'true' }} } }))"
                                                                         class="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
                                                                         title="{{ $hasKom ? ($canEditUlpKomitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUlpKomitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
                                                                         @if($canEditUlpKomitmen)
-    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M12 4v16m8-8H4' }}"></path></svg>
-@else
-    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-@endif
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M12 4v16m8-8H4' }}"></path></svg>
+                                                                        @else
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                                                        @endif
                                                                     </button>
+                                                                @else
+                                                                    <span class="text-gray-400">-</span>
+                                                                @endif
                                                             </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-right">{{ $formatLmValue($realisasi, $lm->satuan->name ?? '') }}</td>
                                                             <td class="px-2 py-2 border border-gray-300 text-right font-bold {{ $bgColor }}">
