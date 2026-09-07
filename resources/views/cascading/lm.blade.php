@@ -910,6 +910,7 @@
         </div>
 
     
+    @if($canEditDelete || (isset($canApproveLm) && $canApproveLm))
     <!-- Floating Action Button for Bulk Delete -->
     <div x-show="selectedBreakdowns.length > 0" 
          x-transition:enter="transition ease-out duration-300 transform"
@@ -921,6 +922,7 @@
          class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-red-600 shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 z-50 border border-red-500" style="display: none;">
         <span class="font-bold text-white text-sm"><span x-text="selectedBreakdowns.length"></span> Terpilih</span>
         <div class="h-5 w-px bg-red-400"></div>
+        @if($canEditDelete)
         <button @click="bulkEdit" class="text-white hover:text-blue-100 font-bold text-sm flex items-center transition-colors">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
             Edit Sekaligus
@@ -930,6 +932,7 @@
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             Hapus Sekaligus
         </button>
+        @endif
         @if(isset($canApproveLm) && $canApproveLm)
         <div class="h-5 w-px bg-red-400"></div>
         <button @click="bulkApprove" class="text-white hover:text-emerald-100 font-bold text-sm flex items-center transition-colors">
@@ -938,6 +941,7 @@
         </button>
         @endif
     </div>
+    @endif
 
     <!-- Hidden Bulk Delete Form -->
     <form id="bulkDeleteForm" action="{{ route('cascading.breakdown.bulk-destroy') }}" method="POST" class="hidden">
