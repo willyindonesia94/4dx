@@ -715,12 +715,6 @@ class CascadingController extends Controller
 
     public function bulkUpdateLm(Request $request)
     {
-        $user = Auth::user();
-        $canEditDelete = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3']);
-        if (!$canEditDelete) {
-            return abort(403, 'Akses Ditolak');
-        }
-
         $ids = json_decode($request->input('ids', '[]'), true);
         if (empty($ids) || !is_array($ids)) return redirect()->back()->with('error', 'Tidak ada data yang dipilih.');
         
