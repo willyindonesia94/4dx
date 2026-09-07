@@ -843,9 +843,15 @@ $formatLmValue = function($value, $satuan) {
                                                                 @endphp
                                                             <td class="px-2 py-2 border border-gray-300 text-center {{ $komBg }}">
                                                                 @if($canEditUlpKomitmen)
+                                                                        @php
+                                                                            $displayKomitmenVal = $komitmenVal;
+                                                                            if ($displayKomitmenVal !== '' && $displayKomitmenVal !== null && isset($lm->satuan->name) && trim($lm->satuan->name) === '%') {
+                                                                                $displayKomitmenVal = (float)$displayKomitmenVal * 100;
+                                                                            }
+                                                                        @endphp
                                                                         <input type="number" step="any" class="w-16 text-xs p-1 border rounded komitmen-input {{ $komInputClass }}" 
-                                                                            data-lm="{{ $lm->id }}" data-unit="{{ $u->id }}" data-sesi="{{ $sw->id }}" data-type="komitmen"
-                                                                            value="{{ $komitmenVal }}" placeholder="-">
+                                                                            data-lm="{{ $lm->id }}" data-unit="{{ $u->id }}" data-sesi="{{ $sw->id }}" data-type="komitmen" data-satuan="{{ trim($lm->satuan->name ?? '') }}"
+                                                                            value="{{ $displayKomitmenVal }}" placeholder="-">
                                                                     @else
                                                                         <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
                                                                     @endif
@@ -989,7 +995,11 @@ $formatLmValue = function($value, $satuan) {
                     const unit_id = this.getAttribute('data-unit');
                     const sesi_id = this.getAttribute('data-sesi');
                     const type = this.getAttribute('data-type');
-                    const val = this.value;
+                    const satuan = this.getAttribute('data-satuan');
+                    let val = this.value;
+                    if (val !== '' && satuan === '%') {
+                        val = (parseFloat(val) / 100).toString();
+                    }
                     
                     const otherType = type === 'komitmen' ? 'carry_over' : 'komitmen';
                     const otherInput = document.querySelector(`.komitmen-input[data-lm="${lm_id}"][data-unit="${unit_id}"][data-sesi="${sesi_id}"][data-type="${otherType}"]`);
