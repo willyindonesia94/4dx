@@ -838,7 +838,7 @@ $formatLmValue = function($value, $satuan) {
                                                                     }
                                                                 @endphp
                                                             <td class="px-2 py-2 border border-gray-300 text-center {{ $komBg }}">
-                                                                @if($canEdit)
+                                                                @if($canEditUlpKomitmen)
                                                                         <input type="number" step="any" class="w-16 text-xs p-1 border rounded komitmen-input {{ $komInputClass }}" 
                                                                             data-lm="{{ $lm->id }}" data-unit="{{ $u->id }}" data-sesi="{{ $sw->id }}" data-type="komitmen"
                                                                             value="{{ $komitmenVal }}" placeholder="-">
