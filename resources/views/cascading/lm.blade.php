@@ -65,7 +65,7 @@
             this.bulkEditTarget = null;
         },
         submitBulkEdit() {
-            if (this.bulkEditTarget === null || this.bulkEditTarget === '') return;
+            if (this.bulkEditTarget === null || this.bulkEditTarget === "") return;
             document.getElementById("bulkEditInputIds").value = JSON.stringify(this.selectedBreakdowns);
             document.getElementById("bulkEditInputTarget").value = this.bulkEditTarget;
             document.getElementById("bulkEditForm").submit();
