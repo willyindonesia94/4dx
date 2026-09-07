@@ -14,9 +14,25 @@ class SesiWigKomitmenController extends Controller
             ->where('unit_id', $unit_id)
             ->first();
 
+        $defaultKomitmen = null;
+        if (!$komitmen || is_null($komitmen->komitmen)) {
+            $sesiWig = \App\Models\SesiWig::find($sesi_wig_id);
+            if ($sesiWig && $sesiWig->tanggal_pelaksanaan) {
+                $breakdownLm = \App\Models\BreakdownLm::where('lm_id', $lm_id)
+                    ->where('unit_id', $unit_id)
+                    ->where('periode_start', '<=', $sesiWig->tanggal_pelaksanaan->format('Y-m-d'))
+                    ->where('periode_end', '>=', $sesiWig->tanggal_pelaksanaan->format('Y-m-d'))
+                    ->first();
+                if ($breakdownLm) {
+                    $defaultKomitmen = $breakdownLm->angka_target;
+                }
+            }
+        }
+
         return response()->json([
             'status' => 'success',
-            'data' => $komitmen
+            'data' => $komitmen,
+            'default_komitmen' => $defaultKomitmen
         ]);
     }
 

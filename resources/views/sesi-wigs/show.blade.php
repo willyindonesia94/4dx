@@ -471,7 +471,20 @@ $formatLmValue = function($value, $satuan) {
                                                 <th rowspan="2" class="px-4 py-3 border border-gray-300 text-left font-bold text-gray-800 sticky left-0 bg-gray-100 z-10">UNIT</th>
                                                 @foreach($sesi_wigs_matrix as $sw)
                                                     <th colspan="8" class="px-4 py-2 border border-gray-300 text-center font-bold text-gray-800 bg-indigo-50">
-                                                        {{ strtolower(trim($sw->tipe_sesi)) === 'mingguan' ? 'MINGGU ' . $sw->minggu_ke : strtoupper($sw->tipe_sesi) }}
+                                                        @php
+                                                            $headerLabel = strtoupper($sw->tipe_sesi);
+                                                            if (strtolower(trim($sw->tipe_sesi)) === 'mingguan') {
+                                                                $headerLabel = 'MINGGU ' . $sw->minggu_ke;
+                                                                $weeks = \App\Models\MasterPeriode::getWeekDates($sw->tahun, $sw->bulan);
+                                                                $weekKey = 'target_m' . $sw->minggu_ke;
+                                                                if (isset($weeks[$weekKey])) {
+                                                                    $start = \Carbon\Carbon::parse($weeks[$weekKey]['start'])->format('d M');
+                                                                    $end = \Carbon\Carbon::parse($weeks[$weekKey]['end'])->format('d M');
+                                                                    $headerLabel .= '<br><span class="text-xs font-normal text-gray-500">(' . $start . ' - ' . $end . ')</span>';
+                                                                }
+                                                            }
+                                                        @endphp
+                                                        {!! $headerLabel !!}
                                                     </th>
                                                 @endforeach
                                             </tr>
@@ -521,6 +534,21 @@ $formatLmValue = function($value, $satuan) {
                                                             if ($isPercent && $up3Count > 0) {
                                                                 $uidRealisasi = $uidRealisasi / $up3Count;
                                                             }
+                                                        }
+                                                        
+                                                        $uidKomitmen = 0;
+                                                        $hasUidKom = false;
+                                                        $komitmenFilledCount = 0;
+                                                        foreach($filteredUp3sByWig[$wig->id] as $up3Unit) {
+                                                            $kVal = $matrixKomitmen[$lm->id][$up3Unit->id][$sw->id]['komitmen'] ?? null;
+                                                            if ($kVal !== null && $kVal !== '') {
+                                                                $uidKomitmen += (float)$kVal;
+                                                                $hasUidKom = true;
+                                                                $komitmenFilledCount++;
+                                                            }
+                                                        }
+                                                        if ($hasUidKom && $isPercent && $komitmenFilledCount > 0) {
+                                                            $uidKomitmen = $uidKomitmen / $komitmenFilledCount;
                                                         }
                                                         
                                                         $uidPencapaian = 0;
@@ -578,7 +606,8 @@ $formatLmValue = function($value, $satuan) {
                                                     @endphp
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ $formatLmValue($uidTarget, $lm->satuan->name ?? '') }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black text-purple-900 bg-purple-50">{{ $formatLmValue($uidTargetPlusCarryOver, $lm->satuan->name ?? '') }}</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td><td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $hasUidKom ? 'text-indigo-900 bg-indigo-50' : 'text-gray-400 bg-slate-50' }}">{{ $hasUidKom ? $formatLmValue($uidKomitmen, $lm->satuan->name ?? '') : '-' }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ $formatLmValue($uidRealisasi, $lm->satuan->name ?? '') }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $uidBgColor }}">{{ $uidPencapaian }}%</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{{ $uidCarryOver > 0 ? $formatLmValue($uidCarryOver, $lm->satuan->name ?? '') : '0' }}</td>
@@ -690,7 +719,7 @@ $formatLmValue = function($value, $satuan) {
                                                                 </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
                                                                 <button type="button" 
-                                                                    @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3Target }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', readonly: {{ $canEditUp3Komitmen ? 'false' : 'true' }} } }))"
+                                                                    @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3Target }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUp3Komitmen ? 'false' : 'true' }} } }))"
                                                                     class="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
                                                                     title="{{ $hasKom ? ($canEditUp3Komitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUp3Komitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
                                                                     @if($canEditUp3Komitmen)
@@ -813,7 +842,7 @@ $formatLmValue = function($value, $satuan) {
                                                                 </td>
                                                                 <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
                                                                     <button type="button" 
-                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $target }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', readonly: {{ $canEditSesiWig ? 'false' : 'true' }} } }))"
+                                                                    @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $target }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditSesiWig ? 'false' : 'true' }} } }))"
                                                                         class="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
                                                                         title="{{ $hasKom ? ($canEditSesiWig ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditSesiWig ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
                                                                         @if($canEditSesiWig)
@@ -1441,16 +1470,24 @@ $formatLmValue = function($value, $satuan) {
                     fetch(`/sesi-wigs/${this.params.sesi}/komitmen/${this.params.lm}/${this.params.unit}`)
                         .then(res => res.json())
                         .then(data => {
+                            let kVal = '';
                             if (data.data) {
                                 this.form.pic_lm = data.data.pic_lm || '';
-                                this.form.komitmen = data.data.komitmen || '';
+                                kVal = data.data.komitmen || data.default_komitmen || '';
                                 this.form.hambatans = data.data.hambatans || [{hambatan: '', dukungan: ''}];
                                 this.form.aksi_konkrits = data.data.aksi_konkrits || [{aksi: '', target: '', deadline: '', detail_komitmen: ''}];
                             } else {
-                                this.form.komitmen = '';
+                                kVal = data.default_komitmen || '';
                                 this.form.hambatans = [{hambatan: '', dukungan: ''}];
                                 this.form.aksi_konkrits = [{aksi: '', target: '', deadline: '', detail_komitmen: ''}];
                             }
+                            
+                            // Adjust for percentage display (if DB has 0.9, show 90)
+                            if (kVal !== '' && this.params.satuan && this.params.satuan.trim() === '%') {
+                                kVal = (parseFloat(kVal) * 100).toString();
+                            }
+                            this.form.komitmen = kVal;
+                            
                             this.isOpen = true;
                         });
                 },
@@ -1460,13 +1497,18 @@ $formatLmValue = function($value, $satuan) {
                 saveKomitmen() {
                     this.isSaving = true;
                     
+                    let payload = JSON.parse(JSON.stringify(this.form));
+                    if (payload.komitmen !== '' && this.params.satuan && this.params.satuan.trim() === '%') {
+                        payload.komitmen = (parseFloat(payload.komitmen) / 100).toString();
+                    }
+                    
                     fetch(`/sesi-wigs/${this.params.sesi}/komitmen/${this.params.lm}/${this.params.unit}`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                         },
-                        body: JSON.stringify(this.form)
+                        body: JSON.stringify(payload)
                     })
                     .then(res => res.json())
                     .then(data => {

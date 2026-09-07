@@ -86,9 +86,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('sesi-wigs', \App\Http\Controllers\SesiWigController::class);
     
 
-    Route::get('/realisasis/template', [\App\Http\Controllers\RealizationController::class, 'downloadTemplate'])->name('realisasis.template')->middleware('role:Super Admin|Perencanaan UID|Asman Perencanaan UP3|Asman Bidang UP3');
-    Route::get('/realisasis/template-k3l', [\App\Http\Controllers\RealizationController::class, 'downloadTemplateK3L'])->name('realisasis.template-k3l')->middleware('role:Super Admin|Perencanaan UID|Asman Perencanaan UP3|Asman Bidang UP3|Bidang K3L (MSB)');
-    Route::post('/realisasis/import', [\App\Http\Controllers\RealizationController::class, 'import'])->name('realisasis.import')->middleware('role:Super Admin|Perencanaan UID|Asman Perencanaan UP3|Asman Bidang UP3');
+    Route::get('/realisasis/template', [\App\Http\Controllers\RealizationController::class, 'downloadTemplate'])->name('realisasis.template');
+    Route::get('/realisasis/template-k3l', [\App\Http\Controllers\RealizationController::class, 'downloadTemplateK3L'])->name('realisasis.template-k3l');
+    Route::post('/realisasis/import', [\App\Http\Controllers\RealizationController::class, 'import'])->name('realisasis.import');
     Route::delete('/realisasis/bulk-destroy', [\App\Http\Controllers\RealizationController::class, 'bulkDestroy'])->name('realisasis.bulk-destroy');
     Route::resource('realisasis', \App\Http\Controllers\RealizationController::class)->except(['show']);
     

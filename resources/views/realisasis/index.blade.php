@@ -10,12 +10,12 @@
             <div class="flex flex-wrap justify-between items-center gap-4 mb-6 w-full">
                 <p class="text-gray-600 text-sm sm:text-base flex-1 min-w-[250px]">Berikut adalah daftar realisasi pencapaian Lead Measures yang telah diinput.</p>
                 <div class="flex flex-wrap items-center justify-end gap-2 shrink-0">
-                    @if(auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin') || auth()->user()->role_name === 'Perencanaan UID' || auth()->user()->hasRole('Perencanaan UID') || auth()->user()->hasRole('Asman Perencanaan UP3') || auth()->user()->hasRole('Asman Bidang UP3') || auth()->user()->hasRole('Bidang K3L (MSB)'))
+                    @if(auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin') || auth()->user()->role_name === 'Perencanaan UID' || auth()->user()->hasRole('Perencanaan UID') || auth()->user()->hasRole('Asman Perencanaan UP3') || auth()->user()->hasRole('Asman Bidang UP3') || auth()->user()->hasRole('Bidang K3L (MSB)') || strtolower(auth()->user()->username) === 'admin.k3l')
                         <a href="{{ route('realisasis.template') }}" class="w-full sm:w-auto justify-center bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2.5 px-4 rounded-lg shadow-sm border border-indigo-200 transition-colors text-sm flex items-center whitespace-nowrap">
                             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                             Template
                         </a>
-                        @if(auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Bidang K3L (MSB)') || strtoupper(trim((string)auth()->user()->matrix_group_id)) === 'K3L')
+                        @if(auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Bidang K3L (MSB)') || strtoupper(trim((string)auth()->user()->matrix_group_id)) === 'K3L' || strtolower(auth()->user()->username) === 'admin.k3l')
                         <a href="{{ route('realisasis.template-k3l') }}" class="w-full sm:w-auto justify-center bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-2.5 px-4 rounded-lg shadow-sm border border-emerald-200 transition-colors text-sm flex items-center whitespace-nowrap">
                             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                             Template K3L (Seluruh ULP)
@@ -90,6 +90,26 @@
                     </select>
                 </div>
                 @endif
+                
+                <!-- Filter Tanggal -->
+                <div class="flex flex-col gap-1 min-w-[160px]">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tanggal Input</label>
+                    <select name="filter_tanggal" class="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-700 font-medium">
+                        <option value="">— Semua Tanggal —</option>
+                        @php
+                            $daysInMonth = \Carbon\Carbon::createFromDate($tahun, $bulan, 1)->daysInMonth;
+                        @endphp
+                        @for($i = 1; $i <= $daysInMonth; $i++)
+                            @php
+                                $dateStr = \Carbon\Carbon::createFromDate($tahun, $bulan, $i)->format('Y-m-d');
+                                $displayStr = \Carbon\Carbon::createFromDate($tahun, $bulan, $i)->locale('id')->translatedFormat('d F Y');
+                            @endphp
+                            <option value="{{ $dateStr }}" {{ request('filter_tanggal') == $dateStr ? 'selected' : '' }}>
+                                {{ $displayStr }}
+                            </option>
+                        @endfor
+                    </select>
+                </div>
 
                 @if(!$isUlpLevel && isset($up3Units) && $up3Units->count() > 0)
                 <!-- UP3 -->
@@ -127,12 +147,17 @@
                 const selected = this.options[this.selectedIndex];
                 const tahun = selected.getAttribute('data-tahun');
                 if (tahun) document.getElementById('tahunHidden').value = tahun;
+                
+                // Clear the date filter when changing the month period
+                const filterTanggal = document.querySelector('select[name="filter_tanggal"]');
+                if (filterTanggal) filterTanggal.value = '';
+                
                 this.form.submit();
             });
             
-            // Auto submit for other selects
-            document.querySelectorAll('select[name="lm_id_filter"], select[name="wig_id"], select[name="up3_id"]').forEach(function(select) {
-                select.addEventListener('change', function() {
+            // Auto submit for other selects and inputs
+            document.querySelectorAll('select[name="lm_id_filter"], select[name="wig_id"], select[name="up3_id"], select[name="filter_tanggal"]').forEach(function(el) {
+                el.addEventListener('change', function() {
                     this.form.submit();
                 });
             });

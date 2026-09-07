@@ -15,7 +15,11 @@ use Spatie\Activitylog\LogOptions;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles, LogsActivity;
+    use HasFactory, Notifiable, LogsActivity;
+    use HasRoles {
+        hasRole as traitHasRole;
+        hasAnyRole as traitHasAnyRole;
+    }
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -42,6 +46,41 @@ class User extends Authenticatable
         'unit_id',
         'matrix_group_id'
     ];
+
+    public function hasRole($roles, string $guard = null): bool
+    {
+        if ($this->traitHasRole($roles, $guard)) {
+            return true;
+        }
+
+        if (is_string($roles) && false !== strpos($roles, '|')) {
+            $roles = explode('|', $roles);
+        }
+
+        if (is_string($roles)) {
+            return $roles === $this->role_name;
+        }
+
+        if (is_array($roles)) {
+            foreach ($roles as $role) {
+                if ($this->role_name === $role) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+
+    public function hasAnyRole(...$roles): bool
+    {
+        if ($this->traitHasAnyRole(...$roles)) {
+            return true;
+        }
+
+        $roles = collect($roles)->flatten()->all();
+        return in_array($this->role_name, $roles);
+    }
 
     public function location()
     {

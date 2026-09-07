@@ -1,4 +1,15 @@
 <x-app-layout>
+@php
+    $formatLmValue = function($value, $satuan) {
+        if ($value === null || $value === '') return '-';
+        if (trim($satuan) === '%') {
+            $formatted = number_format((float)$value * 100, 2, ",", ".");
+            $formatted = rtrim(rtrim($formatted, '0'), ',');
+            return $formatted . ' %';
+        }
+        return number_format((float)$value, 2, ",", ".") . ' ' . $satuan;
+    };
+@endphp
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Cascading LM') }}
@@ -303,8 +314,8 @@
                                                             }
                                                             
                                                             $unitName = $monthlyTargets->first()->unit->name ?? 'UP3';
-                                                            $targetItems = $monthlyTargets->sortBy('periode_start')->map(function($t) {
-                                                                return \Carbon\Carbon::parse($t->periode_start)->locale('id')->translatedFormat('M Y') . ': ' . number_format($t->angka_target, 2) . ' ' . ($t->satuan->name ?? '');
+                                                            $targetItems = $monthlyTargets->sortBy('periode_start')->map(function($t) use ($formatLmValue) {
+                                                                return \Carbon\Carbon::parse($t->periode_start)->locale('id')->translatedFormat('M Y') . ': ' . $formatLmValue($t->angka_target, $t->satuan->name ?? '');
                                                             })->unique()->implode('  •  ');
                                                             
                                                             $myUp3TargetText = $unitName . ' => ' . $targetItems;
@@ -319,8 +330,8 @@
                                                             if ($monthlyTargets->isEmpty()) {
                                                                 $monthlyTargets = $up3LmBreakdowns;
                                                             }
-                                                            $myUp3TargetText = $monthlyTargets->sortBy('periode_start')->map(function($t) {
-                                                                return ($t->unit->name ?? 'UP3') . ' (' . \Carbon\Carbon::parse($t->periode_start)->locale('id')->translatedFormat('M Y') . '): ' . number_format($t->angka_target, 2) . ' ' . ($t->satuan->name ?? '');
+                                                            $myUp3TargetText = $monthlyTargets->sortBy('periode_start')->map(function($t) use ($formatLmValue) {
+                                                                return ($t->unit->name ?? 'UP3') . ' (' . \Carbon\Carbon::parse($t->periode_start)->locale('id')->translatedFormat('M Y') . '): ' . $formatLmValue($t->angka_target, $t->satuan->name ?? '');
                                                             })->unique()->implode('  •  ');
                                                         } else {
                                                             $myUp3TargetText = 'Belum ada target LM pada level UP3';
@@ -423,7 +434,7 @@
                                                                                     @endif
                                                                                 </td>
                                                                                 <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
-                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ number_format($breakdown->angka_target, 2) }} {{ $lm->satuan->name ?? '' }}</td>
+                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ $formatLmValue($breakdown->angka_target, $lm->satuan->name ?? '') }}</td>
                                                                                 <td class="px-4 py-2 text-gray-500">
                                                                                     @if (\Carbon\Carbon::parse($breakdown->periode_start)->diffInDays(\Carbon\Carbon::parse($breakdown->periode_end)) >= 20)
                                                                                         <span class="font-bold text-indigo-700">Target Total Bulanan</span>
@@ -553,7 +564,7 @@
                                                                                     @endif
                                                                                 </td>
                                                                                 <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
-                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ number_format($breakdown->angka_target, 2) }} {{ $lm->satuan->name ?? '' }}</td>
+                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ $formatLmValue($breakdown->angka_target, $lm->satuan->name ?? '') }}</td>
                                                                                 <td class="px-4 py-2 text-gray-500">{{ \Carbon\Carbon::parse($breakdown->periode_start)->locale('id')->translatedFormat('d M Y') }} - {{ \Carbon\Carbon::parse($breakdown->periode_end)->locale('id')->translatedFormat('d M Y') }}</td>
                                                                                 @if(!empty($canBreakdownToUp3))
                                                                                 <td class="px-4 py-2 text-center whitespace-nowrap">
@@ -681,7 +692,7 @@
                                                                                     @endif
                                                                                 </td>
                                                                                 <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
-                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ number_format($breakdown->angka_target, 2) }} {{ $lm->satuan->name ?? '' }}</td>
+                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ $formatLmValue($breakdown->angka_target, $lm->satuan->name ?? '') }}</td>
                                                                                 <td class="px-4 py-2 text-gray-500">{{ \Carbon\Carbon::parse($breakdown->periode_start)->locale('id')->translatedFormat('d M Y') }} - {{ \Carbon\Carbon::parse($breakdown->periode_end)->locale('id')->translatedFormat('d M Y') }}</td>
                                                                                 @if(!empty($canBreakdownToUlp))
                                                                                 <td class="px-4 py-2 text-center whitespace-nowrap">

@@ -19,6 +19,7 @@ class RealizationController extends Controller
         $wigId      = $request->input('wig_id');
         $lmIdFilter = $request->input('lm_id_filter');
         $up3IdFilter = $request->input('up3_id');
+        $filterTanggal = $request->input('filter_tanggal');
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
@@ -49,10 +50,14 @@ class RealizationController extends Controller
         $displayWigs = $displayWigsQuery->get();
 
         // Eager load realisasis and apply filters
-        $displayWigs->load(['masterLms.realisasis' => function($q) use ($bulan, $tahun, $up3IdFilter, $lmIdFilter, $isSuperAdmin, $user) {
-            $q->whereMonth('tanggal_input', $bulan)
-              ->whereYear('tanggal_input', $tahun)
-              ->with('unit', 'user');
+        $displayWigs->load(['masterLms.realisasis' => function($q) use ($bulan, $tahun, $up3IdFilter, $lmIdFilter, $isSuperAdmin, $user, $filterTanggal) {
+            if ($filterTanggal) {
+                $q->whereDate('tanggal_input', $filterTanggal);
+            } else {
+                $q->whereMonth('tanggal_input', $bulan)
+                  ->whereYear('tanggal_input', $tahun);
+            }
+            $q->with('unit', 'user');
 
             if ($lmIdFilter) {
                 $q->where('lm_id', $lmIdFilter);
@@ -177,7 +182,7 @@ class RealizationController extends Controller
         ]);
 
         $user = auth()->user();
-        if (!$user->hasAnyRole(['Team Leader ULP', 'Super Admin', 'Admin Unit', 'Perencanaan UID'])) {
+        if (!$user->hasAnyRole(['Team Leader ULP', 'Super Admin', 'Admin Unit', 'Perencanaan UID']) && !in_array($user->role_name, ['Team Leader ULP', 'Super Admin', 'Admin Unit', 'Perencanaan UID'])) {
             return redirect()->back()->with('error', 'Hanya Pelaksana / Team Leader ULP yang dapat menginput realisasi LM harian.');
         }
 
@@ -276,7 +281,7 @@ class RealizationController extends Controller
         }
 
         $user = auth()->user();
-        $isSuperAdmin = $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
+        $isSuperAdmin = $user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array($user->role_name, ['Super Admin', 'Perencanaan UID']);
 
         $deletedCount = 0;
         foreach ($ids as $id) {
@@ -307,7 +312,7 @@ class RealizationController extends Controller
 
     private function checkEditRule(Realisasi $realisasi)
     {
-        if (auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3'])) {
+        if (auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3']) || in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3'])) {
             return; // Superadmin & Asman UP3 have full access
         }
 
@@ -318,7 +323,7 @@ class RealizationController extends Controller
 
     private function checkDeleteRule(Realisasi $realisasi)
     {
-        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID'])) {
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID']) && !in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID'])) {
             abort(403, 'Akses Ditolak: Hanya Superadmin yang dapat menghapus data realisasi LM.');
         }
     }
@@ -328,6 +333,10 @@ class RealizationController extends Controller
      */
     public function import(Request $request)
     {
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3', 'Asman Bidang UP3']) && strtolower(auth()->user()->username) !== 'admin.k3l') {
+            abort(403, 'USER DOES NOT HAVE THE RIGHT ROLES.');
+        }
+
         $fileKey = $request->hasFile('file_excel') ? 'file_excel' : 'file';
         
         $request->validate([
@@ -361,6 +370,10 @@ class RealizationController extends Controller
      */
     public function downloadTemplate()
     {
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3', 'Asman Bidang UP3']) && strtolower(auth()->user()->username) !== 'admin.k3l') {
+            abort(403, 'USER DOES NOT HAVE THE RIGHT ROLES.');
+        }
+
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Template Realisasi LM');
@@ -473,6 +486,10 @@ class RealizationController extends Controller
      */
     public function downloadTemplateK3L()
     {
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3', 'Asman Bidang UP3', 'Bidang K3L (MSB)']) && strtolower(auth()->user()->username) !== 'admin.k3l') {
+            abort(403, 'USER DOES NOT HAVE THE RIGHT ROLES.');
+        }
+
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Template Realisasi K3L');
