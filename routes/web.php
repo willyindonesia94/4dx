@@ -54,6 +54,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/cascading/breakdown', [\App\Http\Controllers\CascadingController::class, 'storeBreakdown'])->name('cascading.breakdown.store');
     Route::delete('/cascading/breakdown-lm/bulk', [\App\Http\Controllers\CascadingController::class, 'bulkDestroyLm'])->name('cascading.breakdown.bulk-destroy');
     Route::post('/cascading/breakdown-lm/bulk-approve', [\App\Http\Controllers\CascadingController::class, 'bulkApproveLm'])->name('cascading.breakdown.bulk-approve');
+    Route::put('/cascading/breakdown-lm/bulk-update', [\App\Http\Controllers\CascadingController::class, 'bulkUpdateLm'])->name('cascading.breakdown.bulk-update');
     Route::put('/cascading/breakdown/{id}', [\App\Http\Controllers\CascadingController::class, 'updateBreakdown'])->name('cascading.breakdown.update');
     Route::delete('/cascading/breakdown/{id}', [\App\Http\Controllers\CascadingController::class, 'destroyBreakdown'])->name('cascading.breakdown.destroy');
     Route::post('/cascading/breakdown/{id}/approve', [\App\Http\Controllers\CascadingController::class, 'approveLmBreakdown'])->name('cascading.breakdown.approve');

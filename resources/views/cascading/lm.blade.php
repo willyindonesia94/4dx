@@ -44,6 +44,7 @@
 
     <div class="py-12" x-data='{ 
         activeWig: {{ $highlightWigId }}, openBreakdownModal: false, editMode: false, editBreakdownId: null,
+        bulkEditModal: false, bulkEditTarget: null,
         formLmId: null, formLmTitle: "", formType: "uid", formUp3Target: "", availableUnitsData: @json($availableUnits),
         formUnitId: "", formBidang: "", formAngkaTarget: null, formSatuanId: "", formSatuanName: "", formBulan: "", formTahun: "",
         targetM1: null, targetM2: null, targetM3: null, targetM4: null, targetM5: null, isAutoFill: true,
@@ -57,6 +58,17 @@
                 let newSelection = [...new Set([...this.selectedBreakdowns, ...strItems])];
                 this.selectedBreakdowns = newSelection;
             }
+        },
+        bulkEdit() {
+            if (this.selectedBreakdowns.length === 0) return;
+            this.bulkEditModal = true;
+            this.bulkEditTarget = null;
+        },
+        submitBulkEdit() {
+            if (this.bulkEditTarget === null || this.bulkEditTarget === '') return;
+            document.getElementById("bulkEditInputIds").value = JSON.stringify(this.selectedBreakdowns);
+            document.getElementById("bulkEditInputTarget").value = this.bulkEditTarget;
+            document.getElementById("bulkEditForm").submit();
         },
         bulkDelete() {
             if (this.selectedBreakdowns.length === 0) return;
@@ -909,6 +921,11 @@
          class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-red-600 shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 z-50 border border-red-500" style="display: none;">
         <span class="font-bold text-white text-sm"><span x-text="selectedBreakdowns.length"></span> Terpilih</span>
         <div class="h-5 w-px bg-red-400"></div>
+        <button @click="bulkEdit" class="text-white hover:text-blue-100 font-bold text-sm flex items-center transition-colors">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            Edit Sekaligus
+        </button>
+        <div class="h-5 w-px bg-red-400"></div>
         <button @click="bulkDelete" class="text-white hover:text-red-100 font-bold text-sm flex items-center transition-colors">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             Hapus Sekaligus
@@ -934,6 +951,63 @@
         @csrf
         <input type="hidden" name="ids" id="bulkApproveInput">
     </form>
+
+    <!-- Hidden Bulk Edit Form -->
+    <form id="bulkEditForm" action="{{ route('cascading.breakdown.bulk-update') }}" method="POST" class="hidden">
+        @csrf
+        @method('PUT')
+        <input type="hidden" name="ids" id="bulkEditInputIds">
+        <input type="hidden" name="angka_target" id="bulkEditInputTarget">
+    </form>
+
+    <!-- Bulk Edit Modal -->
+    <div x-show="bulkEditModal"
+         x-cloak
+         class="fixed inset-0 z-[9999] flex items-center justify-center"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" @click="bulkEditModal = false"></div>
+        
+        <div class="bg-white rounded-xl shadow-2xl overflow-hidden w-full max-w-md z-10 transform transition-all"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+             x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+            
+            <div class="bg-blue-600 px-6 py-4 flex items-center justify-between">
+                <h3 class="text-lg font-bold text-white flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    Edit Massal Target
+                </h3>
+                <button @click="bulkEditModal = false" class="text-blue-100 hover:text-white transition-colors focus:outline-none">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <p class="text-sm text-slate-600 mb-4">Anda akan mengubah angka target untuk <strong class="text-blue-600"><span x-text="selectedBreakdowns.length"></span> target</strong> yang dipilih.</p>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Angka Target Baru</label>
+                    <input type="number" step="any" x-model="bulkEditTarget" placeholder="Masukkan target baru..." class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2 bg-slate-50">
+                </div>
+            </div>
+            
+            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 rounded-b-xl border-t border-slate-100">
+                <button @click="bulkEditModal = false" type="button" class="px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-200">
+                    Batal
+                </button>
+                <button @click="submitBulkEdit" type="button" class="px-5 py-2 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-md hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Simpan Perubahan
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Custom Confirm Delete Modal -->
     <div x-show="showConfirmModal"

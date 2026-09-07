@@ -713,6 +713,25 @@ class CascadingController extends Controller
         return $redirect;
     }
 
+    public function bulkUpdateLm(Request $request)
+    {
+        $ids = json_decode($request->input('ids', '[]'), true);
+        if (empty($ids) || !is_array($ids)) return redirect()->back()->with('error', 'Tidak ada data yang dipilih.');
+        
+        $request->validate([
+            'angka_target' => 'required|numeric'
+        ]);
+
+        BreakdownLm::whereIn('id', $ids)->update(['angka_target' => $request->angka_target]);
+        
+        $first = BreakdownLm::with('lm')->whereIn('id', $ids)->first();
+        $wig_id = $first ? ($first->lm->wig_id ?? null) : null;
+        
+        $redirect = redirect()->back()->with('success', count($ids) . ' target Cascading LM berhasil diubah masal.');
+        if ($wig_id) $redirect->with('active_wig', $wig_id);
+        return $redirect;
+    }
+
     public function bulkDestroyWigBreakdown(Request $request)
     {
         $ids = json_decode($request->input('ids', '[]'), true);
