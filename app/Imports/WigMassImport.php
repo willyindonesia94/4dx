@@ -20,11 +20,14 @@ class WigMassImport implements ToCollection
         if ($val === null || $val === "") return 0;
         $valStr = (string)$val;
         $isPercent = str_contains($valStr, '%');
+        return $this->cleanNumber($valStr, $isPercent);
+    }
+
+    private function cleanNumber($valStr, $isPercent)
+    {
+        if ($valStr === null || $valStr === '') return 0;
         $valClean = str_replace([",", "%"], "", $valStr);
         $floatVal = floatval($valClean);
-        if ($isPercent) {
-            return $floatVal / 100;
-        }
         return $floatVal;
     }
 

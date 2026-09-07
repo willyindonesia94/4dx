@@ -3,7 +3,7 @@
     $formatLmValue = function($value, $satuan) {
         if ($value === null || $value === '') return '-';
         if (trim($satuan) === '%') {
-            $formatted = number_format((float)$value * 100, 2, ",", ".");
+            $formatted = number_format((float)$value, 2, ",", ".");
             $formatted = rtrim(rtrim($formatted, '0'), ',');
             return $formatted . ' %';
         }
