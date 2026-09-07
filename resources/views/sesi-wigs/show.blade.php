@@ -606,7 +606,7 @@ $formatLmValue = function($value, $satuan) {
                                                     @endphp
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ $formatLmValue($uidTarget, $lm->satuan->name ?? '') }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black text-purple-900 bg-purple-50">{{ $formatLmValue($uidTargetPlusCarryOver, $lm->satuan->name ?? '') }}</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $hasUidKom ? 'text-indigo-900 bg-indigo-50' : 'text-gray-400 bg-slate-50' }}">{{ $hasUidKom ? $formatLmValue($uidKomitmen, $lm->satuan->name ?? '') : '-' }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $hasUidKom ? 'text-indigo-900 bg-indigo-50' : 'text-gray-400 bg-slate-50' }}">{{ $hasUidKom ? (float)$uidKomitmen : '-' }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ $formatLmValue($uidRealisasi, $lm->satuan->name ?? '') }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $uidBgColor }}">{{ $uidPencapaian }}%</td>
@@ -719,7 +719,7 @@ $formatLmValue = function($value, $satuan) {
                                                                     }
                                                                 @endphp
                                                             <td class="px-2 py-2 border border-gray-300 text-center {{ $komBg }}">
-                                                                <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
+                                                                <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? (float)$komitmenVal : '-' }}</span>
                                                                 </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
                                                                 @if($canEditUp3Komitmen || $hasKom)
@@ -843,17 +843,11 @@ $formatLmValue = function($value, $satuan) {
                                                                 @endphp
                                                             <td class="px-2 py-2 border border-gray-300 text-center {{ $komBg }}">
                                                                 @if($canEditUlpKomitmen)
-                                                                        @php
-                                                                            $displayKomitmenVal = $komitmenVal;
-                                                                            if ($displayKomitmenVal !== '' && $displayKomitmenVal !== null && isset($lm->satuan->name) && trim($lm->satuan->name) === '%') {
-                                                                                $displayKomitmenVal = (float)$displayKomitmenVal * 100;
-                                                                            }
-                                                                        @endphp
                                                                         <input type="number" step="any" class="w-16 text-xs p-1 border rounded komitmen-input {{ $komInputClass }}" 
                                                                             data-lm="{{ $lm->id }}" data-unit="{{ $u->id }}" data-sesi="{{ $sw->id }}" data-type="komitmen" data-satuan="{{ trim($lm->satuan->name ?? '') }}"
-                                                                            value="{{ $displayKomitmenVal }}" placeholder="-">
+                                                                            value="{{ $komitmenVal }}" placeholder="-">
                                                                     @else
-                                                                        <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
+                                                                        <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? (float)$komitmenVal : '-' }}</span>
                                                                     @endif
                                                                 </td>
                                                                 <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
@@ -997,9 +991,6 @@ $formatLmValue = function($value, $satuan) {
                     const type = this.getAttribute('data-type');
                     const satuan = this.getAttribute('data-satuan');
                     let val = this.value;
-                    if (val !== '' && satuan === '%') {
-                        val = (parseFloat(val) / 100).toString();
-                    }
                     
                     const otherType = type === 'komitmen' ? 'carry_over' : 'komitmen';
                     const otherInput = document.querySelector(`.komitmen-input[data-lm="${lm_id}"][data-unit="${unit_id}"][data-sesi="${sesi_id}"][data-type="${otherType}"]`);
@@ -1506,10 +1497,6 @@ $formatLmValue = function($value, $satuan) {
                                 this.form.aksi_konkrits = [{aksi: '', target: '', deadline: '', detail_komitmen: ''}];
                             }
                             
-                            // Adjust for percentage display (if DB has 0.9, show 90)
-                            if (kVal !== '' && this.params.satuan && this.params.satuan.trim() === '%') {
-                                kVal = (parseFloat(kVal) * 100).toString();
-                            }
                             this.form.komitmen = kVal;
                             
                             this.isOpen = true;
@@ -1522,9 +1509,6 @@ $formatLmValue = function($value, $satuan) {
                     this.isSaving = true;
                     
                     let payload = JSON.parse(JSON.stringify(this.form));
-                    if (payload.komitmen !== '' && this.params.satuan && this.params.satuan.trim() === '%') {
-                        payload.komitmen = (parseFloat(payload.komitmen) / 100).toString();
-                    }
                     
                     fetch(`/sesi-wigs/${this.params.sesi}/komitmen/${this.params.lm}/${this.params.unit}`, {
                         method: 'POST',
