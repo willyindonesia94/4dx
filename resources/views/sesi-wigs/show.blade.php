@@ -688,10 +688,14 @@ $formatLmValue = function($value, $satuan) {
                                                                     $komitmenVal = $hasKom ? $komData['komitmen'] : '';
 
                                                                     $userAuth = auth()->user();
-                                                                    $canEditUp3Komitmen = $canEditSesiWig;
-                                                                    if ($userAuth && in_array(strtoupper(trim($up3->type)), ['UP2D', 'UP2K'])) {
-                                                                        if ($userAuth->unit_id == $up3->id && (str_contains(strtoupper($userAuth->role_name ?? ''), 'UP2D') || str_contains(strtoupper($userAuth->role_name ?? ''), 'UP2K'))) {
+                                                                    $canEditUp3Komitmen = false;
+                                                                    if ($userAuth) {
+                                                                        if ($userAuth->hasRole('Super Admin') || $userAuth->hasRole('Perencanaan UID') || strtolower($userAuth->role_name) === 'super admin' || strtolower($userAuth->role_name) === 'perencanaan uid') {
                                                                             $canEditUp3Komitmen = true;
+                                                                        } else if ($userAuth->unit_id == $up3->id) {
+                                                                            if (in_array(strtolower($userAuth->role_name), ['admin unit', 'manager up3', 'manajer up3', 'asman perencanaan up3', 'asman bidang up3', 'team leader ulp'])) {
+                                                                                $canEditUp3Komitmen = true;
+                                                                            }
                                                                         }
                                                                     }
                                                                     
@@ -769,11 +773,13 @@ $formatLmValue = function($value, $satuan) {
                                                                     }
                                                                 }
                                                                 
-                                                                $canEdit = false;
+                                                                $canEditUlpKomitmen = false;
                                                                 $user = auth()->user();
-                                                                if ($user && $canEditSesiWig) {
-                                                                    if ($user->hasRole('Super Admin') || ($user->hasRole('Staff ULP') && $user->unit_id == $u->id)) {
-                                                                        $canEdit = true;
+                                                                if ($user) {
+                                                                    if ($user->hasRole('Super Admin') || $user->hasRole('Perencanaan UID') || strtolower($user->role_name) === 'super admin' || strtolower($user->role_name) === 'perencanaan uid') {
+                                                                        $canEditUlpKomitmen = true;
+                                                                    } else if (in_array(strtolower($user->role_name), ['team leader ulp', 'admin unit', 'staff ulp', 'manager ulp', 'manajer ulp']) && $user->unit_id == $u->id) {
+                                                                        $canEditUlpKomitmen = true;
                                                                     }
                                                                 }
                                                                 
@@ -841,11 +847,11 @@ $formatLmValue = function($value, $satuan) {
                                                                     @endif
                                                                 </td>
                                                                 <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
-                                                                    <button type="button" 
-                                                                    @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $target }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditSesiWig ? 'false' : 'true' }} } }))"
+                                                                <button type="button" 
+                                                                    @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $target }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUlpKomitmen ? 'false' : 'true' }} } }))"
                                                                         class="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
-                                                                        title="{{ $hasKom ? ($canEditSesiWig ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditSesiWig ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
-                                                                        @if($canEditSesiWig)
+                                                                        title="{{ $hasKom ? ($canEditUlpKomitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUlpKomitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
+                                                                        @if($canEditUlpKomitmen)
     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M12 4v16m8-8H4' }}"></path></svg>
 @else
     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
