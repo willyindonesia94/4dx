@@ -26,7 +26,7 @@
                         <div>
                             <label class="block text-sm font-semibold text-gray-700">Angka Realisasi</label>
                             <div class="mt-1 relative rounded-md shadow-sm">
-                                <input type="number" step="0.01" name="angka_realisasi" class="py-3 px-4 focus:ring-blue-500 focus:border-blue-500 block w-full text-lg font-bold sm:text-sm border-gray-300 rounded-xl placeholder-gray-300" placeholder="0.00">
+                                <input type="number" step="0.000001" name="angka_realisasi" class="py-3 px-4 focus:ring-blue-500 focus:border-blue-500 block w-full text-lg font-bold sm:text-sm border-gray-300 rounded-xl placeholder-gray-300" placeholder="0.00">
                             </div>
                         </div>
 
