@@ -207,36 +207,47 @@ class SesiWigController extends Controller
             $colBln = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][$targetBulan];
             $colPrevBln = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][$prevBulan];
             
+            // UID Target (Current Month)
             $targetQuery = \Illuminate\Support\Facades\DB::table('breakdown_wigs')->where('wig_id', $wig->id);
-            $realisasiQuery = \App\Models\RealisasiWig::where('wig_id', $wig->id);
-            
-            // UID Target: Ambil dari unit_id = 1 untuk bulan yang sesuai
             $targetQuery->where('tahun', $endDate->year)->where('unit_id', 1);
             $target = $targetQuery->sum($colBln);
+            $prevTarget = $targetQuery->sum($colPrevBln);
             
             // Realisasi UID: Tarik data bulan berjalan
-            // Cek apakah ada input langsung untuk UID (unit_id = 1)
             $realisasiUidDirect = \App\Models\RealisasiWig::where('wig_id', $wig->id)
                 ->where('tahun', $endDate->year)
                 ->where('bulan', $targetBulan)
                 ->where('unit_id', 1)
                 ->first();
                 
+            $realisasiQuery = \App\Models\RealisasiWig::where('wig_id', $wig->id);
             if ($realisasiUidDirect) {
                 $realisasi = $realisasiUidDirect->angka_realisasi;
             } else {
-                // Fallback: aggregasi dari seluruh UP3
-                $realisasiQuery->where('tahun', $endDate->year)->where('bulan', $targetBulan)->where('unit_id', '!=', 1);
+                $realisasiQ = clone $realisasiQuery;
+                $realisasiQ->where('tahun', $endDate->year)->where('bulan', $targetBulan)->where('unit_id', '!=', 1);
+                $realisasi = $isNonSummable ? ($realisasiQ->avg('angka_realisasi') ?? 0) : ($realisasiQ->sum('angka_realisasi') ?? 0);
+            }
+
+            // Realisasi UID (Previous Month)
+            $realisasiUidDirectPrev = \App\Models\RealisasiWig::where('wig_id', $wig->id)
+                ->where('tahun', $endDate->year)
+                ->where('bulan', $prevBulan)
+                ->where('unit_id', 1)
+                ->first();
                 
-                if ($isNonSummable) {
-                    $realisasi = $realisasiQuery->avg('angka_realisasi') ?? 0;
-                } else {
-                    $realisasi = $realisasiQuery->sum('angka_realisasi') ?? 0;
-                }
+            if ($realisasiUidDirectPrev) {
+                $prevRealisasi = $realisasiUidDirectPrev->angka_realisasi;
+            } else {
+                $realisasiQPrev = clone $realisasiQuery;
+                $realisasiQPrev->where('tahun', $endDate->year)->where('bulan', $prevBulan)->where('unit_id', '!=', 1);
+                $prevRealisasi = $isNonSummable ? ($realisasiQPrev->avg('angka_realisasi') ?? 0) : ($realisasiQPrev->sum('angka_realisasi') ?? 0);
             }
             
             $wig->total_target = $target;
             $wig->total_realisasi = $realisasi;
+            $wig->total_target_prev = $prevTarget;
+            $wig->total_realisasi_prev = $prevRealisasi;
             
             $capaian = 0;
             if ($target > 0) {
@@ -247,6 +258,49 @@ class SesiWigController extends Controller
                 }
             }
             $wig->capaian = round($capaian, 2);
+
+            $prevCapaian = 0;
+            if ($prevTarget > 0) {
+                if (strtolower($wig->polaritas) === 'negatif' || $wig->polaritas === '3') {
+                    $prevCapaian = ($prevTarget / max(0.0001, $prevRealisasi)) * 100;
+                } else {
+                    $prevCapaian = ($prevRealisasi / $prevTarget) * 100;
+                }
+            }
+            $wig->capaian_prev = round($prevCapaian, 2);
+            
+            // --- CALC TREND CAPAIAN WIG PER BULAN ---
+            $trend = [];
+            for ($m = 1; $m <= $targetBulan; $m++) {
+                $colM = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][$m];
+                $tMQuery = clone $targetQuery;
+                $tM = $tMQuery->sum($colM);
+                
+                $rMDirect = \App\Models\RealisasiWig::where('wig_id', $wig->id)
+                    ->where('tahun', $endDate->year)
+                    ->where('bulan', $m)
+                    ->where('unit_id', 1)
+                    ->first();
+                    
+                if ($rMDirect) {
+                    $rM = $rMDirect->angka_realisasi;
+                } else {
+                    $rMQ = clone $realisasiQuery;
+                    $rMQ->where('tahun', $endDate->year)->where('bulan', $m)->where('unit_id', '!=', 1);
+                    $rM = $isNonSummable ? ($rMQ->avg('angka_realisasi') ?? 0) : ($rMQ->sum('angka_realisasi') ?? 0);
+                }
+                
+                $cM = 0;
+                if ($tM > 0) {
+                    if (strtolower($wig->polaritas) === 'negatif' || $wig->polaritas === '3') {
+                        $cM = ($tM / max(0.0001, $rM)) * 100;
+                    } else {
+                        $cM = ($rM / $tM) * 100;
+                    }
+                }
+                $trend[$m] = round($cM, 2);
+            }
+            $wig->trend_capaian = $trend;
             
             // --- UNIT LEVEL (UP3) FOR WIG TABLE ---
             $wigUnitData[$wig->id] = [];
@@ -438,6 +492,7 @@ class SesiWigController extends Controller
 
         $matrixTargets = [];
         $matrixRealisasi = [];
+        $matrixRealisasiCount = [];
         $matrixKomitmen = [];
 
 
@@ -479,6 +534,7 @@ class SesiWigController extends Controller
                 ->get();
             foreach ($realisasis as $r) {
                 $matrixRealisasi[$r->lm_id][$r->unit_id][$sw->id] = ($matrixRealisasi[$r->lm_id][$r->unit_id][$sw->id] ?? 0) + $r->angka_realisasi;
+                $matrixRealisasiCount[$r->lm_id][$r->unit_id][$sw->id] = ($matrixRealisasiCount[$r->lm_id][$r->unit_id][$sw->id] ?? 0) + 1;
             }
 
             if (class_exists(\App\Models\SesiWigKomitmen::class)) {
@@ -499,6 +555,15 @@ class SesiWigController extends Controller
         foreach ($lms as $lm) {
             $isNonSummable = in_array($lm->satuan_id, $nonSummableSatuans);
             foreach ($sesi_wigs_matrix as $sw) {
+                // Average daily ULP inputs if non-summable (like percentage %)
+                if ($isNonSummable) {
+                    foreach ($allUlps as $ulp) {
+                        if (isset($matrixRealisasiCount[$lm->id][$ulp->id][$sw->id]) && $matrixRealisasiCount[$lm->id][$ulp->id][$sw->id] > 0) {
+                            $matrixRealisasi[$lm->id][$ulp->id][$sw->id] /= $matrixRealisasiCount[$lm->id][$ulp->id][$sw->id];
+                        }
+                    }
+                }
+                
                 // Rollup ULP to UP3
                 foreach ($up3s as $up3) {
                     $ulpsOfUp3 = $allUlps->where('parent_id', $up3->id);

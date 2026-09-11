@@ -101,7 +101,7 @@ class LeadMeasureController extends Controller
         $data['tujuan_unit_role'] = $wig->unitPemilik ? $wig->unitPemilik->name : '';
 
         $data['angka_target'] = $data['angka_target'] ?? 0;
-        $user = Auth::user();
+        $user = auth()->user();
         $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
         $isMsb = $user && (strtolower(trim($user->role_name ?? '')) === 'sub bidang uid');
 

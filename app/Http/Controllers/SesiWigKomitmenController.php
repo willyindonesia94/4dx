@@ -38,6 +38,17 @@ class SesiWigKomitmenController extends Controller
 
     public function store(Request $request, $sesi_wig_id, $lm_id, $unit_id)
     {
+        $sesi = SesiWig::findOrFail($sesi_wig_id);
+        
+        $user = auth()->user();
+        $isSuperAdmin = $user && ($user->hasRole('Super Admin') || strtolower($user->role_name) === 'super admin');
+        
+        if (!$isSuperAdmin) {
+            if (\Carbon\Carbon::parse($sesi->tanggal_pelaksanaan)->endOfWeek()->isPast()) {
+                return response()->json(['success' => false, 'message' => 'Batas waktu pengisian komitmen (akhir minggu) untuk Sesi WIG ini sudah berlalu.'], 403);
+            }
+        }
+        
         $request->validate([
             'pic_lm' => 'nullable|string|max:255',
             'komitmen' => 'nullable|numeric',
