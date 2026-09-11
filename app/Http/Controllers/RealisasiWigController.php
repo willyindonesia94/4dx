@@ -94,7 +94,7 @@ class RealisasiWigController extends Controller
         }
         $wigs = $wigsInputQuery->get();
 
-        $availableUnits = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->get();
+        $availableUnits = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K', 'UID'])->get();
 
         return view('realisasis.wig', compact('displayWigs', 'wigs', 'bulanFilter', 'tahunFilter', 'wigFilter', 'up3Filter', 'availableUnits', 'isSuperAdmin'));
     }
@@ -287,7 +287,7 @@ class RealisasiWigController extends Controller
         if ($user->hasRole('Asman Perencanaan UP3') && $user->unit_id) {
             $up3s = \App\Models\MasterUnit::where('id', $user->unit_id)->get();
         } else {
-            $up3s = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->get();
+            $up3s = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K', 'UID'])->get();
         }
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();

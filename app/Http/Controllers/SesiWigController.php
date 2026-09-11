@@ -215,14 +215,24 @@ class SesiWigController extends Controller
             $target = $targetQuery->sum($colBln);
             
             // Realisasi UID: Tarik data bulan berjalan
-            $realisasiQuery->where('tahun', $endDate->year)->where('bulan', $targetBulan)->where('unit_id', '!=', 1);
-            
-            if ($isNonSummable) {
-                // Untuk metrik seperti % atau Menit, gunakan Average antar UP3
-                $realisasi = $realisasiQuery->avg('angka_realisasi') ?? 0;
+            // Cek apakah ada input langsung untuk UID (unit_id = 1)
+            $realisasiUidDirect = \App\Models\RealisasiWig::where('wig_id', $wig->id)
+                ->where('tahun', $endDate->year)
+                ->where('bulan', $targetBulan)
+                ->where('unit_id', 1)
+                ->first();
+                
+            if ($realisasiUidDirect) {
+                $realisasi = $realisasiUidDirect->angka_realisasi;
             } else {
-                // Untuk metrik seperti GWh, gunakan Sum antar UP3
-                $realisasi = $realisasiQuery->sum('angka_realisasi') ?? 0;
+                // Fallback: aggregasi dari seluruh UP3
+                $realisasiQuery->where('tahun', $endDate->year)->where('bulan', $targetBulan)->where('unit_id', '!=', 1);
+                
+                if ($isNonSummable) {
+                    $realisasi = $realisasiQuery->avg('angka_realisasi') ?? 0;
+                } else {
+                    $realisasi = $realisasiQuery->sum('angka_realisasi') ?? 0;
+                }
             }
             
             $wig->total_target = $target;
@@ -308,6 +318,26 @@ class SesiWigController extends Controller
             }
 
             $target = $targetQuery->sum('angka_target') ?? 0;
+
+            if ($target == 0) {
+                if ($lm_unit) {
+                    $ulpIds = \App\Models\MasterUnit::where('parent_id', $lm_unit)->pluck('id');
+                    if ($ulpIds->count() > 0) {
+                        $ulpQuery = \App\Models\BreakdownLm::where('lm_id', $lm->id)
+                            ->where('periode_start', '=', $targetStartDate)
+                            ->where('periode_end', '=', $targetEndDate)
+                            ->whereIn('unit_id', $ulpIds);
+                        $target = $isNonSummable ? ($ulpQuery->avg('angka_target') ?? 0) : ($ulpQuery->sum('angka_target') ?? 0);
+                    }
+                } else {
+                    $up3Ids = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->pluck('id');
+                    $up3Query = \App\Models\BreakdownLm::where('lm_id', $lm->id)
+                        ->where('periode_start', '=', $targetStartDate)
+                        ->where('periode_end', '=', $targetEndDate)
+                        ->whereIn('unit_id', $up3Ids);
+                    $target = $isNonSummable ? ($up3Query->avg('angka_target') ?? 0) : ($up3Query->sum('angka_target') ?? 0);
+                }
+            }
 
             $lm->total_target = $target;
             $lm->total_realisasi = $realisasi;

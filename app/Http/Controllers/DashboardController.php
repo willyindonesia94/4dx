@@ -14,9 +14,6 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $userRole = auth()->user()->role_name ?? (auth()->user()->roles->pluck('name')->first() ?? '');
-        if (str_contains(strtoupper($userRole), 'SRM PERENCANAAN')) {
-            return redirect()->route('sesi-wigs.index');
-        }
 
         $selectedDivisi = $request->query('divisi');
         $selectedUp3    = $request->query('up3_id');
@@ -48,8 +45,8 @@ class DashboardController extends Controller
         $allUlps = MasterUnit::where('type', 'ULP')->get();
 
         // ── Quick Stats ─────────────────────────────────────────────────────────
-        $totalWigs = MasterWig::where('is_approved', true)->count();
-        $totalLms  = MasterLm::where('is_approved', true)->count();
+        $totalWigs = MasterWig::where('is_approved', 1)->count();
+        $totalLms  = MasterLm::where('is_approved', 1)->count();
 
         $realCountQ = Realisasi::whereMonth('tanggal_input', $bulan)->whereYear('tanggal_input', $tahun);
         if ($selectedUlp) {
@@ -144,8 +141,8 @@ class DashboardController extends Controller
         }
 
         // ── WIG Progresses ─────────────────────────────────────────────────────
-        $wigQuery = MasterWig::where('is_approved', true)->with(['satuan', 'masterLms' => function ($q) {
-            $q->where('is_approved', true)->with('satuan');
+        $wigQuery = MasterWig::where('is_approved', 1)->with(['satuan', 'masterLms' => function ($q) {
+            $q->where('is_approved', 1)->with('satuan');
         }]);
         if ($selectedDivisi) $wigQuery->whereJsonContains('divisi', $selectedDivisi);
         $wigs = $wigQuery->get()->each(function($wig) {

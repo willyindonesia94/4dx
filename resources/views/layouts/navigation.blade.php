@@ -16,38 +16,38 @@
                         $userRole = auth()->user()->role_name ?? (auth()->user()->roles->pluck('name')->first() ?? '');
                         $isUlp = str_contains(strtoupper($userRole), 'ULP') || (auth()->user()->unit && strtoupper(auth()->user()->unit->type) === 'ULP');
                         $isUp3 = str_contains(strtoupper($userRole), 'UP3') || str_contains(strtoupper($userRole), 'UP2D') || str_contains(strtoupper($userRole), 'UP2K') || (auth()->user()->unit && in_array(strtoupper(auth()->user()->unit->type), ['UP3', 'UP2D', 'UP2K']));
-                        $isSrmPerencanaan = str_contains(strtoupper($userRole), 'SRM PERENCANAAN');
+                        $isSrm = str_contains(strtoupper($userRole), 'SRM');
                     @endphp
 
-                    @if(!$isSrmPerencanaan)
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
 
-                    @if(!$isUlp && !$isUp3)
-                    <x-nav-link :href="route('cascading.wig.index')" :active="request()->routeIs('cascading.wig.*')">
-                        {{ __('Cascading WIG') }}
-                    </x-nav-link>
-                    @endif
+                    @if(!$isSrm)
+                        @if(!$isUlp && !$isUp3)
+                        <x-nav-link :href="route('cascading.wig.index')" :active="request()->routeIs('cascading.wig.*')">
+                            {{ __('Cascading WIG') }}
+                        </x-nav-link>
+                        @endif
 
-                    @if(!$isUlp)
-                    <x-nav-link :href="route('cascading.lm.index')" :active="request()->routeIs('cascading.lm.*')">
-                        {{ __('Cascading LM') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('realisasi-wig.index')" :active="request()->routeIs('realisasi-wig.*')">
-                        {{ __('Realisasi WIG') }}
-                    </x-nav-link>
-                    @endif
-                    <x-nav-link :href="route('realisasis.index')" :active="request()->routeIs('realisasis.*')">
-                        {{ __('Realisasi LM') }}
-                    </x-nav-link>
+                        @if(!$isUlp)
+                        <x-nav-link :href="route('cascading.lm.index')" :active="request()->routeIs('cascading.lm.*')">
+                            {{ __('Cascading LM') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('realisasi-wig.index')" :active="request()->routeIs('realisasi-wig.*')">
+                            {{ __('Realisasi WIG') }}
+                        </x-nav-link>
+                        @endif
+                        <x-nav-link :href="route('realisasis.index')" :active="request()->routeIs('realisasis.*')">
+                            {{ __('Realisasi LM') }}
+                        </x-nav-link>
                     @endif
                     
                     <x-nav-link :href="route('sesi-wigs.index')" :active="request()->routeIs('sesi-wigs.*')">
                         {{ __('Sesi WIG') }}
                     </x-nav-link>
 
-                    @if(!$isSrmPerencanaan)
+                    @if(!$isSrm)
                     @hasanyrole('Super Admin|Perencanaan UID')
                     <div class="hidden sm:flex sm:items-center">
                         <x-dropdown align="right" width="48">
@@ -447,6 +447,7 @@
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
             
+            @if(!$isSrm)
             @if(!$isUlp && !$isUp3)
             <x-responsive-nav-link :href="route('cascading.wig.index')" :active="request()->routeIs('cascading.wig.*')">
                 {{ __('Cascading WIG') }}
@@ -466,11 +467,13 @@
             <x-responsive-nav-link :href="route('realisasis.index')" :active="request()->routeIs('realisasis.*')">
                 {{ __('Realisasi LM') }}
             </x-responsive-nav-link>
+            @endif
 
             <x-responsive-nav-link :href="route('sesi-wigs.index')" :active="request()->routeIs('sesi-wigs.*')">
                 {{ __('Sesi WIG') }}
             </x-responsive-nav-link>
 
+            @if(!$isSrm)
             <x-responsive-nav-link :href="route('laporan.index')" :active="request()->routeIs('laporan.*')">
                 {{ __('Laporan') }}
             </x-responsive-nav-link>
@@ -503,6 +506,7 @@
                 </x-responsive-nav-link>
             </div>
             @endrole
+            @endif
 
         </div>
 

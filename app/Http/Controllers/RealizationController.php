@@ -417,8 +417,9 @@ class RealizationController extends Controller
         $sheet->getStyle('A1:F1')->applyFromArray($headerStyle);
         $sheet->getRowDimension(1)->setRowHeight(28);
 
-        // Fetch all LMs to populate the template
-        $lms = \App\Models\MasterLm::with('wig')->get()->sort(function($a, $b) {
+        // Fetch all LMs belonging to K3L
+        $k3lWigs = \App\Models\MasterWig::where('divisi', 'LIKE', '%K3L%')->pluck('id');
+        $lms = \App\Models\MasterLm::with('wig')->whereIn('wig_id', $k3lWigs)->get()->sort(function($a, $b) {
             if ($a->wig_id === $b->wig_id) {
                 preg_match('/LM-?(\d+)/i', $a->judul_lm, $mA);
                 preg_match('/LM-?(\d+)/i', $b->judul_lm, $mB);
@@ -426,17 +427,22 @@ class RealizationController extends Controller
             }
             return $a->wig_id <=> $b->wig_id;
         });
-        $rowNum = 2;
-        $user = auth()->user();
-        $ulps = collect([(object)['name' => '']]); // default
-        if ($user && $user->unit_id) {
-            $unit = \App\Models\MasterUnit::find($user->unit_id);
-            if ($unit && $unit->type === 'UP3') {
-                $ulps = \App\Models\MasterUnit::where('parent_id', $unit->id)->where('type', 'ULP')->orderBy('name')->get();
-            } else if ($unit && $unit->type === 'ULP') {
-                $ulps = collect([$unit]);
-            }
+
+        // Jika tidak ada LM K3L secara spesifik, fallback ambil semua LM
+        if ($lms->count() == 0) {
+            $lms = \App\Models\MasterLm::with('wig')->get()->sort(function($a, $b) {
+                if ($a->wig_id === $b->wig_id) {
+                    preg_match('/LM-?(\d+)/i', $a->judul_lm, $mA);
+                    preg_match('/LM-?(\d+)/i', $b->judul_lm, $mB);
+                    return (int)($mA[1] ?? 999) <=> (int)($mB[1] ?? 999);
+                }
+                return $a->wig_id <=> $b->wig_id;
+            });
         }
+
+        $rowNum = 2;
+        // Template K3L Harian Seluruh ULP & UP2D
+        $ulps = \App\Models\MasterUnit::whereIn('type', ['ULP', 'UP2D'])->orderBy('type')->orderBy('name')->get();
         
         $today = date('Y-m-d');
 
@@ -567,8 +573,8 @@ class RealizationController extends Controller
             $lms = \App\Models\MasterLm::with('wig')->get();
         }
 
-        // Ambil semua ULP
-        $ulps = \App\Models\MasterUnit::where('type', 'ULP')->orderBy('name')->get();
+        // Ambil semua ULP dan UP2D
+        $ulps = \App\Models\MasterUnit::whereIn('type', ['ULP', 'UP2D'])->orderBy('type')->orderBy('name')->get();
 
         $rowNum = 2;
         $no = 1;

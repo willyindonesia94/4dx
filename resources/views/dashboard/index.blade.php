@@ -78,8 +78,8 @@
                                         </div>
                                         <div class="text-right ml-4">
                                             @php
-                                                $progressColor = $wig['progress'] >= 80 ? 'text-green-600' : ($wig['progress'] >= 50 ? 'text-yellow-500' : 'text-red-500');
-                                                $bgColor = $wig['progress'] >= 80 ? 'bg-green-500' : ($wig['progress'] >= 50 ? 'bg-yellow-400' : 'bg-red-500');
+                                                $progressColor = $wig['progress'] >= 100 ? 'text-green-600' : ($wig['progress'] >= 95 ? 'text-yellow-500' : 'text-red-500');
+                                                $bgColor = $wig['progress'] >= 100 ? 'bg-green-500' : ($wig['progress'] >= 95 ? 'bg-yellow-400' : 'bg-red-500');
                                             @endphp
                                             <span class="text-xl font-black {{ $progressColor }}">{{ $wig['progress'] }}%</span>
                                         </div>
@@ -102,8 +102,8 @@
                                                         </div>
                                                         <div class="text-right">
                                                             @php
-                                                                $lmColor = $lm['progress'] >= 80 ? 'text-green-600' : ($lm['progress'] >= 50 ? 'text-yellow-500' : 'text-red-500');
-                                                                $lmBg = $lm['progress'] >= 80 ? 'bg-green-500' : ($lm['progress'] >= 50 ? 'bg-yellow-400' : 'bg-red-500');
+                                                                $lmColor = $lm['progress'] >= 100 ? 'text-green-600' : ($lm['progress'] >= 95 ? 'text-yellow-500' : 'text-red-500');
+                                                                $lmBg = $lm['progress'] >= 100 ? 'bg-green-500' : ($lm['progress'] >= 95 ? 'bg-yellow-400' : 'bg-red-500');
                                                             @endphp
                                                             <span class="text-sm font-bold {{ $lmColor }}">{{ $lm['progress'] }}%</span>
                                                         </div>
@@ -663,13 +663,11 @@
                     let lmData = this.dynamicMapData[this.selectedLm][this.mapLevel];
 
                     lmData.forEach(loc => {
-                        var color = '#ef4444'; // Default Red (< 100)
+                        var color = '#ef4444'; // Merah (< 95%)
                         if (loc.progress >= 100) {
-                            if (loc.komitmen !== '' && loc.realisasi < parseFloat(loc.komitmen)) {
-                                color = '#f97316'; // Orange (>= 100 but realisasi < komitmen)
-                            } else {
-                                color = '#22c55e'; // Green (>= 100 and realisasi >= komitmen)
-                            }
+                            color = '#22c55e'; // Hijau (>= 100%)
+                        } else if (loc.progress >= 95) {
+                            color = '#eab308'; // Kuning (95% - 99.99%)
                         }
                         
                         var markerHtmlStyles = `

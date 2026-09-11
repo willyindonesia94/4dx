@@ -13,12 +13,12 @@
                     @if(auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin') || auth()->user()->role_name === 'Perencanaan UID' || auth()->user()->hasRole('Perencanaan UID') || auth()->user()->hasRole('Asman Perencanaan UP3') || auth()->user()->hasRole('Asman Bidang UP3') || auth()->user()->hasRole('Bidang K3L (MSB)') || strtolower(auth()->user()->username) === 'admin.k3l')
                         <a href="{{ route('realisasis.template') }}" class="w-full sm:w-auto justify-center bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2.5 px-4 rounded-lg shadow-sm border border-indigo-200 transition-colors text-sm flex items-center whitespace-nowrap">
                             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            Template
+                            Template K3L (ULP & UP2D) - Harian
                         </a>
                         @if(auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Bidang K3L (MSB)') || strtoupper(trim((string)auth()->user()->matrix_group_id)) === 'K3L' || strtolower(auth()->user()->username) === 'admin.k3l')
                         <a href="{{ route('realisasis.template-k3l') }}" class="w-full sm:w-auto justify-center bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-2.5 px-4 rounded-lg shadow-sm border border-emerald-200 transition-colors text-sm flex items-center whitespace-nowrap">
                             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            Template K3L (Seluruh ULP)
+                            Template K3L (ULP & UP2D) - Mingguan
                         </a>
                         @endif
                         <button @click="openUploadModal = true" class="w-full sm:w-auto justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-sm transition-colors text-sm flex items-center whitespace-nowrap">
@@ -407,7 +407,7 @@
                                             <span class="text-[11px] text-indigo-800">Belum memiliki format file teratas?</span>
                                             <a href="{{ route('realisasis.template') }}" class="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-lg transition-all shadow-sm">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                                Unduh Template Sekarang
+                                                Unduh Template Harian
                                             </a>
                                         </div>
                                     </div>
