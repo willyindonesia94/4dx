@@ -645,7 +645,6 @@ class DashboardController extends Controller
             ->get();
         $rtBdMap = [];
         foreach ($targetQuery as $t) {
-            $matrixTargets[$t->lm_id][$t->unit_id] = $t->target;
             $rtBdMap[$t->unit_id][$t->lm_id] = (float) $t->target;
         }
 
