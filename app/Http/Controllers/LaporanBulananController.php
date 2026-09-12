@@ -305,6 +305,36 @@ class LaporanBulananController extends Controller
                     $prevPctUid = ($wigPrevRealTot / $wigPrevTargetTot) * 100;
                 }
             }
+            
+            // Trend Capaian (Jan to Current Month)
+            $trend = [];
+            for ($m = 1; $m <= $targetBulan; $m++) {
+                $colM = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][$m];
+                
+                $tMQ = clone $wigTargetQuery;
+                if ($isSuperAdmin || !$user || !$user->unit_id) {
+                    $tMQ->where('unit_id', 1);
+                }
+                $tM = $tMQ->where('tahun', $tahunT)->sum($colM);
+                
+                $rMQ = clone $wigRealQuery;
+                if ($isSuperAdmin || !$user || !$user->unit_id) {
+                    $rMQ->where('unit_id', '!=', 1);
+                    $rM = $isNonSummableWig ? ($rMQ->where('tahun', $tahunT)->where('bulan', $m)->avg('angka_realisasi') ?? 0) : ($rMQ->where('tahun', $tahunT)->where('bulan', $m)->sum('angka_realisasi') ?? 0);
+                } else {
+                    $rM = $rMQ->where('tahun', $tahunT)->where('bulan', $m)->sum('angka_realisasi') ?? 0;
+                }
+                
+                $cM = 0;
+                if ($tM > 0) {
+                    if ($polaritasWig === 'negatif' || $polaritasWig === '3') {
+                        $cM = ($tM / max(0.0001, $rM)) * 100;
+                    } else {
+                        $cM = ($rM / $tM) * 100;
+                    }
+                }
+                $trend[$m] = round($cM, 2);
+            }
 
             $wigData = [
                 'target' => $wigTargetTot,
@@ -313,6 +343,7 @@ class LaporanBulananController extends Controller
                 'prev_target' => $wigPrevTargetTot,
                 'prev_realisasi' => $wigPrevRealTot,
                 'prev_pct' => $prevPctUid,
+                'trend_capaian' => $trend,
                 'lms' => [],
                 'units' => [],
                 'status_menang' => 0,

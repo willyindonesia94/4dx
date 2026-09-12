@@ -38,14 +38,17 @@
 
         <!-- Top WIG Header (Trend & Overall) -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col md:flex-row gap-6 items-center">
-            <div class="flex-1 text-center md:text-left">
-                <div class="text-4xl font-extrabold text-green-600 mb-2">
+            <div class="flex-1 text-center md:text-left w-full">
+                <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
+                    Capaian Bulan Berjalan ({{ strtoupper($curBulanName) }})
+                </div>
+                <div class="text-3xl font-black {{ $wData['pct'] >= 100 ? 'text-green-600' : 'text-blue-600' }} mb-1">
                     {{ number_format($wData['pct'], 2) }} %
                 </div>
-                <div class="text-sm font-bold text-gray-800 uppercase mb-3">
-                    Capaian {{ $wig->judul }} {{ !empty($isUlpLevel) || !empty($isUp3Level) ? 'ULP' : 'UID Jabar' }}
+                <div class="text-sm font-bold text-gray-800 uppercase mb-2">
+                    CAPAIAN {{ $wig->judul }}
                 </div>
-                <div class="text-xs text-gray-500">
+                <div class="text-xs text-gray-500 font-medium">
                     Target: {{ number_format($wData['target'], 2) }}<br>
                     Realisasi: {{ number_format($wData['realisasi'], 2) }}
                 </div>
@@ -66,29 +69,48 @@
                     </div>
                 </div>
                 
-                <div>
-                    <div class="text-[9px] font-semibold text-gray-400 uppercase tracking-wider text-center mb-1">
-                        Trend WIG (%)
-                    </div>
-                    <div class="relative h-10 bg-gray-50 rounded-md overflow-hidden border border-gray-100 flex items-end px-2">
-                        <div class="flex-1 flex flex-col justify-end items-center group relative h-full"
-                             title="Bulan Lalu ({{ strtoupper($prevBulanName) }})&#10;Target: {{ number_format($wData['prev_target'] ?? 0, 2) }}&#10;Realisasi: {{ number_format($wData['prev_realisasi'] ?? 0, 2) }}&#10;Capaian: {{ number_format($wData['prev_pct'] ?? 0, 2) }}%">
-                            <div class="w-3/4 bg-blue-300 rounded-t-sm transition-all" style="height: {{ min(100, max(5, $wData['prev_pct'] ?? 0)) }}%"></div>
-                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-[9px] font-bold rounded">
-                                {{ number_format($wData['prev_pct'] ?? 0, 2) }}%
+                <div class="mt-2">
+                    <div class="text-[8px] font-bold text-gray-400 text-center mb-0.5">TREND WIG (%)</div>
+                    <div class="h-10 relative w-full group">
+                        @php
+                            $trendValues = $wData['trend_capaian'] ?? [];
+                            $maxVal = max(100, count($trendValues) ? max($trendValues) : 0) * 1.1;
+                            if ($maxVal == 0) $maxVal = 100;
+                            
+                            $xStep = $targetBulan > 1 ? 90 / ($targetBulan - 1) : 0;
+                            $points = [];
+                            $xPos = 5;
+                            
+                            for($i=1; $i<=$targetBulan; $i++) {
+                                $val = $trendValues[$i] ?? 0;
+                                $yPos = 90 - ($val / $maxVal) * 80;
+                                $points[] = "{$xPos},{$yPos}";
+                                $xPos += $xStep;
+                            }
+                            $pointsStr = implode(" ", $points);
+                        @endphp
+                        
+                        <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+                            <polyline points="{{ $pointsStr }}" fill="none" stroke="#3b82f6" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        
+                        @php $xPos = 5; @endphp
+                        @for($i=1; $i<=$targetBulan; $i++)
+                            @php
+                                $val = $trendValues[$i] ?? 0;
+                                $yPos = 90 - ($val / $maxVal) * 80;
+                            @endphp
+                            <div class="absolute w-[7px] h-[7px] bg-white border border-blue-500 rounded-full hover:bg-blue-100 hover:scale-125 transition-transform" 
+                                 style="left: {{ $xPos }}%; top: {{ $yPos }}%; transform: translate(-50%, -50%); cursor: pointer;"
+                                 title="Bulan {{ ['JAN','FEB','MAR','APR','MEI','JUN','JUL','AGU','SEP','OKT','NOV','DES'][$i-1] }}: {{ $val }}%">
                             </div>
-                        </div>
-                        <div class="flex-1 flex flex-col justify-end items-center group relative h-full"
-                             title="Bulan Ini ({{ strtoupper($curBulanName) }})&#10;Target: {{ number_format($wData['target'] ?? 0, 2) }}&#10;Realisasi: {{ number_format($wData['realisasi'] ?? 0, 2) }}&#10;Capaian: {{ number_format($wData['pct'] ?? 0, 2) }}%">
-                            <div class="w-3/4 bg-blue-500 rounded-t-sm transition-all" style="height: {{ min(100, max(5, $wData['pct'])) }}%"></div>
-                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-[9px] font-bold rounded">
-                                {{ number_format($wData['pct'], 2) }}%
-                            </div>
-                        </div>
+                            @php $xPos += $xStep; @endphp
+                        @endfor
                     </div>
-                    <div class="flex justify-between text-[8px] font-bold text-gray-400 mt-1 uppercase px-4">
-                        <span>{{ substr($prevBulanName, 0, 3) }}</span>
-                        <span>{{ substr($curBulanName, 0, 3) }}</span>
+                    <div class="flex justify-between text-[7px] text-gray-400 font-bold mt-1">
+                        <span>JAN</span>
+                        <span>..</span>
+                        <span>{{ strtoupper(substr($curBulanName, 0, 3)) }}</span>
                     </div>
                 </div>
             </div>
