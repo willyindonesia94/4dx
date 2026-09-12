@@ -410,6 +410,7 @@ class LaporanBulananController extends Controller
                 
                 $lmTotalTarget = 0;
                 $lmTotalReal = 0;
+                $aggregatedLmTotalTarget = 0;
                 $lmMenang = 0;
                 $lmKalah = 0;
                 $unitCount = count($units);
@@ -417,44 +418,6 @@ class LaporanBulananController extends Controller
                 // Calculate LM per Unit per Week
                 foreach ($units as $unit) {
                     $unitLmWeeks = [];
-                    $unitLmTotalT = 0;
-                    $unitLmTotalR = 0;
-
-                    for ($w = 1; $w <= 5; $w++) {
-                        $wT = 0; $wR = 0; $wPct = 0;
-                        if (isset($weeklyCalendars[$w])) {
-                            $wStart = $weeklyCalendars[$w]['start'];
-                            $wEnd = $weeklyCalendars[$w]['end'];
-
-                            $wT = \App\Models\BreakdownLm::where('lm_id', $lm->id)
-                                ->where('unit_id', $unit->id)
-                                ->where('periode_start', $wStart)
-                                ->where('periode_end', $wEnd)
-                                ->sum('angka_target');
-                            
-                            $wR = \App\Models\Realisasi::where('lm_id', $lm->id)
-                                ->where('unit_id', $unit->id)
-                                ->where('tanggal_input', '>=', $wStart . ' 00:00:00')
-                                ->where('tanggal_input', '<=', $wEnd . ' 23:59:59')
-                                ->sum('angka_realisasi') ?? 0;
-                        }
-                        
-                        if ($wT > 0 || $wR > 0) {
-                            if ($lmPolaritas === 'negatif' || $lmPolaritas === '3') {
-                                $wPct = $wT > 0 ? ($wT / max(0.0001, $wR)) * 100 : 0;
-                            } else {
-                                $wPct = $wT > 0 ? ($wR / $wT) * 100 : 0;
-                            }
-                        }
-                        
-                        $unitLmWeeks[$w] = [
-                            't' => $wT,
-                            'r' => $wR,
-                            'pct' => $wPct
-                        ];
-
-                        $unitLmTotalR += $wR;
-                    }
                     
                     $allTargets = \App\Models\BreakdownLm::where('lm_id', $lm->id)
                         ->where('unit_id', $unit->id)
@@ -467,6 +430,20 @@ class LaporanBulananController extends Controller
                     })->first();
                     
                     $unitLmTotalT = $monthlyTargetRecord ? $monthlyTargetRecord->angka_target : 0;
+                    
+                    $monthStart = \Carbon\Carbon::create($tahunT, $targetBulan, 1)->startOfMonth()->format('Y-m-d');
+                    $monthEnd = \Carbon\Carbon::create($tahunT, $targetBulan, 1)->endOfMonth()->format('Y-m-d');
+                    
+                    $realQuery = \App\Models\Realisasi::where('lm_id', $lm->id)
+                                ->where('unit_id', $unit->id)
+                                ->where('tanggal_input', '>=', $monthStart . ' 00:00:00')
+                                ->where('tanggal_input', '<=', $monthEnd . ' 23:59:59');
+                    
+                    if ($isNonSummableLm) {
+                        $unitLmTotalR = $realQuery->avg('angka_realisasi') ?? 0;
+                    } else {
+                        $unitLmTotalR = $realQuery->sum('angka_realisasi') ?? 0;
+                    }
 
                     $unitLmPct = 0;
                     if ($unitLmTotalT > 0 || $unitLmTotalR > 0) {
@@ -484,6 +461,7 @@ class LaporanBulananController extends Controller
                     }
 
                     $lmTotalReal += $unitLmTotalR;
+                    $aggregatedLmTotalTarget += $unitLmTotalT;
                     
                     if (!$isSuperAdmin && $user && $user->unit_id && $user->unit_id == $unit->id) {
                         $lmTotalTarget = $unitLmTotalT;
@@ -508,6 +486,14 @@ class LaporanBulananController extends Controller
                     })->first();
                     
                     $lmTotalTarget = $monthlyUidTargetRecord ? $monthlyUidTargetRecord->angka_target : 0;
+                    
+                    if ($lmTotalTarget == 0) {
+                        if ($isNonSummableLm && $unitCount > 0) {
+                            $lmTotalTarget = $aggregatedLmTotalTarget / $unitCount;
+                        } else {
+                            $lmTotalTarget = $aggregatedLmTotalTarget;
+                        }
+                    }
                     
                     if ($isNonSummableLm && $unitCount > 0) {
                         $lmTotalReal = $lmTotalReal / $unitCount;
