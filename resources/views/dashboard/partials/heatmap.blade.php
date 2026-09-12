@@ -26,6 +26,16 @@
 @if($wData)
     <div class="mt-8 space-y-6">
         
+        <!-- Section Title -->
+        <div class="flex items-center gap-3 border-b border-gray-200 pb-3 mb-4">
+            <div class="bg-blue-100 p-2 rounded-lg">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 uppercase tracking-wide">
+                Rincian Performa: {{ $wig->judul }}
+            </h3>
+        </div>
+
         <!-- Top WIG Header (Trend & Overall) -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col md:flex-row gap-6 items-center">
             <div class="flex-1 text-center md:text-left">
