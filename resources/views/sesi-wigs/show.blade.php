@@ -330,48 +330,64 @@ $formatLmValue = function($value, $satuan) {
                                                     <div class="text-[9px] text-gray-500 mt-1">Target: {{ number_format($wig->total_target ?? 0, 2) }}</div>
                                                     <div class="text-[9px] text-gray-500">Realisasi: {{ number_format($wig->total_realisasi ?? 0, 2) }}</div>
                                                 </div>
-                                                <div class="w-full sm:w-1/2 border-t sm:border-t-0 sm:border-l border-gray-200 mt-2 sm:mt-0 pt-2 sm:pt-0 sm:pl-3 flex flex-col justify-end">
-                                                    <div class="text-[9px] font-bold text-gray-600 text-center mb-1.5">TREND CAPAIAN WIG (%)</div>
-                                                    <div class="h-10 mt-auto relative w-full group">
-                                                        @php
-                                                            $trendValues = $wig->trend_capaian ?? [];
-                                                            $maxVal = max(100, count($trendValues) ? max($trendValues) : 0) * 1.1;
-                                                            if ($maxVal == 0) $maxVal = 100;
-                                                            
-                                                            $xStep = $bulanT > 1 ? 90 / ($bulanT - 1) : 0;
-                                                            $points = [];
-                                                            $xPos = 5;
-                                                            
-                                                            for($i=1; $i<=$bulanT; $i++) {
-                                                                $val = $trendValues[$i] ?? 0;
-                                                                $yPos = 90 - ($val / $maxVal) * 80;
-                                                                $points[] = "{$xPos},{$yPos}";
-                                                                $xPos += $xStep;
-                                                            }
-                                                            $pointsStr = implode(" ", $points);
-                                                        @endphp
-                                                        
-                                                        <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-                                                            <polyline points="{{ $pointsStr }}" fill="none" stroke="#3b82f6" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
-                                                        </svg>
-                                                        
-                                                        @php $xPos = 5; @endphp
-                                                        @for($i=1; $i<=$bulanT; $i++)
-                                                            @php
-                                                                $val = $trendValues[$i] ?? 0;
-                                                                $yPos = 90 - ($val / $maxVal) * 80;
-                                                            @endphp
-                                                            <div class="absolute w-[9px] h-[9px] bg-white border-2 border-blue-500 rounded-full hover:bg-blue-100 hover:scale-125 transition-transform" 
-                                                                 style="left: {{ $xPos }}%; top: {{ $yPos }}%; transform: translate(-50%, -50%); cursor: pointer;"
-                                                                 title="Bulan {{ $i }}: {{ $val }}%">
+                                                <div class="w-full sm:w-1/2 border-t sm:border-t-0 sm:border-l border-gray-200 mt-2 sm:mt-0 pt-2 sm:pt-0 sm:pl-3 flex flex-col justify-between">
+                                                    <div>
+                                                        <div class="text-[9px] font-bold text-gray-800 uppercase mb-1 pb-1 border-b border-gray-100">
+                                                            CAPAIAN WIG BULAN LALU ({{ strtoupper($namaBulanPrev) }})
+                                                        </div>
+                                                        <div class="flex items-center gap-3">
+                                                            <div class="text-xl font-black {{ ($wig->capaian_prev ?? 0) >= 100 ? 'text-green-600' : 'text-orange-500' }}">
+                                                                {{ number_format($wig->capaian_prev ?? 0, 2) }} %
                                                             </div>
-                                                            @php $xPos += $xStep; @endphp
-                                                        @endfor
+                                                            <div class="flex flex-col">
+                                                                <div class="text-[9px] text-gray-500 font-medium">Target: <span class="font-bold text-gray-700">{{ number_format($wig->total_target_prev ?? 0, 2) }}</span></div>
+                                                                <div class="text-[9px] text-gray-500 font-medium">Realisasi: <span class="font-bold text-gray-700">{{ number_format($wig->total_realisasi_prev ?? 0, 2) }}</span></div>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div class="flex justify-between text-[8px] text-gray-400 font-bold mt-1">
-                                                        <span>JAN</span>
-                                                        <span>..</span>
-                                                        <span>{{ strtoupper(substr(\Carbon\Carbon::parse($sesi_wig->tanggal_pelaksanaan)->translatedFormat('F'),0,3)) }}</span>
+                                                    <div class="mt-2">
+                                                        <div class="text-[8px] font-bold text-gray-400 text-center mb-0.5">TREND WIG (%)</div>
+                                                        <div class="h-6 relative w-full group">
+                                                            @php
+                                                                $trendValues = $wig->trend_capaian ?? [];
+                                                                $maxVal = max(100, count($trendValues) ? max($trendValues) : 0) * 1.1;
+                                                                if ($maxVal == 0) $maxVal = 100;
+                                                                
+                                                                $xStep = $bulanT > 1 ? 90 / ($bulanT - 1) : 0;
+                                                                $points = [];
+                                                                $xPos = 5;
+                                                                
+                                                                for($i=1; $i<=$bulanT; $i++) {
+                                                                    $val = $trendValues[$i] ?? 0;
+                                                                    $yPos = 90 - ($val / $maxVal) * 80;
+                                                                    $points[] = "{$xPos},{$yPos}";
+                                                                    $xPos += $xStep;
+                                                                }
+                                                                $pointsStr = implode(" ", $points);
+                                                            @endphp
+                                                            
+                                                            <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+                                                                <polyline points="{{ $pointsStr }}" fill="none" stroke="#3b82f6" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
+                                                            </svg>
+                                                            
+                                                            @php $xPos = 5; @endphp
+                                                            @for($i=1; $i<=$bulanT; $i++)
+                                                                @php
+                                                                    $val = $trendValues[$i] ?? 0;
+                                                                    $yPos = 90 - ($val / $maxVal) * 80;
+                                                                @endphp
+                                                                <div class="absolute w-[7px] h-[7px] bg-white border border-blue-500 rounded-full hover:bg-blue-100 hover:scale-125 transition-transform" 
+                                                                     style="left: {{ $xPos }}%; top: {{ $yPos }}%; transform: translate(-50%, -50%); cursor: pointer;"
+                                                                     title="Bulan {{ ['JAN','FEB','MAR','APR','MEI','JUN','JUL','AGU','SEP','OKT','NOV','DES'][$i-1] }}: {{ $val }}%">
+                                                                </div>
+                                                                @php $xPos += $xStep; @endphp
+                                                            @endfor
+                                                        </div>
+                                                        <div class="flex justify-between text-[7px] text-gray-400 font-bold mt-1">
+                                                            <span>JAN</span>
+                                                            <span>..</span>
+                                                            <span>{{ strtoupper(substr(\Carbon\Carbon::parse($sesi_wig->tanggal_pelaksanaan)->translatedFormat('F'),0,3)) }}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
