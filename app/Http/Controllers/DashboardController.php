@@ -663,33 +663,33 @@ class DashboardController extends Controller
         $rtRealQuery = \Illuminate\Support\Facades\DB::table('realisasis')
             ->whereMonth('tanggal_input', $bulan)
             ->whereYear('tanggal_input', $tahun);
-            
-        if ($latestSesiWig) {
-            $rtRealQuery->where('tanggal_input', '<=', \Carbon\Carbon::parse($latestSesiWig->tanggal_pelaksanaan)->endOfDay());
-        }
-        
-        $rtRealQuery = $rtRealQuery->select('lm_id', 'unit_id', \Illuminate\Support\Facades\DB::raw('SUM(angka_realisasi) as realisasi'))
-            ->groupBy('lm_id', 'unit_id')
-            ->get();
-            
-        $rtRealMap = [];
-        foreach ($rtRealQuery as $row) { $rtRealMap[$row->unit_id][$row->lm_id] = (float) $row->realisasi; }
-
+        // Determine the session ID to use for Menang Kalah and Map (either latest sesi wig or dummy)
+        $sid = $latestSesiWig ? $latestSesiWig->id : 'dummy';
         if (!$latestSesiWig) {
             $dummySw = new \stdClass();
             $dummySw->id = 'dummy';
             $dummySw->minggu_ke = '0';
             $sesi_wigs_matrix->push($dummySw);
 
-            foreach ($rtRealMap as $uid => $lmsReal) {
-                foreach ($lmsReal as $lmId => $real) {
-                    $matrixRealisasi[$lmId][$uid]['dummy'] = $real;
-                }
+            $targetQuery = \Illuminate\Support\Facades\DB::table('breakdown_lms')
+                ->where('bulan', $bulan)
+                ->where('tahun', $tahun)
+                ->whereRaw('DATEDIFF(periode_end, periode_start) >= 20')
+                ->select('lm_id', 'unit_id', \Illuminate\Support\Facades\DB::raw('SUM(angka_target) as target'))
+                ->groupBy('lm_id', 'unit_id')
+                ->get();
+            foreach ($targetQuery as $t) {
+                $matrixTargets[$t->lm_id][$t->unit_id]['dummy'] = (float) $t->target;
             }
-            foreach ($rtBdMap as $uid => $lmsBd) {
-                foreach ($lmsBd as $lmId => $bd) {
-                    $matrixTargets[$lmId][$uid]['dummy'] = $bd;
-                }
+
+            $realQuery = \Illuminate\Support\Facades\DB::table('realisasis')
+                ->whereMonth('tanggal_input', $bulan)
+                ->whereYear('tanggal_input', $tahun)
+                ->select('lm_id', 'unit_id', \Illuminate\Support\Facades\DB::raw('SUM(angka_realisasi) as realisasi'))
+                ->groupBy('lm_id', 'unit_id')
+                ->get();
+            foreach ($realQuery as $r) {
+                $matrixRealisasi[$r->lm_id][$r->unit_id]['dummy'] = (float) $r->realisasi;
             }
         }
 
@@ -701,10 +701,8 @@ class DashboardController extends Controller
                 $divs = is_array($wig->divisi) ? $wig->divisi : json_decode($wig->divisi, true);
                 $divs = is_array($divs) ? $divs : [$wig->divisi ?? 'Lainnya'];
                 
-                $target = 0; 
-                $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
-                foreach ($uidUnits as $uid) { $target += $rtBdMap[$uid][$lm->id] ?? 0; }
-                $realisasi = 0; foreach ($rtRealMap as $uid => $lmsReal) { $realisasi += $lmsReal[$lm->id] ?? 0; }
+                $target = $matrixTargets[$lm->id][1][$sid] ?? 0;
+                $realisasi = $matrixRealisasi[$lm->id][1][$sid] ?? 0;
                 if ($target > 0) {
                     $pct = min($realisasi / $target * 100, 100);
                     foreach ($divs as $name) {
@@ -714,21 +712,17 @@ class DashboardController extends Controller
             }
 
             foreach ($up3s as $up3) {
-                $target = $rtBdMap[$up3->id][$lm->id] ?? 0;
+                $target = $matrixTargets[$lm->id][$up3->id][$sid] ?? 0;
                 if ($target <= 0) continue;
-                $sum = $rtRealMap[$up3->id][$lm->id] ?? 0;
-                $childIds = $ulps->where('parent_id', $up3->id)->pluck('id')->toArray();
-                foreach ($childIds as $cId) {
-                    $sum += $rtRealMap[$cId][$lm->id] ?? 0;
-                }
+                $sum = $matrixRealisasi[$lm->id][$up3->id][$sid] ?? 0;
                 $pct = min($sum / $target * 100, 100);
                 $rtMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => round($pct, 1)];
             }
 
             foreach ($ulps as $ulp) {
-                $target = $rtBdMap[$ulp->id][$lm->id] ?? 0;
+                $target = $matrixTargets[$lm->id][$ulp->id][$sid] ?? 0;
                 if ($target <= 0) continue;
-                $sum = $rtRealMap[$ulp->id][$lm->id] ?? 0;
+                $sum = $matrixRealisasi[$lm->id][$ulp->id][$sid] ?? 0;
                 $pct = min($sum / $target * 100, 100);
                 $rtMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => round($pct, 1)];
             }
@@ -746,8 +740,8 @@ class DashboardController extends Controller
             
             // ULP Map Data
             foreach ($allUlps->filter(fn($u) => $u->latitude && $u->longitude) as $ulp) {
-                $target = $rtBdMap[$ulp->id][$lm->id] ?? 0;
-                $sum = $rtRealMap[$ulp->id][$lm->id] ?? 0;
+                $target = $matrixTargets[$lm->id][$ulp->id][$sid] ?? 0;
+                $sum = $matrixRealisasi[$lm->id][$ulp->id][$sid] ?? 0;
                 $pct = $target > 0 ? min(($sum / $target) * 100, 100) : 0;
                 
                 $komitmenVal = '';
@@ -769,12 +763,8 @@ class DashboardController extends Controller
             
             // UP3 Map Data
             foreach ($up3s->filter(fn($u) => $u->latitude && $u->longitude) as $up3) {
-                $target = $rtBdMap[$up3->id][$lm->id] ?? 0;
-                $sum = $rtRealMap[$up3->id][$lm->id] ?? 0;
-                $childIds = $allUlps->where('parent_id', $up3->id)->pluck('id')->toArray();
-                foreach ($childIds as $cId) {
-                    $sum += $rtRealMap[$cId][$lm->id] ?? 0;
-                }
+                $target = $matrixTargets[$lm->id][$up3->id][$sid] ?? 0;
+                $sum = $matrixRealisasi[$lm->id][$up3->id][$sid] ?? 0;
                 $pct = $target > 0 ? min(($sum / $target) * 100, 100) : 0;
                 
                 $komitmenVal = '';
