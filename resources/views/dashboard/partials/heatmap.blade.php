@@ -61,13 +61,15 @@
                         Trend WIG (%)
                     </div>
                     <div class="relative h-10 bg-gray-50 rounded-md overflow-hidden border border-gray-100 flex items-end px-2">
-                        <div class="flex-1 flex flex-col justify-end items-center group relative h-full">
+                        <div class="flex-1 flex flex-col justify-end items-center group relative h-full"
+                             title="Bulan Lalu ({{ strtoupper($prevBulanName) }})&#10;Target: {{ number_format($wData['prev_target'] ?? 0, 2) }}&#10;Realisasi: {{ number_format($wData['prev_realisasi'] ?? 0, 2) }}&#10;Capaian: {{ number_format($wData['prev_pct'] ?? 0, 2) }}%">
                             <div class="w-3/4 bg-blue-300 rounded-t-sm transition-all" style="height: {{ min(100, max(5, $wData['prev_pct'] ?? 0)) }}%"></div>
                             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-[9px] font-bold rounded">
                                 {{ number_format($wData['prev_pct'] ?? 0, 2) }}%
                             </div>
                         </div>
-                        <div class="flex-1 flex flex-col justify-end items-center group relative h-full">
+                        <div class="flex-1 flex flex-col justify-end items-center group relative h-full"
+                             title="Bulan Ini ({{ strtoupper($curBulanName) }})&#10;Target: {{ number_format($wData['target'] ?? 0, 2) }}&#10;Realisasi: {{ number_format($wData['realisasi'] ?? 0, 2) }}&#10;Capaian: {{ number_format($wData['pct'] ?? 0, 2) }}%">
                             <div class="w-3/4 bg-blue-500 rounded-t-sm transition-all" style="height: {{ min(100, max(5, $wData['pct'])) }}%"></div>
                             <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-[9px] font-bold rounded">
                                 {{ number_format($wData['pct'], 2) }}%
