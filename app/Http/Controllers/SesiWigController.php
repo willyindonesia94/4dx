@@ -211,7 +211,11 @@ class SesiWigController extends Controller
             $targetQuery = \Illuminate\Support\Facades\DB::table('breakdown_wigs')->where('wig_id', $wig->id);
             $targetQuery->where('tahun', $endDate->year)->where('unit_id', 1);
             $target = $targetQuery->sum($colBln);
-            $prevTarget = $targetQuery->sum($colPrevBln);
+            
+            // UID Target (Previous Month)
+            $prevTargetQuery = \Illuminate\Support\Facades\DB::table('breakdown_wigs')->where('wig_id', $wig->id);
+            $prevTargetQuery->where('tahun', $prevTahun)->where('unit_id', 1);
+            $prevTarget = $prevTargetQuery->sum($colPrevBln);
             
             // Realisasi UID: Tarik data bulan berjalan
             $realisasiUidDirect = \App\Models\RealisasiWig::where('wig_id', $wig->id)
@@ -231,7 +235,7 @@ class SesiWigController extends Controller
 
             // Realisasi UID (Previous Month)
             $realisasiUidDirectPrev = \App\Models\RealisasiWig::where('wig_id', $wig->id)
-                ->where('tahun', $endDate->year)
+                ->where('tahun', $prevTahun)
                 ->where('bulan', $prevBulan)
                 ->where('unit_id', 1)
                 ->first();
@@ -240,7 +244,7 @@ class SesiWigController extends Controller
                 $prevRealisasi = $realisasiUidDirectPrev->angka_realisasi;
             } else {
                 $realisasiQPrev = clone $realisasiQuery;
-                $realisasiQPrev->where('tahun', $endDate->year)->where('bulan', $prevBulan)->where('unit_id', '!=', 1);
+                $realisasiQPrev->where('tahun', $prevTahun)->where('bulan', $prevBulan)->where('unit_id', '!=', 1);
                 $prevRealisasi = $isNonSummable ? ($realisasiQPrev->avg('angka_realisasi') ?? 0) : ($realisasiQPrev->sum('angka_realisasi') ?? 0);
             }
             
