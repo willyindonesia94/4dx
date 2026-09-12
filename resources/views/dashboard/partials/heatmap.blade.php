@@ -77,11 +77,14 @@
                             $maxVal = max(100, count($trendValues) ? max($trendValues) : 0) * 1.1;
                             if ($maxVal == 0) $maxVal = 100;
                             
-                            $xStep = $targetBulan > 1 ? 90 / ($targetBulan - 1) : 0;
+                            $chartBulan = $targetBulan > 1 ? $targetBulan - 1 : 1;
+                            $chartBulanName = $bulanNames[$chartBulan] ?? '-';
+                            
+                            $xStep = $chartBulan > 1 ? 90 / ($chartBulan - 1) : 0;
                             $points = [];
                             $xPos = 5;
                             
-                            for($i=1; $i<=$targetBulan; $i++) {
+                            for($i=1; $i<=$chartBulan; $i++) {
                                 $val = $trendValues[$i] ?? 0;
                                 $yPos = 90 - ($val / $maxVal) * 80;
                                 $points[] = "{$xPos},{$yPos}";
@@ -95,7 +98,7 @@
                         </svg>
                         
                         @php $xPos = 5; @endphp
-                        @for($i=1; $i<=$targetBulan; $i++)
+                        @for($i=1; $i<=$chartBulan; $i++)
                             @php
                                 $val = $trendValues[$i] ?? 0;
                                 $yPos = 90 - ($val / $maxVal) * 80;
@@ -110,7 +113,7 @@
                     <div class="flex justify-between text-[7px] text-gray-400 font-bold mt-1">
                         <span>JAN</span>
                         <span>..</span>
-                        <span>{{ strtoupper(substr($curBulanName, 0, 3)) }}</span>
+                        <span>{{ strtoupper(substr($chartBulanName, 0, 3)) }}</span>
                     </div>
                 </div>
             </div>
