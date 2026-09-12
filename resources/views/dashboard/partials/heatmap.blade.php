@@ -40,28 +40,44 @@
                     Realisasi: {{ number_format($wData['realisasi'], 2) }}
                 </div>
             </div>
-            <div class="flex-1 border-t md:border-t-0 md:border-l border-gray-200 pt-4 md:pt-0 md:pl-6 w-full">
-                <div class="text-xs font-semibold text-gray-500 uppercase tracking-widest text-center mb-4">
-                    Trend Capaian WIG (%)
-                </div>
-                <!-- Simple Bar Chart Visualization -->
-                <div class="relative h-16 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 flex items-end px-2">
-                    <div class="flex-1 flex flex-col justify-end items-center group relative h-full">
-                        <div class="w-4/5 bg-blue-300 rounded-t-sm transition-all" style="height: {{ min(100, max(5, $wData['prev_pct'] ?? 0)) }}%"></div>
-                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 text-white text-xs font-bold rounded">
-                            {{ number_format($wData['prev_pct'] ?? 0, 2) }}%
-                        </div>
+            <div class="flex-1 border-t md:border-t-0 md:border-l border-gray-200 pt-4 md:pt-0 md:pl-6 w-full flex flex-col justify-between h-full">
+                <div>
+                    <div class="text-xs font-bold text-gray-800 uppercase mb-2 pb-1 border-b border-gray-100">
+                        CAPAIAN WIG BULAN LALU ({{ strtoupper($prevBulanName) }})
                     </div>
-                    <div class="flex-1 flex flex-col justify-end items-center group relative h-full">
-                        <div class="w-4/5 bg-blue-500 rounded-t-sm transition-all" style="height: {{ min(100, max(5, $wData['pct'])) }}%"></div>
-                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 text-white text-xs font-bold rounded">
-                            {{ number_format($wData['pct'], 2) }}%
+                    <div class="flex items-center gap-4 mb-3">
+                        <div class="text-2xl font-black {{ ($wData['prev_pct'] ?? 0) >= 100 ? 'text-green-600' : 'text-orange-500' }}">
+                            {{ number_format($wData['prev_pct'] ?? 0, 2) }} %
+                        </div>
+                        <div class="flex flex-col">
+                            <div class="text-[10px] text-gray-500 font-medium">Target: <span class="font-bold text-gray-700">{{ number_format($wData['prev_target'] ?? 0, 2) }}</span></div>
+                            <div class="text-[10px] text-gray-500 font-medium">Realisasi: <span class="font-bold text-gray-700">{{ number_format($wData['prev_realisasi'] ?? 0, 2) }}</span></div>
                         </div>
                     </div>
                 </div>
-                <div class="flex justify-between text-[10px] font-bold text-gray-400 mt-1 uppercase px-4">
-                    <span>{{ substr($prevBulanName, 0, 3) }}</span>
-                    <span>{{ substr($curBulanName, 0, 3) }}</span>
+                
+                <div>
+                    <div class="text-[9px] font-semibold text-gray-400 uppercase tracking-wider text-center mb-1">
+                        Trend WIG (%)
+                    </div>
+                    <div class="relative h-10 bg-gray-50 rounded-md overflow-hidden border border-gray-100 flex items-end px-2">
+                        <div class="flex-1 flex flex-col justify-end items-center group relative h-full">
+                            <div class="w-3/4 bg-blue-300 rounded-t-sm transition-all" style="height: {{ min(100, max(5, $wData['prev_pct'] ?? 0)) }}%"></div>
+                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-[9px] font-bold rounded">
+                                {{ number_format($wData['prev_pct'] ?? 0, 2) }}%
+                            </div>
+                        </div>
+                        <div class="flex-1 flex flex-col justify-end items-center group relative h-full">
+                            <div class="w-3/4 bg-blue-500 rounded-t-sm transition-all" style="height: {{ min(100, max(5, $wData['pct'])) }}%"></div>
+                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-[9px] font-bold rounded">
+                                {{ number_format($wData['pct'], 2) }}%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between text-[8px] font-bold text-gray-400 mt-1 uppercase px-4">
+                        <span>{{ substr($prevBulanName, 0, 3) }}</span>
+                        <span>{{ substr($curBulanName, 0, 3) }}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -96,9 +112,9 @@
                         <!-- UID Total Row -->
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-2 border border-gray-300 font-bold text-gray-800 bg-white sticky left-0 z-10">UID Jawa Barat</td>
-                            <td class="px-2 py-2 border border-gray-300 text-center font-bold text-gray-700">-</td>
-                            <td class="px-2 py-2 border border-gray-300 text-center font-bold text-gray-700">-</td>
-                            <td class="px-2 py-2 border border-gray-300 text-center font-bold text-gray-700">-</td>
+                            <td class="px-2 py-2 border border-gray-300 text-center font-bold text-gray-700">{{ number_format($wData['prev_target'], 2) }}</td>
+                            <td class="px-2 py-2 border border-gray-300 text-center font-bold text-gray-700">{{ number_format($wData['prev_realisasi'], 2) }}</td>
+                            <td class="px-2 py-2 border border-gray-300 text-center font-bold {{ $wData['prev_pct'] >= 100 ? 'text-green-600' : 'text-red-600' }}">{{ number_format($wData['prev_pct'], 2) }}%</td>
                             <td class="px-2 py-2 border border-gray-300 text-center font-bold text-gray-800">{{ number_format($wData['target'], 2) }}</td>
                             <td class="px-2 py-2 border border-gray-300 text-center font-bold text-gray-800">{{ number_format($wData['realisasi'], 2) }}</td>
                             <td class="px-2 py-2 border border-gray-300 text-center font-bold {{ $wData['pct'] >= 100 ? 'text-green-600' : 'text-red-600' }}">{{ number_format($wData['pct'], 2) }}%</td>
