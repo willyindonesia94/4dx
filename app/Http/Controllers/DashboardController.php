@@ -514,6 +514,7 @@ class DashboardController extends Controller
         $sesi_wigs_matrix = collect();
         $matrixTargets = [];
         $matrixRealisasi = [];
+        $matrixRealisasiCount = [];
         $matrixKomitmen = [];
         $rtMenangKalah = [];
         $dynamicMapData = [];
@@ -574,6 +575,7 @@ class DashboardController extends Controller
                     ->get();
                 foreach ($realisasis as $r) {
                     $matrixRealisasi[$r->lm_id][$r->unit_id][$sw->id] = ($matrixRealisasi[$r->lm_id][$r->unit_id][$sw->id] ?? 0) + $r->angka_realisasi;
+                    $matrixRealisasiCount[$r->lm_id][$r->unit_id][$sw->id] = ($matrixRealisasiCount[$r->lm_id][$r->unit_id][$sw->id] ?? 0) + 1;
                 }
             }
 
@@ -594,6 +596,15 @@ class DashboardController extends Controller
         foreach ($lms as $lm) {
             $isNonSummable = in_array($lm->satuan_id, $nonSummableSatuans);
             foreach ($sesi_wigs_matrix as $sw) {
+                // Average daily ULP inputs if non-summable (like percentage %)
+                if ($isNonSummable) {
+                    foreach ($allUlps as $ulp) {
+                        if (isset($matrixRealisasiCount[$lm->id][$ulp->id][$sw->id]) && $matrixRealisasiCount[$lm->id][$ulp->id][$sw->id] > 0) {
+                            $matrixRealisasi[$lm->id][$ulp->id][$sw->id] /= $matrixRealisasiCount[$lm->id][$ulp->id][$sw->id];
+                        }
+                    }
+                }
+                
                 // Rollup ULP to UP3
                 foreach ($up3s as $up3) {
                     $ulpsOfUp3 = $allUlps->where('parent_id', $up3->id);
