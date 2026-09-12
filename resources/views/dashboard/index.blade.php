@@ -308,9 +308,6 @@
                                                                         @php
                                                                             $up3Target = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                                                                             $up3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
-                                                                            foreach($up3Ulps as $u) {
-                                                                                $up3Realisasi += $matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0;
-                                                                            }
                                                                             $up3Pencapaian = $up3Target > 0 ? min(100, round(($up3Realisasi / $up3Target) * 100, 2)) : 0;
                                                                             $up3BgColor = $up3Pencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
                                                                             
@@ -318,10 +315,7 @@
                                                                             $prevUp3Realisasi = 0;
                                                                             $up3TrendIcon = '<span class="text-gray-400">-</span>';
                                                                             if ($prevSw) {
-                                                                                $prevUp3Realisasi += $matrixRealisasi[$lm->id][$up3->id][$prevSw->id] ?? 0;
-                                                                                foreach($up3Ulps as $u) {
-                                                                                    $prevUp3Realisasi += $matrixRealisasi[$lm->id][$u->id][$prevSw->id] ?? 0;
-                                                                                }
+                                                                                $prevUp3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$prevSw->id] ?? 0;
                                                                                 if ($up3Realisasi > $prevUp3Realisasi) {
                                                                                     $up3TrendIcon = '<svg class="w-4 h-4 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>';
                                                                                 } else if ($up3Realisasi < $prevUp3Realisasi) {
