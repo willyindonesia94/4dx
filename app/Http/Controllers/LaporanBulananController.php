@@ -434,8 +434,26 @@ class LaporanBulananController extends Controller
                     $monthStart = \Carbon\Carbon::create($tahunT, $targetBulan, 1)->startOfMonth()->format('Y-m-d');
                     $monthEnd = \Carbon\Carbon::create($tahunT, $targetBulan, 1)->endOfMonth()->format('Y-m-d');
                     
+                    $ulpsOfUp3 = \App\Models\MasterUnit::where('parent_id', $unit->id)->pluck('id')->toArray();
+                    
+                    if ($unitLmTotalT == 0 && count($ulpsOfUp3) > 0) {
+                        $ulpTargets = \App\Models\BreakdownLm::where('lm_id', $lm->id)
+                            ->whereIn('unit_id', $ulpsOfUp3)
+                            ->where('bulan', $targetBulan)
+                            ->where('tahun', $tahunT)
+                            ->whereRaw('DATEDIFF(periode_end, periode_start) >= 20')
+                            ->sum('angka_target');
+                            
+                        $unitLmTotalT = $isNonSummableLm ? ($ulpTargets / count($ulpsOfUp3)) : $ulpTargets;
+                    }
+                    
                     $realQuery = \App\Models\Realisasi::where('lm_id', $lm->id)
-                                ->where('unit_id', $unit->id)
+                                ->where(function($q) use ($unit, $ulpsOfUp3) {
+                                    $q->where('unit_id', $unit->id);
+                                    if (count($ulpsOfUp3) > 0) {
+                                        $q->orWhereIn('unit_id', $ulpsOfUp3);
+                                    }
+                                })
                                 ->where('tanggal_input', '>=', $monthStart . ' 00:00:00')
                                 ->where('tanggal_input', '<=', $monthEnd . ' 23:59:59');
                     
