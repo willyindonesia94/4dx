@@ -264,18 +264,8 @@
                                                                 </td>
                                                                 @foreach($sesi_wigs_matrix as $sw)
                                                                     @php
-                                                                        $uidTarget = 0;
-                                                                        if (isset($matrixTargets[$lm->id])) {
-                                                                            foreach($matrixTargets[$lm->id] as $uid => $tgts) {
-                                                                                $uidTarget += $tgts[$sw->id] ?? 0;
-                                                                            }
-                                                                        }
-                                                                        $uidRealisasi = 0;
-                                                                        if (isset($matrixRealisasi[$lm->id])) {
-                                                                            foreach($matrixRealisasi[$lm->id] as $uid => $realSessions) {
-                                                                                $uidRealisasi += $realSessions[$sw->id] ?? 0;
-                                                                            }
-                                                                        }
+                                                                        $uidTarget = $matrixTargets[$lm->id][1][$sw->id] ?? 0;
+                                                                        $uidRealisasi = $matrixRealisasi[$lm->id][1][$sw->id] ?? 0;
                                                                         $uidPencapaian = $uidTarget > 0 ? min(100, round(($uidRealisasi / $uidTarget) * 100, 2)) : 0;
                                                                         $uidBgColor = $uidPencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
                                                                         $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
