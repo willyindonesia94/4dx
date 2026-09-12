@@ -533,50 +533,106 @@ class DashboardController extends Controller
                 });
             }
 
-            $matrixWeeklyTargets = [];
-            foreach ($sesi_wigs_month as $index => $sw) {
-                $swDate = \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->endOfDay();
-                
-                // Determine the start date for the current week's interval
-                if ($index === 0) {
-                    // For the first week, use the start of the month (or a bit earlier to catch first week data)
-                    $prevSwDate = \Carbon\Carbon::create($tahun, $bulan, 1)->subDays(7)->startOfDay();
+            $masterPeriode = \App\Models\MasterPeriode::where('tahun', $tahun)->where('bulan', $bulan)->first();
+            $weeklyCalendars = [];
+            if ($masterPeriode) {
+                if ($masterPeriode->start_m1 && $masterPeriode->end_m1) $weeklyCalendars[1] = ['start' => $masterPeriode->start_m1, 'end' => $masterPeriode->end_m1];
+                if ($masterPeriode->start_m2 && $masterPeriode->end_m2) $weeklyCalendars[2] = ['start' => $masterPeriode->start_m2, 'end' => $masterPeriode->end_m2];
+                if ($masterPeriode->start_m3 && $masterPeriode->end_m3) $weeklyCalendars[3] = ['start' => $masterPeriode->start_m3, 'end' => $masterPeriode->end_m3];
+                if ($masterPeriode->start_m4 && $masterPeriode->end_m4) $weeklyCalendars[4] = ['start' => $masterPeriode->start_m4, 'end' => $masterPeriode->end_m4];
+                if ($masterPeriode->start_m5 && $masterPeriode->end_m5) $weeklyCalendars[5] = ['start' => $masterPeriode->start_m5, 'end' => $masterPeriode->end_m5];
+            }
+
+            foreach ($sesi_wigs_matrix as $sw) {
+                $isMingguan = strtolower(trim($sw->tipe_sesi)) === 'mingguan';
+                $w = $sw->minggu_ke ?? 1;
+
+                if ($isMingguan) {
+                    if (isset($weeklyCalendars[$w])) {
+                        $swStart = $weeklyCalendars[$w]['start'];
+                        $swEnd = $weeklyCalendars[$w]['end'];
+                    } else {
+                        $swStart = \Carbon\Carbon::create($sw->tahun, $sw->bulan, 1)->addDays(($w-1)*7)->format('Y-m-d');
+                        $swEnd = \Carbon\Carbon::create($sw->tahun, $sw->bulan, 1)->addDays(($w-1)*7 + 6)->format('Y-m-d');
+                    }
                 } else {
-                    $prevSw = $sesi_wigs_month[$index - 1];
-                    $prevSwDate = \Carbon\Carbon::parse($prevSw->tanggal_pelaksanaan)->endOfDay();
+                    $swStart = \Carbon\Carbon::create($sw->tahun, $sw->bulan, 1)->format('Y-m-d');
+                    $swEnd = \Carbon\Carbon::create($sw->tahun, $sw->bulan, 1)->endOfMonth()->format('Y-m-d');
+                }
+                
+                $targets = \Illuminate\Support\Facades\DB::table('breakdown_lms')
+                    ->where('periode_start', '=', $swStart)
+                    ->where('periode_end', '=', $swEnd)
+                    ->get();
+                foreach ($targets as $t) {
+                    $matrixTargets[$t->lm_id][$t->unit_id][$sw->id] = $t->angka_target;
                 }
 
-                $sums = \Illuminate\Support\Facades\DB::table('realisasis')
-                    ->where('tanggal_input', '>', $prevSwDate)
-                    ->where('tanggal_input', '<=', $swDate)
-                    ->select('lm_id', 'unit_id', \Illuminate\Support\Facades\DB::raw('SUM(angka_realisasi) as total'))
-                    ->groupBy('lm_id', 'unit_id')
+                $realisasis = \Illuminate\Support\Facades\DB::table('realisasis')
+                    ->where('tanggal_input', '>=', $swStart . ' 00:00:00')
+                    ->where('tanggal_input', '<=', $swEnd . ' 23:59:59')
                     ->get();
-                foreach ($sums as $s) {
-                    $matrixRealisasi[$s->lm_id][$s->unit_id][$sw->id] = $s->total;
-                }
-                
-                $wTgt = \Illuminate\Support\Facades\DB::table('breakdown_lms')
-                    ->where('bulan', $bulan)
-                    ->where('tahun', $tahun)
-                    ->where('periode_end', '>', $prevSwDate)
-                    ->where('periode_end', '<=', $swDate)
-                    ->whereRaw('DATEDIFF(periode_end, periode_start) < 20')
-                    ->select('lm_id', 'unit_id', \Illuminate\Support\Facades\DB::raw('SUM(angka_target) as total'))
-                    ->groupBy('lm_id', 'unit_id')
-                    ->get();
-                foreach ($wTgt as $wt) {
-                    $matrixWeeklyTargets[$wt->lm_id][$wt->unit_id][$sw->id] = (float) $wt->total;
+                foreach ($realisasis as $r) {
+                    $matrixRealisasi[$r->lm_id][$r->unit_id][$sw->id] = ($matrixRealisasi[$r->lm_id][$r->unit_id][$sw->id] ?? 0) + $r->angka_realisasi;
                 }
             }
 
-            // Fetch Komitmen
-            $komitmens = \App\Models\SesiWigKomitmen::whereIn('sesi_wig_id', $sesi_wigs_month->pluck('id'))->get();
-            foreach ($komitmens as $k) {
-                $matrixKomitmen[$k->lm_id][$k->unit_id][$k->sesi_wig_id] = [
-                    'komitmen' => $k->komitmen,
-                    'carry_over' => $k->carry_over
-                ];
+            if (class_exists(\App\Models\SesiWigKomitmen::class)) {
+                $komitmens = \App\Models\SesiWigKomitmen::whereIn('sesi_wig_id', $sesi_wigs_month->pluck('id'))->get();
+                foreach ($komitmens as $k) {
+                    $matrixKomitmen[$k->lm_id][$k->unit_id][$k->sesi_wig_id] = [
+                        'komitmen' => $k->komitmen,
+                        'carry_over' => $k->carry_over,
+                        'has_form' => true
+                    ];
+                }
+            }
+        }
+
+        // --- Aggregation (Rollup) ULP -> UP3 -> UID ---
+        $nonSummableSatuans = [1, 2, 6, 14];
+        foreach ($lms as $lm) {
+            $isNonSummable = in_array($lm->satuan_id, $nonSummableSatuans);
+            foreach ($sesi_wigs_matrix as $sw) {
+                // Rollup ULP to UP3
+                foreach ($up3s as $up3) {
+                    $ulpsOfUp3 = $allUlps->where('parent_id', $up3->id);
+                    if ($ulpsOfUp3->isNotEmpty()) {
+                        $sumTarget = 0; $sumReal = 0;
+                        $countUlpTarget = 0; $countUlpReal = 0;
+                        
+                        foreach ($ulpsOfUp3 as $ulp) {
+                            $t = $matrixTargets[$lm->id][$ulp->id][$sw->id] ?? 0;
+                            $r = $matrixRealisasi[$lm->id][$ulp->id][$sw->id] ?? 0;
+                            if ($t > 0) { $sumTarget += $t; $countUlpTarget++; }
+                            if ($r > 0) { $sumReal += $r; $countUlpReal++; }
+                        }
+                        
+                        if (!isset($matrixTargets[$lm->id][$up3->id][$sw->id]) || $matrixTargets[$lm->id][$up3->id][$sw->id] == 0) {
+                            $matrixTargets[$lm->id][$up3->id][$sw->id] = $isNonSummable && $countUlpTarget > 0 ? ($sumTarget / $countUlpTarget) : $sumTarget;
+                        }
+                        if (!isset($matrixRealisasi[$lm->id][$up3->id][$sw->id]) || $matrixRealisasi[$lm->id][$up3->id][$sw->id] == 0) {
+                            $matrixRealisasi[$lm->id][$up3->id][$sw->id] = $isNonSummable && $countUlpReal > 0 ? ($sumReal / $countUlpReal) : $sumReal;
+                        }
+                    }
+                }
+                
+                // Rollup UP3 to UID
+                $sumTargetUid = 0; $sumRealUid = 0;
+                $countUp3Target = 0; $countUp3Real = 0;
+                foreach ($up3s as $up3) {
+                    $t = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
+                    $r = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
+                    if ($t > 0) { $sumTargetUid += $t; $countUp3Target++; }
+                    if ($r > 0) { $sumRealUid += $r; $countUp3Real++; }
+                }
+                
+                if (!isset($matrixTargets[$lm->id][1][$sw->id]) || $matrixTargets[$lm->id][1][$sw->id] == 0) {
+                    $matrixTargets[$lm->id][1][$sw->id] = $isNonSummable && $countUp3Target > 0 ? ($sumTargetUid / $countUp3Target) : $sumTargetUid;
+                }
+                if (!isset($matrixRealisasi[$lm->id][1][$sw->id]) || $matrixRealisasi[$lm->id][1][$sw->id] == 0) {
+                    $matrixRealisasi[$lm->id][1][$sw->id] = $isNonSummable && $countUp3Real > 0 ? ($sumRealUid / $countUp3Real) : $sumRealUid;
+                }
             }
         }
 
@@ -615,7 +671,6 @@ class DashboardController extends Controller
             $dummySw->minggu_ke = '0';
             $sesi_wigs_matrix->push($dummySw);
 
-            $matrixWeeklyTargets = [];
             foreach ($rtRealMap as $uid => $lmsReal) {
                 foreach ($lmsReal as $lmId => $real) {
                     $matrixRealisasi[$lmId][$uid]['dummy'] = $real;
@@ -623,7 +678,7 @@ class DashboardController extends Controller
             }
             foreach ($rtBdMap as $uid => $lmsBd) {
                 foreach ($lmsBd as $lmId => $bd) {
-                    $matrixWeeklyTargets[$lmId][$uid]['dummy'] = $bd;
+                    $matrixTargets[$lmId][$uid]['dummy'] = $bd;
                 }
             }
         }
@@ -736,7 +791,7 @@ class DashboardController extends Controller
             'up3s', 'ulps', 'selectedUp3', 'selectedUlp',
             'leaderboard', 'leaderboardUp3', 'menangKalah', 'bulan', 'tahun', 'trendData',
             'wigs', 'latestSesiWig', 'sesi_wigs_month', 'sesi_wigs_matrix', 'matrixTargets', 'matrixRealisasi', 'matrixKomitmen', 'rtMenangKalah', 'periodeWig',
-            'rtBdMap', 'rtRealMap', 'matrixWeeklyTargets'
+            'rtBdMap', 'rtRealMap'
         ));
     }
 }

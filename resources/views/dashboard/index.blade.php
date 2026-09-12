@@ -266,8 +266,8 @@
                                                                     @php
                                                                         $uidTarget = 0;
                                                                         if (isset($matrixTargets[$lm->id])) {
-                                                                            foreach($matrixTargets[$lm->id] as $uid => $tgt) {
-                                                                                $uidTarget += $tgt;
+                                                                            foreach($matrixTargets[$lm->id] as $uid => $tgts) {
+                                                                                $uidTarget += $tgts[$sw->id] ?? 0;
                                                                             }
                                                                         }
                                                                         $uidRealisasi = 0;
@@ -316,7 +316,7 @@
                                                                     </td>
                                                                     @foreach($sesi_wigs_matrix as $sw)
                                                                         @php
-                                                                            $up3Target = $matrixTargets[$lm->id][$up3->id] ?? 0;
+                                                                            $up3Target = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                                                                             $up3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
                                                                             foreach($up3Ulps as $u) {
                                                                                 $up3Realisasi += $matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0;
@@ -354,7 +354,7 @@
                                                                         </td>
                                                                         @foreach($sesi_wigs_matrix as $sw)
                                                                             @php
-                                                                                $target = $matrixTargets[$lm->id][$u->id] ?? 0;
+                                                                                $target = $matrixTargets[$lm->id][$u->id][$sw->id] ?? 0;
                                                                                 $realisasi = $matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0;
                                                                                 $pencapaian = $target > 0 ? min(100, round(($realisasi / $target) * 100, 2)) : 0;
                                                                                 $bgColor = $pencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
