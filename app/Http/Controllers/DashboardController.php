@@ -517,6 +517,8 @@ class DashboardController extends Controller
         $matrixRealisasiCount = [];
         $matrixKomitmen = [];
         $rtMenangKalah = [];
+        $rtBdMap = [];
+        $rtRealMap = [];
         $dynamicMapData = [];
         $lms = \App\Models\MasterLm::all();
         $sesi_wigs_month = collect();

@@ -272,11 +272,7 @@
                                                                         $prevUidRealisasi = 0;
                                                                         $uidTrendIcon = '<span class="text-gray-400">-</span>';
                                                                         if ($prevSw) {
-                                                                            if (isset($matrixRealisasi[$lm->id])) {
-                                                                                foreach($matrixRealisasi[$lm->id] as $uid => $realSessions) {
-                                                                                    $prevUidRealisasi += $realSessions[$prevSw->id] ?? 0;
-                                                                                }
-                                                                            }
+                                                                            $prevUidRealisasi = $matrixRealisasi[$lm->id][1][$prevSw->id] ?? 0;
                                                                             if ($uidRealisasi > $prevUidRealisasi) {
                                                                                 $uidTrendIcon = '<svg class="w-4 h-4 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>';
                                                                             } else if ($uidRealisasi < $prevUidRealisasi) {
