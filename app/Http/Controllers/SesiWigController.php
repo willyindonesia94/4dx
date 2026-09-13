@@ -541,14 +541,18 @@ class SesiWigController extends Controller
                 foreach ($up3s as $up3) {
                     $ulpsOfUp3 = $allUlps->where('parent_id', $up3->id);
                     if ($ulpsOfUp3->isNotEmpty()) {
-                        $sumTarget = 0; $sumReal = 0;
-                        $countUlpTarget = 0; $countUlpReal = 0;
+                        $sumTarget = 0; $sumReal = 0; $sumKom = 0;
+                        $countUlpTarget = 0; $countUlpReal = 0; $countUlpKom = 0;
                         
                         foreach ($ulpsOfUp3 as $ulp) {
                             $t = $matrixTargets[$lm->id][$ulp->id][$sw->id] ?? 0;
                             $r = $matrixRealisasi[$lm->id][$ulp->id][$sw->id] ?? 0;
+                            $komData = $matrixKomitmen[$lm->id][$ulp->id][$sw->id] ?? null;
+                            $k = $komData ? (float)($komData['komitmen'] ?? 0) : 0;
+                            
                             if ($t > 0) { $sumTarget += $t; $countUlpTarget++; }
                             if ($r > 0) { $sumReal += $r; $countUlpReal++; }
+                            if ($k > 0) { $sumKom += $k; $countUlpKom++; }
                         }
                         
                         if (!isset($matrixTargets[$lm->id][$up3->id][$sw->id]) || $matrixTargets[$lm->id][$up3->id][$sw->id] == 0) {
@@ -557,17 +561,30 @@ class SesiWigController extends Controller
                         if (!isset($matrixRealisasi[$lm->id][$up3->id][$sw->id]) || $matrixRealisasi[$lm->id][$up3->id][$sw->id] == 0) {
                             $matrixRealisasi[$lm->id][$up3->id][$sw->id] = $isNonSummable && $countUlpReal > 0 ? ($sumReal / $countUlpReal) : $sumReal;
                         }
+                        if (!isset($matrixKomitmen[$lm->id][$up3->id][$sw->id]) || empty($matrixKomitmen[$lm->id][$up3->id][$sw->id]['komitmen'])) {
+                            if ($sumKom > 0) {
+                                $matrixKomitmen[$lm->id][$up3->id][$sw->id] = [
+                                    'komitmen' => $isNonSummable && $countUlpKom > 0 ? ($sumKom / $countUlpKom) : $sumKom,
+                                    'carry_over' => 0,
+                                    'has_form' => false
+                                ];
+                            }
+                        }
                     }
                 }
                 
                 // Rollup UP3 to UID
-                $sumTargetUid = 0; $sumRealUid = 0;
-                $countUp3Target = 0; $countUp3Real = 0;
+                $sumTargetUid = 0; $sumRealUid = 0; $sumKomUid = 0;
+                $countUp3Target = 0; $countUp3Real = 0; $countUp3Kom = 0;
                 foreach ($up3s as $up3) {
                     $t = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                     $r = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
+                    $komData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
+                    $k = $komData ? (float)($komData['komitmen'] ?? 0) : 0;
+                    
                     if ($t > 0) { $sumTargetUid += $t; $countUp3Target++; }
                     if ($r > 0) { $sumRealUid += $r; $countUp3Real++; }
+                    if ($k > 0) { $sumKomUid += $k; $countUp3Kom++; }
                 }
                 
                 if (!isset($matrixTargets[$lm->id][1][$sw->id]) || $matrixTargets[$lm->id][1][$sw->id] == 0) {
@@ -575,6 +592,15 @@ class SesiWigController extends Controller
                 }
                 if (!isset($matrixRealisasi[$lm->id][1][$sw->id]) || $matrixRealisasi[$lm->id][1][$sw->id] == 0) {
                     $matrixRealisasi[$lm->id][1][$sw->id] = $isNonSummable && $countUp3Real > 0 ? ($sumRealUid / $countUp3Real) : $sumRealUid;
+                }
+                if (!isset($matrixKomitmen[$lm->id][1][$sw->id]) || empty($matrixKomitmen[$lm->id][1][$sw->id]['komitmen'])) {
+                    if ($sumKomUid > 0) {
+                        $matrixKomitmen[$lm->id][1][$sw->id] = [
+                            'komitmen' => $isNonSummable && $countUp3Kom > 0 ? ($sumKomUid / $countUp3Kom) : $sumKomUid,
+                            'carry_over' => 0,
+                            'has_form' => false
+                        ];
+                    }
                 }
             }
         }
