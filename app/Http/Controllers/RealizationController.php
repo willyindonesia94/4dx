@@ -159,7 +159,8 @@ class RealizationController extends Controller
         $isSuperAdmin = $user && ($user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || $isMsbK3L);
 
         $lmQuery = MasterLm::query();
-        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+        $isActualSuperAdmin = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
+        if (!$isActualSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $lmQuery->whereHas('wig', fn($q) => $q->where('divisi', $userMatrixGroup));
         }
         $lms = $lmQuery->get()->sort(function($a, $b) {
@@ -230,7 +231,8 @@ class RealizationController extends Controller
         $isSuperAdmin = $user && ($user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || $isMsbK3L);
 
         $lmQuery = MasterLm::query();
-        if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
+        $isActualSuperAdmin = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
+        if (!$isActualSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $lmQuery->whereHas('wig', fn($q) => $q->where('divisi', $userMatrixGroup));
         }
         $lms = $lmQuery->get()->sort(function($a, $b) {
