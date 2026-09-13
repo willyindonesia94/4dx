@@ -23,7 +23,8 @@ class RealizationController extends Controller
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
+        $isMsbK3L = $user && $user->hasRole('MSB UID') && strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L';
+        $isSuperAdmin = $user && ($user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || $isMsbK3L);
         $isUlpLevel = !$isSuperAdmin && $user && $user->unit && in_array(strtoupper(trim((string)$user->unit->type)), ['ULP', 'UP2D', 'UP2K']);
         
         $skipMatrixFilter = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'SRM Perencanaan UID', 'Asman Perencanaan UP3', 'Manager UP3', 'Manager ULP', 'General Manager UID']);
@@ -154,7 +155,8 @@ class RealizationController extends Controller
     {
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
+        $isMsbK3L = $user && $user->hasRole('MSB UID') && strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L';
+        $isSuperAdmin = $user && ($user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || $isMsbK3L);
 
         $lmQuery = MasterLm::query();
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
@@ -224,7 +226,8 @@ class RealizationController extends Controller
         
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
+        $isMsbK3L = $user && $user->hasRole('MSB UID') && strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L';
+        $isSuperAdmin = $user && ($user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || $isMsbK3L);
 
         $lmQuery = MasterLm::query();
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
@@ -281,7 +284,8 @@ class RealizationController extends Controller
         }
 
         $user = auth()->user();
-        $isSuperAdmin = $user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array($user->role_name, ['Super Admin', 'Perencanaan UID']);
+        $isMsbK3L = $user->hasRole('MSB UID') && strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L';
+        $isSuperAdmin = $user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array($user->role_name, ['Super Admin', 'Perencanaan UID']) || $isMsbK3L;
 
         $deletedCount = 0;
         foreach ($ids as $id) {
@@ -310,9 +314,13 @@ class RealizationController extends Controller
         return $redirect;
     }
 
+    private function isMsbK3L() {
+        return auth()->user()->hasRole('MSB UID') && strtoupper(trim((string)(auth()->user()->matrix_group_id ?? ''))) === 'K3L';
+    }
+
     private function checkEditRule(Realisasi $realisasi)
     {
-        if (auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3']) || in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3'])) {
+        if (auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3']) || in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3']) || $this->isMsbK3L()) {
             return; // Superadmin & Asman UP3 have full access
         }
 
@@ -323,7 +331,7 @@ class RealizationController extends Controller
 
     private function checkDeleteRule(Realisasi $realisasi)
     {
-        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID']) && !in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID'])) {
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID']) && !in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID']) && !$this->isMsbK3L()) {
             abort(403, 'Akses Ditolak: Hanya Superadmin yang dapat menghapus data realisasi LM.');
         }
     }

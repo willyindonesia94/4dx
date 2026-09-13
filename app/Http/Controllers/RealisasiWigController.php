@@ -20,7 +20,8 @@ class RealisasiWigController extends Controller
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
-        $isSuperAdmin = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID']);
+        $isMsbK3L = $user && $user->hasRole('MSB UID') && strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L';
+        $isSuperAdmin = $user && ($user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || $isMsbK3L);
 
         $skipMatrixFilter = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'SRM Perencanaan UID', 'Asman Perencanaan UP3', 'Manager UP3', 'Manager ULP', 'General Manager UID']);
 
@@ -268,10 +269,14 @@ class RealisasiWigController extends Controller
         return redirect()->back()->with('success', 'Realisasi WIG berhasil dihapus.')->with('active_wig', $wig_id);
     }
 
+    private function isMsbK3L() {
+        return auth()->user()->hasRole('MSB UID') && strtoupper(trim((string)(auth()->user()->matrix_group_id ?? ''))) === 'K3L';
+    }
+
     private function authorizeSuperadmin()
     {
-        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Admin Sub Bidang UID'])) {
-            abort(403, 'Akses Ditolak: Hanya Admin Sub Bidang UID atau Superadmin yang dapat mengedit/menghapus Realisasi WIG.');
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Admin Sub Bidang UID']) && !$this->isMsbK3L()) {
+            abort(403, 'Akses Ditolak: Hanya Admin Sub Bidang UID, MSB K3L, atau Superadmin yang dapat mengedit/menghapus Realisasi WIG.');
         }
     }
     public function downloadTemplate(Request $request)
