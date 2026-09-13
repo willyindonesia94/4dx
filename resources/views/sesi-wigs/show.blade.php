@@ -1,5 +1,17 @@
 <x-app-layout>
 @php
+$komitmenLocks = [];
+foreach($sesi_wigs_matrix as $sw) {
+    $mp = \App\Models\MasterPeriode::where('tahun', $sw->tahun)->where('bulan', $sw->bulan)->first();
+    $sDate = null;
+    if ($mp) { $c = 'start_m' . $sw->minggu_ke; $sDate = $mp->$c; }
+    if (!$sDate) { $sDate = \Carbon\Carbon::create($sw->tahun, $sw->bulan, 1)->addDays(($sw->minggu_ke - 1) * 7)->format('Y-m-d'); }
+    $tStart = \Carbon\Carbon::parse($sDate);
+    $oDate = $tStart->copy()->subDays(6)->startOfDay();
+    $dLine = $tStart->copy()->endOfDay();
+    $komitmenLocks[$sw->id] = now()->isAfter($dLine) || now()->isBefore($oDate);
+}
+
 $formatLmValue = function($value, $satuan) {
     if ($value === null || $value === '') return '-';
     if (trim($satuan) === '%') {
@@ -747,7 +759,7 @@ $formatLmValue = function($value, $satuan) {
                                                                         
                                                                         // Lock editing for past sessions (unless Super Admin)
                                                                         if ($canEditUp3Komitmen && !($userAuth->hasRole('Super Admin') || strtolower($userAuth->role_name) === 'super admin')) {
-                                                                            if (\Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->endOfWeek()->addDay()->endOfDay()->isPast()) {
+                                                                            if ($komitmenLocks[$sw->id] ?? true) {
                                                                                 $canEditUp3Komitmen = false;
                                                                             }
                                                                         }
@@ -842,7 +854,7 @@ $formatLmValue = function($value, $satuan) {
                                                                     
                                                                     // Lock editing for past sessions (unless Super Admin)
                                                                     if ($canEditUlpKomitmen && !($user->hasRole('Super Admin') || strtolower($user->role_name) === 'super admin')) {
-                                                                        if (\Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->endOfWeek()->addDay()->endOfDay()->isPast()) {
+                                                                        if ($komitmenLocks[$sw->id] ?? true) {
                                                                             $canEditUlpKomitmen = false;
                                                                         }
                                                                     }
