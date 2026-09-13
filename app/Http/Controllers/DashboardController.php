@@ -82,11 +82,19 @@ class DashboardController extends Controller
         $realBaseQuery = DB::table('realisasis')
             ->whereMonth('tanggal_input', $bulan)
             ->whereYear('tanggal_input', $tahun);
+        // Determine non-summable LMs (e.g. percentage, minutes) to average instead of sum
+        $nonSummableLmSatuans = [1, 2, 6, 14];
+        $lmsData = \App\Models\MasterLm::select('id', 'satuan_id')->get();
+        $isNonSummable = [];
+        foreach ($lmsData as $lmData) {
+            $isNonSummable[$lmData->id] = in_array($lmData->satuan_id, $nonSummableLmSatuans);
+        }
+
         if ($scopedUnitIds !== null) {
             $realBaseQuery->whereIn('unit_id', $scopedUnitIds);
         }
         $realQuery = (clone $realBaseQuery)
-            ->select('lm_id', 'unit_id', DB::raw('SUM(angka_realisasi) as realisasi'))
+            ->select('lm_id', 'unit_id', DB::raw('SUM(angka_realisasi) as realisasi, COUNT(angka_realisasi) as cnt'))
             ->groupBy('lm_id', 'unit_id')
             ->get();
 
@@ -97,7 +105,11 @@ class DashboardController extends Controller
         }
         $realMap = [];
         foreach ($realQuery as $row) {
-            $realMap[$row->unit_id][$row->lm_id] = (float) $row->realisasi;
+            $val = (float) $row->realisasi;
+            if (!empty($isNonSummable[$row->lm_id]) && $row->cnt > 0) {
+                $val /= $row->cnt;
+            }
+            $realMap[$row->unit_id][$row->lm_id] = $val;
         }
 
         // ── Build scoped target map for current scope ──────────────────────────
@@ -106,13 +118,6 @@ class DashboardController extends Controller
         $scopedRealisasi = [];  // [lm_id] => realisasi
 
         if ($scopedUnitIds !== null) {
-            // Fetch non-summable LMs to average them instead of sum
-            $nonSummableLmSatuans = [1, 2, 6, 14];
-            $lmsData = \App\Models\MasterLm::select('id', 'satuan_id')->get();
-            $isNonSummable = [];
-            foreach ($lmsData as $lmData) {
-                $isNonSummable[$lmData->id] = in_array($lmData->satuan_id, $nonSummableLmSatuans);
-            }
 
             // Target: Get target for the explicitly selected unit only (prevent double counting with children)
             $targetUnitForScope = $selectedUlp ? $selectedUlp : $selectedUp3;
@@ -157,14 +162,6 @@ class DashboardController extends Controller
             $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
             $up3Ids = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->pluck('id')->toArray();
             $ulpIds = \App\Models\MasterUnit::where('type', 'ULP')->pluck('id')->toArray();
-
-            // Fetch non-summable LMs to average them instead of sum
-            $nonSummableLmSatuans = [1, 2, 6, 14];
-            $lmsData = \App\Models\MasterLm::select('id', 'satuan_id')->get();
-            $isNonSummable = [];
-            foreach ($lmsData as $lmData) {
-                $isNonSummable[$lmData->id] = in_array($lmData->satuan_id, $nonSummableLmSatuans);
-            }
 
             $cascadeSum = function($map) use ($uidUnits, $up3Ids, $ulpIds, $isNonSummable) {
                 $res = [];
@@ -492,12 +489,16 @@ class DashboardController extends Controller
             if ($scopedUnitIds !== null) {
                 $tRealBaseQuery->whereIn('unit_id', $scopedUnitIds);
             }
-            $tRealQuery = $tRealBaseQuery->select('lm_id', 'unit_id', DB::raw('SUM(angka_realisasi) as realisasi'))
+            $tRealQuery = $tRealBaseQuery->select('lm_id', 'unit_id', DB::raw('SUM(angka_realisasi) as realisasi, COUNT(angka_realisasi) as cnt'))
                 ->groupBy('lm_id', 'unit_id')
                 ->get();
             $tRealMap = [];
             foreach ($tRealQuery as $row) {
-                $tRealMap[$row->unit_id][$row->lm_id] = (float) $row->realisasi;
+                $val = (float) $row->realisasi;
+                if (!empty($isNonSummable[$row->lm_id]) && $row->cnt > 0) {
+                    $val /= $row->cnt;
+                }
+                $tRealMap[$row->unit_id][$row->lm_id] = $val;
             }
             
             $tScopedTarget = [];
