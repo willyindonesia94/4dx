@@ -113,12 +113,46 @@ class DashboardController extends Controller
                     $scopedTarget[$lmId] = ($scopedTarget[$lmId] ?? 0) + $t;
                 }
             }
+            // Fallback: if no direct target, rollup from children
+            if (empty($scopedTarget) && $selectedUp3) {
+                $childIds = \App\Models\MasterUnit::where('parent_id', $selectedUp3)->pluck('id')->toArray();
+                foreach ($childIds as $cId) {
+                    if (!isset($bdMap[$cId])) continue;
+                    foreach ($bdMap[$cId] as $lmId => $t) {
+                        $scopedTarget[$lmId] = ($scopedTarget[$lmId] ?? 0) + $t;
+                    }
+                }
+            }
         } else {
-            // All units - For Target: Only take the UID target (Top-Down distribution)
+            // All units - For Target: Try UID target first (Top-Down distribution)
+            // Fallback: rollup from UP3; if still empty, rollup from ULP
             $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
             foreach ($uidUnits as $uid) {
                 if (isset($bdMap[$uid])) {
                     foreach ($bdMap[$uid] as $lmId => $t) {
+                        $scopedTarget[$lmId] = ($scopedTarget[$lmId] ?? 0) + $t;
+                    }
+                }
+            }
+
+            // Fallback: if no UID-level data found for some LMs, try UP3 rollup
+            $up3Ids = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->pluck('id')->toArray();
+            foreach ($up3Ids as $up3Id) {
+                if (!isset($bdMap[$up3Id])) continue;
+                foreach ($bdMap[$up3Id] as $lmId => $t) {
+                    // Only fill if UID-level target is missing for this LM
+                    if (!isset($scopedTarget[$lmId]) || $scopedTarget[$lmId] == 0) {
+                        $scopedTarget[$lmId] = ($scopedTarget[$lmId] ?? 0) + $t;
+                    }
+                }
+            }
+
+            // Final fallback: if still missing, try ULP rollup
+            $ulpIds = \App\Models\MasterUnit::whereIn('type', ['ULP'])->pluck('id')->toArray();
+            foreach ($ulpIds as $ulpId) {
+                if (!isset($bdMap[$ulpId])) continue;
+                foreach ($bdMap[$ulpId] as $lmId => $t) {
+                    if (!isset($scopedTarget[$lmId]) || $scopedTarget[$lmId] == 0) {
                         $scopedTarget[$lmId] = ($scopedTarget[$lmId] ?? 0) + $t;
                     }
                 }
