@@ -226,21 +226,28 @@ class DashboardController extends Controller
                 $wigRealQuery->where('bulan', '<=', $bulan);
             }
             
-            if ($scopedUnitIds !== null) {
-                $wigRealQuery->whereIn('unit_id', $scopedUnitIds);
-            } else {
-                $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
-                if (!empty($uidUnits)) {
-                    $wigRealQuery->whereIn('unit_id', $uidUnits);
-                }
-            }
             $satuanAvgIds = [1, 2, 14]; // %, Menit, Menit/plg
             $isAvg = in_array($wig->satuan_id, $satuanAvgIds);
             
-            if ($isAvg) {
-                $wigRealisasi = (float) $wigRealQuery->avg('angka_realisasi');
+            if ($scopedUnitIds !== null) {
+                $wigRealQuery->whereIn('unit_id', $scopedUnitIds);
+                if ($isAvg) {
+                    $wigRealisasi = (float) $wigRealQuery->avg('angka_realisasi');
+                } else {
+                    $wigRealisasi = (float) $wigRealQuery->sum('angka_realisasi');
+                }
             } else {
-                $wigRealisasi = (float) $wigRealQuery->sum('angka_realisasi');
+                $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
+                $uidUnitId = !empty($uidUnits) ? $uidUnits[0] : 1;
+                
+                $hasUid = (clone $wigRealQuery)->where('unit_id', $uidUnitId)->exists();
+                if ($hasUid) {
+                    $uidQuery = (clone $wigRealQuery)->where('unit_id', $uidUnitId);
+                    $wigRealisasi = $isAvg ? (float) $uidQuery->avg('angka_realisasi') : (float) $uidQuery->sum('angka_realisasi');
+                } else {
+                    $up3Query = (clone $wigRealQuery)->where('unit_id', '!=', $uidUnitId);
+                    $wigRealisasi = $isAvg ? (float) $up3Query->avg('angka_realisasi') : (float) $up3Query->sum('angka_realisasi');
+                }
             }
 
             $wigProgress = 0;
@@ -465,16 +472,31 @@ class DashboardController extends Controller
             
             // Get WIG realisasi for month $m
             $tWigRealQuery = DB::table('realisasi_wigs')->where('tahun', $tahun)->where('bulan', $m);
+            $tWigRealisasisSum = [];
+            $tWigRealisasisAvg = [];
+            
             if ($scopedUnitIds !== null) {
                 $tWigRealQuery->whereIn('unit_id', $scopedUnitIds);
+                $tWigRealisasisSum = clone $tWigRealQuery->select('wig_id', DB::raw('SUM(angka_realisasi) as total_realisasi'))->groupBy('wig_id')->pluck('total_realisasi', 'wig_id')->toArray();
+                $tWigRealisasisAvg = clone $tWigRealQuery->select('wig_id', DB::raw('AVG(angka_realisasi) as total_realisasi'))->groupBy('wig_id')->pluck('total_realisasi', 'wig_id')->toArray();
             } else {
                 $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
-                if (!empty($uidUnits)) {
-                    $tWigRealQuery->whereIn('unit_id', $uidUnits);
+                $uidUnitId = !empty($uidUnits) ? $uidUnits[0] : 1;
+                
+                $allRealisasis = $tWigRealQuery->get();
+                foreach($wigs as $w) {
+                    $wReals = $allRealisasis->where('wig_id', $w->id);
+                    $uidWReals = $wReals->where('unit_id', $uidUnitId);
+                    if ($uidWReals->count() > 0) {
+                        $tWigRealisasisSum[$w->id] = $uidWReals->sum('angka_realisasi');
+                        $tWigRealisasisAvg[$w->id] = $uidWReals->avg('angka_realisasi');
+                    } else {
+                        $up3WReals = $wReals->where('unit_id', '!=', $uidUnitId);
+                        $tWigRealisasisSum[$w->id] = $up3WReals->sum('angka_realisasi');
+                        $tWigRealisasisAvg[$w->id] = $up3WReals->avg('angka_realisasi');
+                    }
                 }
             }
-            $tWigRealisasisSum = $tWigRealQuery->select('wig_id', DB::raw('SUM(angka_realisasi) as total_realisasi'))->groupBy('wig_id')->pluck('total_realisasi', 'wig_id')->toArray();
-            $tWigRealisasisAvg = $tWigRealQuery->select('wig_id', DB::raw('AVG(angka_realisasi) as total_realisasi'))->groupBy('wig_id')->pluck('total_realisasi', 'wig_id')->toArray();
 
             foreach ($wigs as $wig) {
                 $target = (float) ($tWigTargets[$wig->id] ?? 0);
