@@ -183,6 +183,7 @@ class DashboardController extends Controller
                 }
 
                 $lmDetails[] = [
+                    'id'        => $lm->id,
                     'judul'     => $lm->judul_lm,
                     'target'    => $target,
                     'realisasi' => $realisasi,
@@ -708,10 +709,10 @@ class DashboardController extends Controller
             $pol = strtolower(trim($polaritas ?? 'positif'));
             if ($pol === 'negatif' || $pol === '3') {
                 if ($target == 0) return $realisasi == 0 ? 100 : 0;
-                return $realisasi == 0 ? 100 : max(0, min(($target / $realisasi) * 100, 100));
+                return $realisasi == 0 ? 100 : ($target / $realisasi) * 100;
             } else {
                 if ($target == 0) return $realisasi > 0 ? 100 : 0;
-                return max(0, min(($realisasi / $target) * 100, 100));
+                return ($realisasi / $target) * 100;
             }
         };
         $rtRealQuery = \Illuminate\Support\Facades\DB::table('realisasis')
@@ -860,14 +861,15 @@ class DashboardController extends Controller
         $namaBulanPrev = ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'][$prevBulan - 1];
         $colBln = 'target_' . substr($namaBulanTarget, 0, 3);
         $colPrevBln = 'target_' . substr($namaBulanPrev, 0, 3);
+        // Pre-fetch UID unit IDs once
+        $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
+        $uidUnitId = !empty($uidUnits) ? $uidUnits[0] : 1;
 
         foreach ($wigs as $wig) {
             $filteredUp3sByWig[$wig->id] = $up3s;
-            $prevTarget = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
-                ->where('wig_id', $wig->id)->where('tahun', $prevTahun)->sum($colPrevBln);
             
-            $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
-            $uidUnitId = !empty($uidUnits) ? $uidUnits[0] : 1;
+            $prevTarget = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
+                ->where('wig_id', $wig->id)->where('tahun', $prevTahun)->where('unit_id', $uidUnitId)->sum($colPrevBln);
             
             $satuanAvgIds = [1, 2, 14];
             $isAvg = in_array($wig->satuan_id, $satuanAvgIds);
