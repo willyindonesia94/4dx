@@ -176,7 +176,7 @@
                                             <div class="p-3 flex-1 flex flex-col sm:flex-row">
                                                 <div class="w-full sm:w-1/2 text-center flex flex-col justify-center items-center px-2 py-2">
                                                     <div class="text-2xl font-bold text-[#0b2256]">{{ number_format($wig->total_target ?? 0, 2) }} <span class="text-sm">{{ $wig->satuan->name ?? '' }}</span></div>
-                                                    <div class="text-[10px] font-bold text-gray-700 mt-1">Target WIG {{ $isUlpLevel ? 'ULP' : ($isUp3Level ? 'UP3' : 'UID Jabar') }}</div>
+                                                    <div class="text-[10px] font-bold text-gray-700 mt-1">Target WIG UID Jabar</div>
                                                     <div class="text-[9px] text-gray-500 mt-1">Realisasi: {{ number_format($wig->total_realisasi ?? 0, 2) }} {{ $wig->satuan->name ?? '' }}</div>
                                                 </div>
                                                 <div class="w-full sm:w-1/2 border-t sm:border-t-0 sm:border-l border-gray-200 mt-2 sm:mt-0 pt-2 sm:pt-0 sm:pl-3 flex flex-col justify-between">
@@ -306,9 +306,9 @@
                                                         $lmStatus = $lmPct >= 100 ? 'EXCEEDED TARGET' : 'PERFORMANCE WATCH';
                                                         
                                                         // Fetch LM menang kalah data which was built in controller
-                                                        $mkLevel = $isUlpLevel || $isUp3Level ? 'ulp' : 'up3';
-                                                        $menang = count($lmMenangKalah[$lm->id][$mkLevel]['menang'] ?? []);
-                                                        $kalah = count($lmMenangKalah[$lm->id][$mkLevel]['kalah'] ?? []);
+                                                        $mkLevel = 'up3';
+                                                        $menang = count($rtMenangKalah[$lm->id][$mkLevel]['menang'] ?? []);
+                                                        $kalah = count($rtMenangKalah[$lm->id][$mkLevel]['kalah'] ?? []);
                                                     @endphp
                                                     <div class="bg-gray-50 border border-gray-300 rounded-lg flex flex-col items-center justify-center p-3 text-center border-t-4 {{ $lmPct >= 100 ? 'border-t-green-500' : 'border-t-red-500' }} shadow-sm hover:shadow-md transition-shadow">
                                                         <div class="text-[10px] font-bold text-gray-700 leading-tight mb-2 h-[26px] overflow-hidden line-clamp-2" title="{{ $lm->judul_lm }}">LM {{ $loop->iteration }} - {{ preg_replace('/^LM\s*-?\s*\d+\s*/i', '', $lm->judul_lm) }}</div>

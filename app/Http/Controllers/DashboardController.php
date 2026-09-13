@@ -927,7 +927,7 @@ class DashboardController extends Controller
             'up3s', 'ulps', 'allUlps', 'selectedUp3', 'selectedUlp',
             'leaderboard', 'leaderboardUp3', 'menangKalah', 'bulan', 'tahun', 'trendData',
             'wigs', 'latestSesiWig', 'sesi_wigs_month', 'sesi_wigs_matrix', 'matrixTargets', 'matrixRealisasi', 'matrixKomitmen', 'rtMenangKalah', 'periodeWig',
-            'rtBdMap', 'rtRealMap', 'targetBulan', 'prevBulan', 'calcCapaian', 'formatLmValue', 'wigUnitData', 'filteredUp3sByWig', 'namaBulanTarget', 'namaBulanPrev'
+            'rtBdMap', 'rtRealMap', 'targetBulan', 'prevBulan', 'calcCapaian', 'formatLmValue', 'wigUnitData', 'filteredUp3sByWig', 'namaBulanTarget', 'namaBulanPrev', 'lms'
         ));
     }
 }
