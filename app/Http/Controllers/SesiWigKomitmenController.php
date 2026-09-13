@@ -45,9 +45,21 @@ class SesiWigKomitmenController extends Controller
         $isSuperAdmin = $user && ($user->hasRole('Super Admin') || strtolower($user->role_name) === 'super admin');
         
         if (!$isSuperAdmin) {
-            $deadline = \Carbon\Carbon::parse($sesi->tanggal_pelaksanaan)->endOfWeek()->addDay()->endOfDay(); // Monday 23:59 of next week
-            if (now()->isAfter($deadline)) {
-                return response()->json(['success' => false, 'message' => 'Batas waktu pengisian komitmen (Hari Senin pukul 23:59 setelah sesi) sudah berlalu. Saat ini Anda hanya bisa melihat komitmen (Read-Only).'], 403);
+            $masterPeriode = \App\Models\MasterPeriode::where('tahun', $sesi->tahun)->where('bulan', $sesi->bulan)->first();
+            $startDate = null;
+            if ($masterPeriode) {
+                $col = 'start_m' . $sesi->minggu_ke;
+                $startDate = $masterPeriode->$col;
+            }
+            if (!$startDate) {
+                $startDate = \Carbon\Carbon::create($sesi->tahun, $sesi->bulan, 1)->addDays(($sesi->minggu_ke - 1) * 7)->format('Y-m-d');
+            }
+            $targetStart = \Carbon\Carbon::parse($startDate);
+            $openDate = $targetStart->copy()->subDays(6)->startOfDay(); // Tuesday 00:00:00 before target week
+            $deadline = $targetStart->copy()->endOfDay(); // Monday 23:59:59 of target week
+
+            if (now()->isAfter($deadline) || now()->isBefore($openDate)) {
+                return response()->json(['success' => false, 'message' => 'Batas waktu pengisian komitmen (Hari Selasa s/d Senin ' . $deadline->format('d M') . ' pukul 23:59) tidak sesuai. Saat ini Anda hanya bisa melihat komitmen (Read-Only).'], 403);
             }
         }
         

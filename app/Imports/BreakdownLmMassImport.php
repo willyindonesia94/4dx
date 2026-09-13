@@ -245,6 +245,55 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
                 session()->flash('warning_skipped', "Beberapa data dilewati (Unit/LM tidak ditemukan): " . implode(", ", $uniqueSkipped));
             }
 
+            // Auto-accumulate UP3 targets for WIG 4 (K3L)
+            $wig4s = \App\Models\MasterWig::where('judul', 'like', '%WIG 4%')->orWhere('judul', 'like', '%FREQUENCY RATE ACCIDENT%')->pluck('id');
+            $lm4s = \App\Models\MasterLm::whereIn('wig_id', $wig4s)->pluck('id');
+            
+            if ($lm4s->isNotEmpty()) {
+                $ulpBreakdowns = \App\Models\BreakdownLm::whereIn('lm_id', $lm4s)
+                    ->where('bulan', $this->bulan)
+                    ->where('tahun', $this->tahun)
+                    ->whereHas('unit', function($q) {
+                        $q->where('type', 'ULP');
+                    })
+                    ->with('unit')
+                    ->get();
+                    
+                $up3Accumulations = [];
+                foreach ($ulpBreakdowns as $b) {
+                    if ($b->unit && $b->unit->parent_id) {
+                        $key = $b->lm_id . '_' . $b->unit->parent_id . '_' . $b->periode_start . '_' . $b->periode_end;
+                        if (!isset($up3Accumulations[$key])) {
+                            $up3Accumulations[$key] = [
+                                'lm_id' => $b->lm_id,
+                                'unit_id' => $b->unit->parent_id,
+                                'periode_start' => $b->periode_start,
+                                'periode_end' => $b->periode_end,
+                                'angka_target' => 0,
+                                'satuan_id' => $b->satuan_id,
+                                'bulan' => $b->bulan,
+                                'tahun' => $b->tahun,
+                            ];
+                        }
+                        $up3Accumulations[$key]['angka_target'] += $b->angka_target;
+                    }
+                }
+                
+                foreach ($up3Accumulations as $data) {
+                    \App\Models\BreakdownLm::updateOrCreate([
+                        'lm_id' => $data['lm_id'],
+                        'unit_id' => $data['unit_id'],
+                        'periode_start' => $data['periode_start'],
+                        'periode_end' => $data['periode_end'],
+                    ], [
+                        'angka_target' => $data['angka_target'],
+                        'satuan_id' => $data['satuan_id'],
+                        'bulan' => $data['bulan'],
+                        'tahun' => $data['tahun'],
+                    ]);
+                }
+            }
+
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();

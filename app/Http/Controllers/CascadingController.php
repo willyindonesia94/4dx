@@ -500,7 +500,8 @@ class CascadingController extends Controller
         }
 
         $user = Auth::user();
-        $canEditDelete = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3']);
+        $isMsbK3L = $user && $user->hasRole('MSB UID') && strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L';
+        $canEditDelete = $user && ($user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3']) || $isMsbK3L);
         
         if (!$canEditDelete) {
             return redirect()->back()->with('error', 'Anda tidak memiliki akses untuk menghapus target.');
@@ -716,7 +717,8 @@ class CascadingController extends Controller
     public function bulkUpdateLm(Request $request)
     {
         $user = Auth::user();
-        $canEditDelete = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3']);
+        $isMsbK3L = $user && $user->hasRole('MSB UID') && strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L';
+        $canEditDelete = $user && ($user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3']) || $isMsbK3L);
         if (!$canEditDelete) {
             return abort(403, 'Akses Ditolak');
         }

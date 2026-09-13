@@ -16,8 +16,11 @@ class BreakdownLmTemplateK3LExport implements FromCollection, WithHeadings, Shou
 {
     public function collection()
     {
-        // Untuk Template K3L, kita bypass role checking dan langsung ambil SEMUA ULP
-        $availableUnits = MasterUnit::where('type', 'ULP')->orderBy('name')->get();
+        // Untuk Template K3L, kita bypass role checking dan ambil ULP dan UP2D
+        $availableUnits = MasterUnit::whereIn('type', ['ULP', 'UP2D'])
+            ->orderBy('type', 'asc') // ULP comes before UP2D alphabetically
+            ->orderBy('name')
+            ->get();
 
         if ($availableUnits->isEmpty()) {
             $availableUnits = collect([(object)['name' => 'ULP CONTOH']]);

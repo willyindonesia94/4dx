@@ -18,7 +18,8 @@
 
     @php
         $user = auth()->user();
-        $canEditDelete = $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3']);
+        $isMsbK3L = $user->hasRole('MSB UID') && strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L';
+        $canEditDelete = $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3']) || $isMsbK3L;
         
         $highlightWigId = session('active_wig', 'null');
         if(request('highlight_unit')) {
@@ -183,7 +184,7 @@
                             @if(auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Bidang K3L (MSB)') || strtoupper(trim((string)auth()->user()->matrix_group_id)) === 'K3L')
                             <a href="{{ route('cascading.breakdown.template-k3l') }}" class="whitespace-nowrap justify-center inline-flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-md text-sm font-semibold transition-colors shadow-sm">
                                 <svg class="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                Template K3L (Seluruh ULP)
+                                Template K3L (ULP & UP2D)
                             </a>
                             @endif
                             <button onclick="document.getElementById('uploadTargetForm').classList.toggle('hidden')" class="whitespace-nowrap justify-center inline-flex items-center px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-md text-sm font-bold transition-colors shadow-sm">
@@ -361,7 +362,7 @@
                                                                 <span class="ml-3 bg-white text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{{ $uidLmBreakdowns->count() }} Target Unit</span>
                                                             </div>
                                                             <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
-                                                                @if(!empty($canBreakdownToUid))
+                                                                @if(!empty($canBreakdownToUid) || (isset($canApproveLm) && $canApproveLm))
                                                                 <button @click.stop="openAddModal({{ $lm->id }}, '{{ addslashes($lm->judul_lm) }}', 'uid', '{{ $lm->satuan_id ?? '' }}', '{{ addslashes($lm->satuan->name ?? '') }}')" class="text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1 px-2 rounded transition-colors shadow-sm">+ Breakdown UID</button>
                                                                 @endif
                                                                 <svg class="w-4 h-4 text-indigo-500 transform transition-transform" :class="{'rotate-180': openUid}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -378,7 +379,7 @@
                                                                             <th class="px-4 py-2 font-medium">Bidang</th>
                                                                             <th class="px-4 py-2 font-medium text-right">Target</th>
                                                                             <th class="px-4 py-2 font-medium">Periode</th>
-                                                                            @if(!empty($canBreakdownToUid))
+                                                                            @if(!empty($canBreakdownToUid) || (isset($canApproveLm) && $canApproveLm))
                                                                             <th class="px-4 py-2 font-medium text-center">Aksi</th>
                                                                             @endif
                                                                         </tr>
@@ -397,7 +398,7 @@
                                                                         @endphp
                                                                         <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'false' }} }" class="divide-y divide-indigo-50 bg-white border-b border-indigo-100/50">
                                                                             <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
-                                                                                <td colspan="{{ !empty($canBreakdownToUid) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
+                                                                                <td colspan="{{ (!empty($canBreakdownToUid) || (isset($canApproveLm) && $canApproveLm)) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
                                                                                     <div class="flex justify-between items-center">
                                                                                         <div class="flex items-center gap-3">
                                                                                             <input type="checkbox" @click.stop="selectAll({{ $items->pluck('id')->toJson() }})" :checked="[...{{ $items->pluck('id')->toJson() }}].every(id => selectedBreakdowns.includes(String(id)))" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
@@ -455,7 +456,7 @@
                                                                                         <span class="text-xs text-gray-400 block">{{ \Carbon\Carbon::parse($breakdown->periode_start)->locale('id')->translatedFormat('d M Y') }} - {{ \Carbon\Carbon::parse($breakdown->periode_end)->locale('id')->translatedFormat('d M Y') }}</span>
                                                                                     @endif
                                                                                 </td>
-                                                                                @if(!empty($canBreakdownToUid))
+                                                                                @if(!empty($canBreakdownToUid) || (isset($canApproveLm) && $canApproveLm))
                                                                                 <td class="px-4 py-2 text-center whitespace-nowrap">
                                                                                     <div class="flex justify-center items-center gap-3">
                                                                                         @if(!$breakdown->is_approved && isset($canApproveLm) && $canApproveLm)
@@ -495,7 +496,7 @@
                                                                 <span class="ml-3 bg-white text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{{ $up3LmBreakdowns->count() }} Target Unit</span>
                                                             </div>
                                                             <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
-                                                                @if(!empty($canBreakdownToUp3))
+                                                                @if(!empty($canBreakdownToUp3) || (isset($canApproveLm) && $canApproveLm))
                                                                 <button @click.stop="openAddModal({{ $lm->id }}, '{{ addslashes($lm->judul_lm) }}', 'up3', '{{ $lm->satuan_id ?? '' }}', '{{ addslashes($lm->satuan->name ?? '') }}')" class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1 px-2 rounded transition-colors shadow-sm">+ Breakdown UP3</button>
                                                                 @endif
                                                                 <svg class="w-4 h-4 text-emerald-500 transform transition-transform" :class="{'rotate-180': openUp3}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -512,7 +513,7 @@
                                                                             <th class="px-4 py-2 font-medium">Bidang</th>
                                                                             <th class="px-4 py-2 font-medium text-right">Target</th>
                                                                             <th class="px-4 py-2 font-medium">Periode</th>
-                                                                            @if(!empty($canBreakdownToUp3))
+                                                                            @if(!empty($canBreakdownToUp3) || (isset($canApproveLm) && $canApproveLm))
                                                                             <th class="px-4 py-2 font-medium text-center">Aksi</th>
                                                                             @endif
                                                                         </tr>
@@ -531,7 +532,7 @@
                                                                         @endphp
                                                                         <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'false' }} }" class="divide-y divide-emerald-50 bg-white border-b border-emerald-100/50">
                                                                             <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
-                                                                                <td colspan="{{ !empty($canBreakdownToUp3) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
+                                                                                <td colspan="{{ (!empty($canBreakdownToUp3) || (isset($canApproveLm) && $canApproveLm)) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
                                                                                     <div class="flex justify-between items-center">
                                                                                         <div class="flex items-center gap-3">
                                                                                             <input type="checkbox" @click.stop="selectAll({{ $items->pluck('id')->toJson() }})" :checked="[...{{ $items->pluck('id')->toJson() }}].every(id => selectedBreakdowns.includes(String(id)))" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
@@ -578,7 +579,7 @@
                                                                                 <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
                                                                                 <td class="px-4 py-2 text-right font-bold text-gray-800">{{ $formatLmValue($breakdown->angka_target, $lm->satuan->name ?? '') }}</td>
                                                                                 <td class="px-4 py-2 text-gray-500">{{ \Carbon\Carbon::parse($breakdown->periode_start)->locale('id')->translatedFormat('d M Y') }} - {{ \Carbon\Carbon::parse($breakdown->periode_end)->locale('id')->translatedFormat('d M Y') }}</td>
-                                                                                @if(!empty($canBreakdownToUp3))
+                                                                                @if(!empty($canBreakdownToUp3) || (isset($canApproveLm) && $canApproveLm))
                                                                                 <td class="px-4 py-2 text-center whitespace-nowrap">
                                                                                     <div class="flex justify-center items-center gap-3">
                                                                                         @if(!$breakdown->is_approved && isset($canApproveLm) && $canApproveLm)
@@ -619,7 +620,7 @@
                                                                 <span class="ml-3 bg-white text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{{ $ulpLmBreakdowns->count() }} Target Unit</span>
                                                             </div>
                                                             <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
-                                                                @if(!empty($canBreakdownToUlp))
+                                                                @if(!empty($canBreakdownToUlp) || (isset($canApproveLm) && $canApproveLm))
                                                                 <button @click.stop="openAddModal({{ $lm->id }}, '{{ addslashes($lm->judul_lm) }}', 'ulp', '{{ $lm->satuan_id ?? '' }}', '{{ addslashes($lm->satuan->name ?? '') }}', '{{ addslashes($myUp3TargetText) }}')" class="text-[10px] bg-amber-600 hover:bg-amber-700 text-white font-bold py-1 px-2 rounded transition-colors shadow-sm">+ Breakdown ULP</button>
                                                                 @endif
                                                                 <svg class="w-4 h-4 text-amber-500 transform transition-transform" :class="{'rotate-180': openUlp}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -636,7 +637,7 @@
                                                                             <th class="px-4 py-2 font-medium">Bidang</th>
                                                                             <th class="px-4 py-2 font-medium text-right">Target</th>
                                                                             <th class="px-4 py-2 font-medium">Periode</th>
-                                                                            @if(!empty($canBreakdownToUlp))
+                                                                            @if(!empty($canBreakdownToUlp) || (isset($canApproveLm) && $canApproveLm))
                                                                             <th class="px-4 py-2 font-medium text-center">Aksi</th>
                                                                             @endif
                                                                         </tr>
@@ -655,7 +656,7 @@
                                                                         @endphp
                                                                         <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'false' }} }" class="divide-y divide-amber-50 bg-white border-b border-amber-100/50">
                                                                             <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
-                                                                                <td colspan="{{ !empty($canBreakdownToUlp) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
+                                                                                <td colspan="{{ (!empty($canBreakdownToUlp) || (isset($canApproveLm) && $canApproveLm)) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
                                                                                     <div class="flex justify-between items-center">
                                                                                         <div class="flex items-center gap-3">
                                                                                             <input type="checkbox" @click.stop="selectAll({{ $items->pluck('id')->toJson() }})" :checked="[...{{ $items->pluck('id')->toJson() }}].every(id => selectedBreakdowns.includes(String(id)))" class="rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer">
@@ -706,7 +707,7 @@
                                                                                 <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
                                                                                 <td class="px-4 py-2 text-right font-bold text-gray-800">{{ $formatLmValue($breakdown->angka_target, $lm->satuan->name ?? '') }}</td>
                                                                                 <td class="px-4 py-2 text-gray-500">{{ \Carbon\Carbon::parse($breakdown->periode_start)->locale('id')->translatedFormat('d M Y') }} - {{ \Carbon\Carbon::parse($breakdown->periode_end)->locale('id')->translatedFormat('d M Y') }}</td>
-                                                                                @if(!empty($canBreakdownToUlp))
+                                                                                @if(!empty($canBreakdownToUlp) || (isset($canApproveLm) && $canApproveLm))
                                                                                 <td class="px-4 py-2 text-center whitespace-nowrap">
                                                                                     <div class="flex justify-center items-center gap-3">
                                                                                         @if(!$breakdown->is_approved && isset($canApproveLm) && $canApproveLm)
