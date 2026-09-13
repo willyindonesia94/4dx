@@ -839,13 +839,95 @@ class DashboardController extends Controller
             }
         }
 
+        $targetBulan = $bulan;
+        $prevBulan = $bulan > 1 ? $bulan - 1 : 12;
+        $allUlps = $ulps;
+        $formatLmValue = function($value, $satuan) {
+            if ($value === null || $value === '') return '-';
+            $formatted = number_format((float)$value, 2, ",", ".");
+            $formatted = rtrim(rtrim($formatted, '0'), ',');
+            if ($formatted === '') $formatted = '0';
+            if (trim($satuan) === '%') {
+                return $formatted . '%';
+            }
+            return $formatted;
+        };
+
+        $prevTahun = $bulan > 1 ? $tahun : $tahun - 1;
+        $wigUnitData = [];
+        $filteredUp3sByWig = [];
+        $namaBulanTarget = ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'][$targetBulan - 1];
+        $namaBulanPrev = ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'][$prevBulan - 1];
+        $colBln = 'target_' . substr($namaBulanTarget, 0, 3);
+        $colPrevBln = 'target_' . substr($namaBulanPrev, 0, 3);
+
+        foreach ($wigs as $wig) {
+            $filteredUp3sByWig[$wig->id] = $up3s;
+            $prevTarget = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
+                ->where('wig_id', $wig->id)->where('tahun', $prevTahun)->sum($colPrevBln);
+            
+            $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
+            $uidUnitId = !empty($uidUnits) ? $uidUnits[0] : 1;
+            
+            $satuanAvgIds = [1, 2, 14];
+            $isAvg = in_array($wig->satuan_id, $satuanAvgIds);
+
+            $realQueryPrev = DB::table('realisasi_wigs')
+                ->where('wig_id', $wig->id)
+                ->where('tahun', $prevTahun);
+            if ($periodeWig === 'bulanan') {
+                $realQueryPrev->where('bulan', $prevBulan);
+            } else {
+                $realQueryPrev->where('bulan', '<=', $prevBulan);
+            }
+
+            $hasUidPrev = (clone $realQueryPrev)->where('unit_id', $uidUnitId)->exists();
+            if ($hasUidPrev) {
+                $uidQueryP = (clone $realQueryPrev)->where('unit_id', $uidUnitId);
+                $prevRealisasi = $isAvg ? (float) $uidQueryP->avg('angka_realisasi') : (float) $uidQueryP->sum('angka_realisasi');
+            } else {
+                $up3QueryP = (clone $realQueryPrev)->where('unit_id', '!=', $uidUnitId);
+                $prevRealisasi = $isAvg ? (float) $up3QueryP->avg('angka_realisasi') : (float) $up3QueryP->sum('angka_realisasi');
+            }
+            
+            $wig->total_target_prev = $prevTarget;
+            $wig->total_realisasi_prev = $prevRealisasi;
+            $wig->capaian_prev = round($calcCapaian($prevTarget, $prevRealisasi, $wig->polaritas), 2);
+            
+            $wp = collect($wigProgresses)->firstWhere('id', $wig->id);
+            $wig->total_target = $wp['angka_target'] ?? 0;
+            $wig->total_realisasi = $wp['angka_realisasi'] ?? 0;
+            $wig->capaian = $wp['progress'] ?? 0;
+            $wig->trend_capaian = $trendData[$wig->id] ?? [];
+            
+            $wigUnitData[$wig->id] = [];
+            foreach ($up3s as $up3) {
+                $curT = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
+                    ->where('wig_id', $wig->id)->where('tahun', $tahun)->where('unit_id', $up3->id)->sum($colBln);
+                $curR = \App\Models\RealisasiWig::where('wig_id', $wig->id)
+                    ->where('tahun', $tahun)->where('bulan', $targetBulan)->where('unit_id', $up3->id)->sum('angka_realisasi') ?? 0;
+                $curPct = $calcCapaian($curT, $curR, $wig->polaritas);
+                
+                $prevT = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
+                    ->where('wig_id', $wig->id)->where('tahun', $prevTahun)->where('unit_id', $up3->id)->sum($colPrevBln);
+                $prevR = \App\Models\RealisasiWig::where('wig_id', $wig->id)
+                    ->where('tahun', $prevTahun)->where('bulan', $prevBulan)->where('unit_id', $up3->id)->sum('angka_realisasi') ?? 0;
+                $prevPct = $calcCapaian($prevT, $prevR, $wig->polaritas);
+                
+                $wigUnitData[$wig->id][$up3->id] = [
+                    'cur' => ['t' => $curT, 'r' => $curR, 'pct' => round($curPct, 2)],
+                    'prev' => ['t' => $prevT, 'r' => $prevR, 'pct' => round($prevPct, 2)]
+                ];
+            }
+        }
+
         return view('dashboard.index', compact(
             'totalWigs', 'totalLms', 'totalRealisasis',
             'wigProgresses', 'mapData', 'dynamicMapData', 'divisions', 'selectedDivisi',
-            'up3s', 'ulps', 'selectedUp3', 'selectedUlp',
+            'up3s', 'ulps', 'allUlps', 'selectedUp3', 'selectedUlp',
             'leaderboard', 'leaderboardUp3', 'menangKalah', 'bulan', 'tahun', 'trendData',
             'wigs', 'latestSesiWig', 'sesi_wigs_month', 'sesi_wigs_matrix', 'matrixTargets', 'matrixRealisasi', 'matrixKomitmen', 'rtMenangKalah', 'periodeWig',
-            'rtBdMap', 'rtRealMap'
+            'rtBdMap', 'rtRealMap', 'targetBulan', 'prevBulan', 'calcCapaian', 'formatLmValue', 'wigUnitData', 'filteredUp3sByWig', 'namaBulanTarget', 'namaBulanPrev'
         ));
     }
 }
