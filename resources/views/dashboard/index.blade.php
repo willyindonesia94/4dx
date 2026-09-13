@@ -165,7 +165,7 @@
                             
                             <div x-show="activeTab === {{ $wig->id }}" x-cloak class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm transition-all duration-300">
                                 <!-- Infografis WIG & LM -->
-                                <div class="flex flex-col items-start gap-5 mb-6">
+                                <div class="flex flex-col gap-5 mb-6">
                                     <!-- KIRI: WIG Card & Tabel WIG -->
                                     <div class="w-full flex flex-col gap-4">
                                         <!-- WIG Card -->
