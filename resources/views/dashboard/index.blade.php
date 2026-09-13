@@ -165,9 +165,9 @@
                             
                             <div x-show="activeTab === {{ $wig->id }}" x-cloak class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm transition-all duration-300">
                                 <!-- Infografis WIG & LM -->
-                                <div class="flex flex-col xl:flex-row items-start gap-5 mb-6">
+                                <div class="flex flex-col items-start gap-5 mb-6">
                                     <!-- KIRI: WIG Card & Tabel WIG -->
-                                    <div class="w-full xl:w-[55%] flex flex-col gap-4">
+                                    <div class="w-full flex flex-col gap-4">
                                         <!-- WIG Card -->
                                         <div class="w-full bg-white rounded-lg shadow-sm border border-[#0b2256] overflow-hidden flex flex-col">
                                             <div class="bg-[#0b2256] text-white px-3 py-2 text-[10px] font-bold uppercase truncate">
@@ -294,7 +294,7 @@
                                     </div>
                                     
                                     <!-- KANAN: LM Cards Container -->
-                                    <div class="w-full xl:w-[45%] bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                                    <div class="w-full bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
                                         <div class="text-[10px] font-bold text-[#0b2256] uppercase mb-3 border-b border-gray-200 pb-2">PERFORMA LEAD MEASURE</div>
                                         @if($wigLms->count() > 0)
                                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.75rem;">
@@ -653,18 +653,6 @@
                 @endif
             </div>
 
-            <!-- WIG Heatmap Container -->
-            <div x-show="selectedWig !== null" class="mt-6 border-t border-gray-200 bg-white p-6" x-cloak>
-                <div x-html="heatmapHtml"></div>
-                <div x-show="loadingHeatmap" class="py-12 text-center text-gray-500">
-                    <svg class="animate-spin h-8 w-8 mx-auto text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Memuat Heatmap WIG...
-                </div>
-            </div>
-
             <!-- End of Combined Map & Matrix Widget -->
             
         </div>
@@ -812,7 +800,7 @@
                         this.updateMap();
                     }
 
-                    this.fetchHeatmap();
+                    // this.fetchHeatmap();
                 },
 
                 loadingHeatmap: false,
