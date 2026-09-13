@@ -130,6 +130,7 @@
 
             </div>
 
+            </div>
             <!-- Rincian Performa WIG Section -->
 <div class="grid grid-cols-1 gap-6 mb-6">
 <div class="w-full space-y-4">
@@ -335,9 +336,6 @@
             </div>
 
             
-</div>
-</div>
-</div>
 </div>
 
 <!-- Trend Chart Section -->
