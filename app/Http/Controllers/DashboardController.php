@@ -228,6 +228,11 @@ class DashboardController extends Controller
             
             if ($scopedUnitIds !== null) {
                 $wigRealQuery->whereIn('unit_id', $scopedUnitIds);
+            } else {
+                $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
+                if (!empty($uidUnits)) {
+                    $wigRealQuery->whereIn('unit_id', $uidUnits);
+                }
             }
             $satuanAvgIds = [1, 2, 14]; // %, Menit, Menit/plg
             $isAvg = in_array($wig->satuan_id, $satuanAvgIds);
@@ -462,6 +467,11 @@ class DashboardController extends Controller
             $tWigRealQuery = DB::table('realisasi_wigs')->where('tahun', $tahun)->where('bulan', $m);
             if ($scopedUnitIds !== null) {
                 $tWigRealQuery->whereIn('unit_id', $scopedUnitIds);
+            } else {
+                $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
+                if (!empty($uidUnits)) {
+                    $tWigRealQuery->whereIn('unit_id', $uidUnits);
+                }
             }
             $tWigRealisasisSum = $tWigRealQuery->select('wig_id', DB::raw('SUM(angka_realisasi) as total_realisasi'))->groupBy('wig_id')->pluck('total_realisasi', 'wig_id')->toArray();
             $tWigRealisasisAvg = $tWigRealQuery->select('wig_id', DB::raw('AVG(angka_realisasi) as total_realisasi'))->groupBy('wig_id')->pluck('total_realisasi', 'wig_id')->toArray();
