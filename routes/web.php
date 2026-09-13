@@ -90,6 +90,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/realisasis/template', [\App\Http\Controllers\RealizationController::class, 'downloadTemplate'])->name('realisasis.template');
     Route::get('/realisasis/template-k3l', [\App\Http\Controllers\RealizationController::class, 'downloadTemplateK3L'])->name('realisasis.template-k3l');
     Route::post('/realisasis/import', [\App\Http\Controllers\RealizationController::class, 'import'])->name('realisasis.import');
+    Route::put('/realisasis/bulk-update', [\App\Http\Controllers\RealizationController::class, 'bulkUpdate'])->name('realisasis.bulk-update');
     Route::delete('/realisasis/bulk-destroy', [\App\Http\Controllers\RealizationController::class, 'bulkDestroy'])->name('realisasis.bulk-destroy');
     Route::resource('realisasis', \App\Http\Controllers\RealizationController::class)->except(['show']);
     
@@ -97,6 +98,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/realisasi-wig', [\App\Http\Controllers\RealisasiWigController::class, 'index'])->name('realisasi-wig.index');
     Route::post('/realisasi-wig', [\App\Http\Controllers\RealisasiWigController::class, 'store'])->name('realisasi-wig.store');
     Route::put('/realisasi-wig/{realisasi_wig}', [\App\Http\Controllers\RealisasiWigController::class, 'update'])->name('realisasi-wig.update');
+    Route::put('/realisasi-wig/bulk-update', [\App\Http\Controllers\RealisasiWigController::class, 'bulkUpdate'])->name('realisasi-wig.bulk-update');
     Route::delete('/realisasi-wig/bulk-destroy', [\App\Http\Controllers\RealisasiWigController::class, 'bulkDestroy'])->name('realisasi-wig.bulk-destroy');
     Route::delete('/realisasi-wig/{realisasi_wig}', [\App\Http\Controllers\RealisasiWigController::class, 'destroy'])->name('realisasi-wig.destroy');
     Route::get('/realisasi-wig/template', [\App\Http\Controllers\RealisasiWigController::class, 'downloadTemplate'])->name('realisasi-wig.template')->middleware('role:Super Admin|Perencanaan UID|Asman Perencanaan UP3');

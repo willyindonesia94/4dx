@@ -316,6 +316,48 @@ class RealizationController extends Controller
         return $redirect;
     }
 
+    public function bulkUpdate(Request $request)
+    {
+        $ids = json_decode($request->input('ids', '[]'), true);
+        if (empty($ids) || !is_array($ids)) {
+            return redirect()->back()->with('error', 'Tidak ada data yang dipilih.');
+        }
+
+        $request->validate([
+            'angka_realisasi' => 'required|numeric',
+        ]);
+
+        $user = auth()->user();
+        $isMsbK3L = $user->hasRole('MSB UID') && strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L';
+        // Asman UP3 can edit their own today, but bulk update is restricted to those with real bulk edit power
+        $isSuperAdmin = $user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array($user->role_name, ['Super Admin', 'Perencanaan UID']) || $isMsbK3L;
+
+        $updatedCount = 0;
+        foreach ($ids as $id) {
+            $realisasi = Realisasi::find($id);
+            if ($realisasi) {
+                if (!$isSuperAdmin && !\Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now())) {
+                    continue; 
+                }
+                $realisasi->update(['angka_realisasi' => $request->angka_realisasi]);
+                $updatedCount++;
+            }
+        }
+
+        if ($updatedCount === 0) {
+            return redirect()->back()->with('error', 'Tidak ada data yang berhasil diubah (mungkin Anda tidak memiliki izin untuk mengedit data di luar hari ini).');
+        }
+
+        $first = Realisasi::with('lm')->whereIn('id', $ids)->first();
+        $wig_id = $first ? ($first->lm->wig_id ?? null) : null;
+        $lm_id = $first ? $first->lm_id : null;
+        $redirect = redirect()->back()->with('success', "Berhasil mengubah {$updatedCount} data realisasi.");
+        if ($wig_id) {
+            $redirect->with('active_wig', $wig_id)->with('expanded_lm', $lm_id);
+        }
+        return $redirect;
+    }
+
     private function isMsbK3L() {
         return auth()->user()->hasRole('MSB UID') && strtoupper(trim((string)(auth()->user()->matrix_group_id ?? ''))) === 'K3L';
     }

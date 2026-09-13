@@ -123,6 +123,30 @@ class RealisasiWigController extends Controller
         return $redirect;
     }
 
+    public function bulkUpdate(Request $request)
+    {
+        $this->authorizeSuperadmin();
+        
+        $ids = json_decode($request->input('ids', '[]'), true);
+        if (empty($ids)) {
+            return redirect()->back()->with('error', 'Tidak ada data realisasi yang dipilih untuk diedit.');
+        }
+
+        $request->validate([
+            'angka_realisasi' => 'required|numeric',
+        ]);
+
+        $realisasis = RealisasiWig::whereIn('id', $ids)->get();
+
+        foreach ($realisasis as $r) {
+            $r->update(['angka_realisasi' => $request->angka_realisasi]);
+        }
+
+        $redirect = redirect()->back()->with('success', count($realisasis) . ' data realisasi WIG berhasil diubah.');
+        if ($realisasis->first()) $redirect->with('active_wig', $realisasis->first()->wig_id);
+        return $redirect;
+    }
+
     public function getTargetBulanan(Request $request)
     {
         $wigId = $request->wig_id;

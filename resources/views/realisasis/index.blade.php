@@ -281,7 +281,7 @@
             @endforelse
         </div>
 
-        <!-- Floating Action Button for Bulk Delete -->
+        <!-- Floating Action Button for Bulk Actions -->
         <div x-show="selectedRealisasis.length > 0" 
              x-transition:enter="transition ease-out duration-300 transform"
              x-transition:enter-start="opacity-0 translate-y-10"
@@ -289,21 +289,85 @@
              x-transition:leave="transition ease-in duration-200 transform"
              x-transition:leave-start="opacity-100 translate-y-0"
              x-transition:leave-end="opacity-0 translate-y-10"
-             class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-red-600 shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 z-50 border border-red-500" style="display: none;">
+             class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 z-50 border border-slate-700" style="display: none;">
             <span class="font-bold text-white text-sm"><span x-text="selectedRealisasis.length"></span> Terpilih</span>
-            <div class="h-5 w-px bg-red-400"></div>
-            <button @click="bulkDelete()" class="text-white hover:text-red-100 font-bold text-sm flex items-center transition-colors">
+            <div class="h-5 w-px bg-slate-600"></div>
+            
+            <button @click="openBulkEdit()" class="text-blue-400 hover:text-blue-300 font-bold text-sm flex items-center transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                Edit Sekaligus
+            </button>
+
+            <div class="h-5 w-px bg-slate-600"></div>
+
+            <button @click="bulkDelete()" class="text-red-400 hover:text-red-300 font-bold text-sm flex items-center transition-colors">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 Hapus Sekaligus
             </button>
         </div>
 
-        <!-- Hidden Form for Bulk Action -->
+        <!-- Hidden Form for Bulk Delete -->
         <form id="bulkDeleteForm" action="{{ route('realisasis.bulk-destroy') }}" method="POST" class="hidden">
             @csrf
             @method('DELETE')
             <input type="hidden" name="ids" id="bulkDeleteInput">
         </form>
+
+        <!-- Hidden Form for Bulk Edit -->
+        <form id="bulkEditForm" action="{{ route('realisasis.bulk-update') }}" method="POST" class="hidden">
+            @csrf
+            @method('PUT')
+            <input type="hidden" name="ids" id="bulkEditIds">
+            <input type="hidden" name="angka_realisasi" id="bulkEditAngka">
+        </form>
+
+        <!-- Bulk Edit Modal -->
+        <div x-show="showBulkEditModal"
+             x-cloak
+             class="fixed inset-0 z-[9999] flex items-center justify-center"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
+            <!-- Overlay -->
+            <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @click="showBulkEditModal = false"></div>
+            
+            <!-- Modal Content -->
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+                
+                <div class="p-6">
+                    <div class="flex items-center justify-center w-12 h-12 mx-auto bg-blue-100 rounded-full mb-4">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 text-center mb-2">Edit Sekaligus</h3>
+                    <p class="text-sm text-gray-500 text-center mb-4">
+                        Masukkan nilai realisasi baru untuk <span x-text="selectedRealisasis.length" class="font-bold text-gray-700"></span> data yang dipilih.
+                    </p>
+                    
+                    <div>
+                        <label for="bulkRealisasiInput" class="block text-sm font-medium text-gray-700 mb-1">Angka Realisasi</label>
+                        <input type="number" step="any" x-model="bulkRealisasiValue" id="bulkRealisasiInput" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 px-6 py-4 flex flex-row-reverse gap-3">
+                    <button @click="submitBulkEdit()" type="button" class="w-full sm:w-auto inline-flex justify-center rounded-lg border border-transparent bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+                        Simpan
+                    </button>
+                    <button @click="showBulkEditModal = false" type="button" class="w-full sm:w-auto inline-flex justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors">
+                        Batal
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <!-- Custom Confirm Delete Modal -->
         <div x-show="showConfirmModal"
@@ -635,10 +699,26 @@
                 activeWig: {{ session('active_wig', 'null') }},
                 selectedRealisasis: [],
                 showConfirmModal: false,
-                confirmMessage: '',
-                confirmIds: [],
-                confirmActionType: 'delete',
                 confirmFormId: null,
+                confirmIds: [],
+                showBulkEditModal: false,
+                bulkRealisasiValue: '',
+                openBulkEdit() {
+                    this.bulkRealisasiValue = '';
+                    this.showBulkEditModal = true;
+                },
+                submitBulkEdit() {
+                    if (this.selectedRealisasis.length === 0) return;
+                    if (this.bulkRealisasiValue === '') {
+                        alert('Silakan masukkan nilai angka realisasi terlebih dahulu.');
+                        return;
+                    }
+                    document.getElementById('bulkEditIds').value = JSON.stringify(this.selectedRealisasis);
+                    document.getElementById('bulkEditAngka').value = this.bulkRealisasiValue;
+                    document.getElementById('bulkEditForm').submit();
+                },
+                confirmMessage: '',
+                confirmActionType: 'delete',
                 openConfirm(ids, message, actionType = 'delete', formId = null) {
                     this.confirmIds = ids;
                     this.confirmMessage = message;
