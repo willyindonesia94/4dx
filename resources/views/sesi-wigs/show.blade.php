@@ -1549,15 +1549,15 @@ $formatLmValue = function($value, $satuan) {
                     this.form.aksi_konkrits = [];
                     
                     // Fetch existing data
-                    fetch(`/sesi-wigs/${this.params.sesi}/komitmen/${this.params.lm}/${this.params.unit}`)
+                    fetch(`/sesi-wigs/${this.params.sesi}/komitmen/${this.params.lm}/${this.params.unit}?t=${new Date().getTime()}`, { cache: 'no-store' })
                         .then(res => res.json())
                         .then(data => {
                             let kVal = '';
                             if (data.data) {
                                 this.form.pic_lm = data.data.pic_lm || '';
-                                kVal = data.data.komitmen || data.default_komitmen || '';
-                                this.form.hambatans = data.data.hambatans || [{hambatan: '', dukungan: ''}];
-                                this.form.aksi_konkrits = data.data.aksi_konkrits || [{aksi: '', target: '', deadline: '', detail_komitmen: ''}];
+                                kVal = (data.data.komitmen !== null && data.data.komitmen !== '') ? data.data.komitmen : (data.default_komitmen || '');
+                                this.form.hambatans = (data.data.hambatans && data.data.hambatans.length > 0) ? data.data.hambatans : [{hambatan: '', dukungan: ''}];
+                                this.form.aksi_konkrits = (data.data.aksi_konkrits && data.data.aksi_konkrits.length > 0) ? data.data.aksi_konkrits : [{aksi: '', target: '', deadline: '', detail_komitmen: ''}];
                             } else {
                                 kVal = data.default_komitmen || '';
                                 this.form.hambatans = [{hambatan: '', dukungan: ''}];
