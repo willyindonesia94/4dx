@@ -106,6 +106,14 @@ class DashboardController extends Controller
         $scopedRealisasi = [];  // [lm_id] => realisasi
 
         if ($scopedUnitIds !== null) {
+            // Fetch non-summable LMs to average them instead of sum
+            $nonSummableLmSatuans = [1, 2, 6, 14];
+            $lmsData = \App\Models\MasterLm::select('id', 'satuan_id')->get();
+            $isNonSummable = [];
+            foreach ($lmsData as $lmData) {
+                $isNonSummable[$lmData->id] = in_array($lmData->satuan_id, $nonSummableLmSatuans);
+            }
+
             // Target: Get target for the explicitly selected unit only (prevent double counting with children)
             $targetUnitForScope = $selectedUlp ? $selectedUlp : $selectedUp3;
             if (isset($bdMap[$targetUnitForScope])) {
@@ -116,18 +124,32 @@ class DashboardController extends Controller
             // Fallback: if no direct target, rollup from children
             if (empty($scopedTarget) && $selectedUp3) {
                 $childIds = \App\Models\MasterUnit::where('parent_id', $selectedUp3)->pluck('id')->toArray();
+                $cCount = [];
                 foreach ($childIds as $cId) {
                     if (!isset($bdMap[$cId])) continue;
                     foreach ($bdMap[$cId] as $lmId => $t) {
                         $scopedTarget[$lmId] = ($scopedTarget[$lmId] ?? 0) + $t;
+                        $cCount[$lmId] = ($cCount[$lmId] ?? 0) + 1;
+                    }
+                }
+                foreach ($cCount as $lmId => $count) {
+                    if (!empty($isNonSummable[$lmId]) && $count > 0) {
+                        $scopedTarget[$lmId] /= $count;
                     }
                 }
             }
             
             // For Realisasi: Aggregate across all relevant units (Bottom-Up)
+            $rCount = [];
             foreach ($scopedUnitIds as $uid) {
                 foreach ($realMap[$uid] ?? [] as $lmId => $r) {
                     $scopedRealisasi[$lmId] = ($scopedRealisasi[$lmId] ?? 0) + $r;
+                    $rCount[$lmId] = ($rCount[$lmId] ?? 0) + 1;
+                }
+            }
+            foreach ($rCount as $lmId => $count) {
+                if (!empty($isNonSummable[$lmId]) && $count > 0) {
+                    $scopedRealisasi[$lmId] /= $count;
                 }
             }
         } else {
@@ -136,7 +158,15 @@ class DashboardController extends Controller
             $up3Ids = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->pluck('id')->toArray();
             $ulpIds = \App\Models\MasterUnit::where('type', 'ULP')->pluck('id')->toArray();
 
-            $cascadeSum = function($map) use ($uidUnits, $up3Ids, $ulpIds) {
+            // Fetch non-summable LMs to average them instead of sum
+            $nonSummableLmSatuans = [1, 2, 6, 14];
+            $lmsData = \App\Models\MasterLm::select('id', 'satuan_id')->get();
+            $isNonSummable = [];
+            foreach ($lmsData as $lmData) {
+                $isNonSummable[$lmData->id] = in_array($lmData->satuan_id, $nonSummableLmSatuans);
+            }
+
+            $cascadeSum = function($map) use ($uidUnits, $up3Ids, $ulpIds, $isNonSummable) {
                 $res = [];
                 $levelMap = []; 
                 foreach ($uidUnits as $uid) {
@@ -146,27 +176,33 @@ class DashboardController extends Controller
                     }
                 }
                 $up3Sums = [];
+                $up3Counts = [];
                 foreach ($up3Ids as $up3) {
                     foreach ($map[$up3] ?? [] as $lmId => $val) {
                         if (!isset($levelMap[$lmId])) {
                             $up3Sums[$lmId] = ($up3Sums[$lmId] ?? 0) + $val;
+                            $up3Counts[$lmId] = ($up3Counts[$lmId] ?? 0) + 1;
                         }
                     }
                 }
                 foreach ($up3Sums as $lmId => $val) {
-                    $res[$lmId] = $val;
+                    $isAvg = $isNonSummable[$lmId] ?? false;
+                    $res[$lmId] = ($isAvg && $up3Counts[$lmId] > 0) ? ($val / $up3Counts[$lmId]) : $val;
                     $levelMap[$lmId] = 'UP3';
                 }
                 $ulpSums = [];
+                $ulpCounts = [];
                 foreach ($ulpIds as $ulp) {
                     foreach ($map[$ulp] ?? [] as $lmId => $val) {
                         if (!isset($levelMap[$lmId])) {
                             $ulpSums[$lmId] = ($ulpSums[$lmId] ?? 0) + $val;
+                            $ulpCounts[$lmId] = ($ulpCounts[$lmId] ?? 0) + 1;
                         }
                     }
                 }
                 foreach ($ulpSums as $lmId => $val) {
-                    $res[$lmId] = $val;
+                    $isAvg = $isNonSummable[$lmId] ?? false;
+                    $res[$lmId] = ($isAvg && $ulpCounts[$lmId] > 0) ? ($val / $ulpCounts[$lmId]) : $val;
                     $levelMap[$lmId] = 'ULP';
                 }
                 return $res;
@@ -474,15 +510,29 @@ class DashboardController extends Controller
                 // Fallback: if no direct target, rollup from children
                 if (empty($tScopedTarget) && $selectedUp3) {
                     $childIds = \App\Models\MasterUnit::where('parent_id', $selectedUp3)->pluck('id')->toArray();
+                    $cCount = [];
                     foreach ($childIds as $cId) {
                         foreach ($tBdMap[$cId] ?? [] as $lmId => $t) {
                             $tScopedTarget[$lmId] = ($tScopedTarget[$lmId] ?? 0) + $t;
+                            $cCount[$lmId] = ($cCount[$lmId] ?? 0) + 1;
+                        }
+                    }
+                    foreach ($cCount as $lmId => $count) {
+                        if (!empty($isNonSummable[$lmId]) && $count > 0) {
+                            $tScopedTarget[$lmId] /= $count;
                         }
                     }
                 }
+                $rCount = [];
                 foreach ($scopedUnitIds as $uid) {
                     foreach ($tRealMap[$uid] ?? [] as $lmId => $r) {
                         $tScopedRealisasi[$lmId] = ($tScopedRealisasi[$lmId] ?? 0) + $r;
+                        $rCount[$lmId] = ($rCount[$lmId] ?? 0) + 1;
+                    }
+                }
+                foreach ($rCount as $lmId => $count) {
+                    if (!empty($isNonSummable[$lmId]) && $count > 0) {
+                        $tScopedRealisasi[$lmId] /= $count;
                     }
                 }
             } else {
