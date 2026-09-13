@@ -747,7 +747,7 @@ $formatLmValue = function($value, $satuan) {
                                                                         
                                                                         // Lock editing for past sessions (unless Super Admin)
                                                                         if ($canEditUp3Komitmen && !($userAuth->hasRole('Super Admin') || strtolower($userAuth->role_name) === 'super admin')) {
-                                                                            if (\Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->endOfWeek()->isPast()) {
+                                                                            if (\Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->endOfWeek()->addDay()->endOfDay()->isPast()) {
                                                                                 $canEditUp3Komitmen = false;
                                                                             }
                                                                         }
@@ -842,7 +842,7 @@ $formatLmValue = function($value, $satuan) {
                                                                     
                                                                     // Lock editing for past sessions (unless Super Admin)
                                                                     if ($canEditUlpKomitmen && !($user->hasRole('Super Admin') || strtolower($user->role_name) === 'super admin')) {
-                                                                        if (\Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->endOfWeek()->isPast()) {
+                                                                        if (\Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->endOfWeek()->addDay()->endOfDay()->isPast()) {
                                                                             $canEditUlpKomitmen = false;
                                                                         }
                                                                     }

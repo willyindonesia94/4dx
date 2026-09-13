@@ -45,8 +45,9 @@ class SesiWigKomitmenController extends Controller
         $isSuperAdmin = $user && ($user->hasRole('Super Admin') || strtolower($user->role_name) === 'super admin');
         
         if (!$isSuperAdmin) {
-            if (\Carbon\Carbon::parse($sesi->tanggal_pelaksanaan)->endOfWeek()->isPast()) {
-                return response()->json(['success' => false, 'message' => 'Batas waktu pengisian komitmen (akhir minggu) untuk Sesi WIG ini sudah berlalu.'], 403);
+            $deadline = \Carbon\Carbon::parse($sesi->tanggal_pelaksanaan)->endOfWeek()->addDay()->endOfDay(); // Monday 23:59 of next week
+            if (now()->isAfter($deadline)) {
+                return response()->json(['success' => false, 'message' => 'Batas waktu pengisian komitmen (Hari Senin pukul 23:59 setelah sesi) sudah berlalu. Saat ini Anda hanya bisa melihat komitmen (Read-Only).'], 403);
             }
         }
         
