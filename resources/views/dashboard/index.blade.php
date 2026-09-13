@@ -130,7 +130,6 @@
 
             </div>
 
-            </div>
             <!-- Rincian Performa WIG Section -->
 <div class="grid grid-cols-1 gap-6 mb-6">
 <div class="w-full space-y-4">
@@ -656,6 +655,7 @@
         </div>
     </div>
 
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
