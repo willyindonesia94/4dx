@@ -123,55 +123,57 @@ class DashboardController extends Controller
                     }
                 }
             }
-        } else {
-            // All units - For Target: Try UID target first (Top-Down distribution)
-            // Fallback: rollup from UP3; if still empty, rollup from ULP
-            $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
-            foreach ($uidUnits as $uid) {
-                if (isset($bdMap[$uid])) {
-                    foreach ($bdMap[$uid] as $lmId => $t) {
-                        $scopedTarget[$lmId] = ($scopedTarget[$lmId] ?? 0) + $t;
-                    }
-                }
-            }
-
-            // Fallback: if no UID-level data found for some LMs, try UP3 rollup
-            $up3Ids = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->pluck('id')->toArray();
-            foreach ($up3Ids as $up3Id) {
-                if (!isset($bdMap[$up3Id])) continue;
-                foreach ($bdMap[$up3Id] as $lmId => $t) {
-                    // Only fill if UID-level target is missing for this LM
-                    if (!isset($scopedTarget[$lmId]) || $scopedTarget[$lmId] == 0) {
-                        $scopedTarget[$lmId] = ($scopedTarget[$lmId] ?? 0) + $t;
-                    }
-                }
-            }
-
-            // Final fallback: if still missing, try ULP rollup
-            $ulpIds = \App\Models\MasterUnit::whereIn('type', ['ULP'])->pluck('id')->toArray();
-            foreach ($ulpIds as $ulpId) {
-                if (!isset($bdMap[$ulpId])) continue;
-                foreach ($bdMap[$ulpId] as $lmId => $t) {
-                    if (!isset($scopedTarget[$lmId]) || $scopedTarget[$lmId] == 0) {
-                        $scopedTarget[$lmId] = ($scopedTarget[$lmId] ?? 0) + $t;
-                    }
-                }
-            }
-        }
-        
-        // For Realisasi: Aggregate across all relevant units (Bottom-Up)
-        if ($scopedUnitIds !== null) {
+            
+            // For Realisasi: Aggregate across all relevant units (Bottom-Up)
             foreach ($scopedUnitIds as $uid) {
                 foreach ($realMap[$uid] ?? [] as $lmId => $r) {
                     $scopedRealisasi[$lmId] = ($scopedRealisasi[$lmId] ?? 0) + $r;
                 }
             }
         } else {
-            foreach ($realMap as $uid => $lms) {
-                foreach ($lms as $lmId => $r) {
-                    $scopedRealisasi[$lmId] = ($scopedRealisasi[$lmId] ?? 0) + $r;
+            // All units - Cascade aggregation helper to prevent double-counting across levels
+            $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
+            $up3Ids = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->pluck('id')->toArray();
+            $ulpIds = \App\Models\MasterUnit::where('type', 'ULP')->pluck('id')->toArray();
+
+            $cascadeSum = function($map) use ($uidUnits, $up3Ids, $ulpIds) {
+                $res = [];
+                $levelMap = []; 
+                foreach ($uidUnits as $uid) {
+                    foreach ($map[$uid] ?? [] as $lmId => $val) {
+                        $res[$lmId] = ($res[$lmId] ?? 0) + $val;
+                        $levelMap[$lmId] = 'UID';
+                    }
                 }
-            }
+                $up3Sums = [];
+                foreach ($up3Ids as $up3) {
+                    foreach ($map[$up3] ?? [] as $lmId => $val) {
+                        if (!isset($levelMap[$lmId])) {
+                            $up3Sums[$lmId] = ($up3Sums[$lmId] ?? 0) + $val;
+                        }
+                    }
+                }
+                foreach ($up3Sums as $lmId => $val) {
+                    $res[$lmId] = $val;
+                    $levelMap[$lmId] = 'UP3';
+                }
+                $ulpSums = [];
+                foreach ($ulpIds as $ulp) {
+                    foreach ($map[$ulp] ?? [] as $lmId => $val) {
+                        if (!isset($levelMap[$lmId])) {
+                            $ulpSums[$lmId] = ($ulpSums[$lmId] ?? 0) + $val;
+                        }
+                    }
+                }
+                foreach ($ulpSums as $lmId => $val) {
+                    $res[$lmId] = $val;
+                    $levelMap[$lmId] = 'ULP';
+                }
+                return $res;
+            };
+
+            $scopedTarget = $cascadeSum($bdMap);
+            $scopedRealisasi = $cascadeSum($realMap);
         }
 
         // ── WIG Progresses ─────────────────────────────────────────────────────
@@ -469,26 +471,26 @@ class DashboardController extends Controller
                 foreach ($tBdMap[$targetUnitForScope] ?? [] as $lmId => $t) {
                     $tScopedTarget[$lmId] = ($tScopedTarget[$lmId] ?? 0) + $t;
                 }
+                // Fallback: if no direct target, rollup from children
+                if (empty($tScopedTarget) && $selectedUp3) {
+                    $childIds = \App\Models\MasterUnit::where('parent_id', $selectedUp3)->pluck('id')->toArray();
+                    foreach ($childIds as $cId) {
+                        foreach ($tBdMap[$cId] ?? [] as $lmId => $t) {
+                            $tScopedTarget[$lmId] = ($tScopedTarget[$lmId] ?? 0) + $t;
+                        }
+                    }
+                }
                 foreach ($scopedUnitIds as $uid) {
                     foreach ($tRealMap[$uid] ?? [] as $lmId => $r) {
                         $tScopedRealisasi[$lmId] = ($tScopedRealisasi[$lmId] ?? 0) + $r;
                     }
                 }
             } else {
-                // All units - For Target: Only take the UID target (Top-Down distribution)
-                $uidUnits = \App\Models\MasterUnit::where('type', 'UID')->pluck('id')->toArray();
-                foreach ($uidUnits as $uid) {
-                    foreach ($tBdMap[$uid] ?? [] as $lmId => $t) {
-                        $tScopedTarget[$lmId] = ($tScopedTarget[$lmId] ?? 0) + $t;
-                    }
-                }
-                // For Realisasi: Aggregate across all units
-                foreach ($tRealMap as $uid => $lms) {
-                    foreach ($lms as $lmId => $r) {
-                        $tScopedRealisasi[$lmId] = ($tScopedRealisasi[$lmId] ?? 0) + $r;
-                    }
-                }
+                // All units - cascade aggregation
+                $tScopedTarget = isset($cascadeSum) ? $cascadeSum($tBdMap) : [];
+                $tScopedRealisasi = isset($cascadeSum) ? $cascadeSum($tRealMap) : [];
             }
+
             
             $bulanNamesFull = [1 => 'jan', 2 => 'feb', 3 => 'mar', 4 => 'apr', 5 => 'mei', 6 => 'jun', 7 => 'jul', 8 => 'agu', 9 => 'sep', 10 => 'okt', 11 => 'nov', 12 => 'des'];
             $colTarget = 'target_' . $bulanNamesFull[$m];
