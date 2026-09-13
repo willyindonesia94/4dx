@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SesiWigKomitmen;
+use App\Models\SesiWig;
 use Illuminate\Http\Request;
 
 class SesiWigKomitmenController extends Controller

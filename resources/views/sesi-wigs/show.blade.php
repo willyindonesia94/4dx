@@ -1579,25 +1579,40 @@ $formatLmValue = function($value, $satuan) {
                         },
                         body: JSON.stringify(payload)
                     })
-                    .then(res => res.json())
+                    .then(async res => {
+                        const data = await res.json();
+                        if (!res.ok) {
+                            throw new Error(data.message || 'Gagal menyimpan komitmen.');
+                        }
+                        return data;
+                    })
                     .then(data => {
                         this.isSaving = false;
-                        if(data.status === 'success') {
+                        if (data.status === 'success' || data.success) {
                             this.closeModal();
-                            // Optional: show toast or just reload to update the matrix colors
                             window.location.reload();
                         } else {
-                            alert(data.message || 'Gagal menyimpan komitmen.');
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Gagal',
+                                text: data.message || 'Gagal menyimpan komitmen.',
+                                confirmButtonColor: '#3085d6'
+                            });
                         }
                     })
                     .catch(err => {
-                        console.error(err);
                         this.isSaving = false;
-                        alert('Terjadi kesalahan jaringan.');
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Tidak Bisa Disimpan',
+                            text: err.message === 'Unexpected token < in JSON at position 0' ? 'Terjadi kesalahan sistem (Server Error).' : err.message,
+                            confirmButtonColor: '#3085d6'
+                        });
                     });
                 }
             }
         }
     </script>
-</x-app-layout>
 
+
+</x-app-layout>
