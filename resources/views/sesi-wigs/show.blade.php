@@ -1374,12 +1374,12 @@ $formatLmValue = function($value, $satuan) {
                                 <div class="md:col-span-2 flex sm:items-center items-start gap-2">
                                     <span class="font-semibold text-slate-500 w-[110px] sm:w-32 shrink-0 mt-1 sm:mt-0">PIC LM</span> 
                                     <span class="mt-1 sm:mt-0">:</span>
-                                    <input type="text" x-model="form.pic_lm" class="w-full md:w-1/2 p-1.5 border border-slate-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white" placeholder="Nama PIC LM">
+                                    <input type="text" :disabled="params.readonly" x-model="form.pic_lm" class="w-full md:w-1/2 p-1.5 border border-slate-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white" placeholder="Nama PIC LM">
                                 </div>
                                 <div class="md:col-span-2 flex sm:items-center items-start gap-2 mt-1">
                                     <span class="font-semibold text-slate-500 w-[110px] sm:w-32 shrink-0 mt-1 sm:mt-0">Angka Komitmen</span> 
                                     <span class="mt-1 sm:mt-0">:</span>
-                                    <input type="number" step="any" x-model="form.komitmen" class="w-32 p-1.5 border border-slate-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white" placeholder="Target Angka">
+                                    <input type="number" step="any" :disabled="params.readonly" x-model="form.komitmen" class="w-32 p-1.5 border border-slate-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white" placeholder="Target Angka">
                                 </div>
                             </div>
                         </div>
@@ -1435,10 +1435,10 @@ $formatLmValue = function($value, $satuan) {
                                     <template x-for="(h, index) in form.hambatans" :key="index">
                                         <tr>
                                             <td class="py-2 px-2 border-r border-slate-200">
-                                                <textarea x-model="h.hambatan" class="w-full p-2 border-0 bg-transparent resize-none focus:ring-0 text-sm h-12" placeholder="Tulis hambatan..."></textarea>
+                                                <textarea :disabled="params.readonly" x-model="h.hambatan" class="w-full p-2 border-0 bg-transparent resize-none focus:ring-0 text-sm h-12" placeholder="Tulis hambatan..."></textarea>
                                             </td>
                                             <td class="py-2 px-2">
-                                                <textarea x-model="h.dukungan" class="w-full p-2 border-0 bg-transparent resize-none focus:ring-0 text-sm h-12" placeholder="Tulis dukungan yang dibutuhkan..."></textarea>
+                                                <textarea :disabled="params.readonly" x-model="h.dukungan" class="w-full p-2 border-0 bg-transparent resize-none focus:ring-0 text-sm h-12" placeholder="Tulis dukungan yang dibutuhkan..."></textarea>
                                             </td>
                                             <td class="py-2 px-2 text-center text-red-400 hover:text-red-600">
                                                 <button type="button" @click="form.hambatans.splice(index, 1)" tabindex="-1" title="Hapus Baris">
@@ -1450,7 +1450,7 @@ $formatLmValue = function($value, $satuan) {
                                 </tbody>
                             </table>
                             <div class="bg-slate-50 border-t border-slate-200 p-2 text-center">
-                                <button type="button" @click="form.hambatans.push({hambatan: '', dukungan: ''})" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto">
+                                <button type="button" x-show="!params.readonly" @click="form.hambatans.push({hambatan: '', dukungan: ''})" x-show="!params.readonly" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                                     Tambah Hambatan
                                 </button>
@@ -1503,7 +1503,7 @@ $formatLmValue = function($value, $satuan) {
                                 </table>
                             </div>
                             <div class="bg-slate-50 border-t border-slate-200 p-2 text-center">
-                                <button type="button" x-show="!params.readonly" @click="form.aksi_konkrits.push({aksi: '', target: '', deadline: '', detail_komitmen: ''})" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto">
+                                <button type="button" x-show="!params.readonly" @click="form.aksi_konkrits.push({aksi: '', target: '', deadline: '', detail_komitmen: ''})" x-show="!params.readonly" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center justify-center gap-1 mx-auto">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                                     Tambah Aksi Konkrit
                                 </button>
@@ -1517,7 +1517,7 @@ $formatLmValue = function($value, $satuan) {
 
                     <div class="bg-white border-t border-slate-200 px-6 py-4 rounded-b-xl flex justify-end gap-3 shrink-0">
                         <button type="button" @click="closeModal()" class="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors">Batal</button>
-                        <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md transition-all flex items-center gap-2" :class="isSaving ? 'opacity-75 cursor-wait' : ''" :disabled="isSaving">
+                        <button x-show="!params.readonly" type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md transition-all flex items-center gap-2" :class="isSaving ? 'opacity-75 cursor-wait' : ''" :disabled="isSaving">
                             <svg x-show="isSaving" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
