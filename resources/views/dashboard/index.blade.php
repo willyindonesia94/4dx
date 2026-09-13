@@ -97,7 +97,7 @@
                                                         <div class="flex-1 pr-4">
                                                             <span class="text-xs font-semibold text-gray-700">{{ $lm['judul'] }}</span>
                                                             <div class="text-[10px] text-gray-500 mt-0.5">
-                                                                Target: {{ number_format($lm['target'], 2) }} | Realisasi: {{ number_format($lm['realisasi'], 2) }} {{ $lm['satuan'] }} ({{ ucfirst($lm['polaritas']) }})
+                                                                Target: {{ number_format($lm['target'], 2) }} {{ $lm['satuan'] }} | Realisasi: {{ number_format($lm['realisasi'], 2) }} {{ $lm['satuan'] }} ({{ ucfirst($lm['polaritas']) }})
                                                             </div>
                                                         </div>
                                                         <div class="text-right">
