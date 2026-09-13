@@ -540,8 +540,16 @@ class DashboardController extends Controller
         // ── Sesi WIG Matrix Calculation (Latest Sesi in Month) ──
         $latestSesiWig = \App\Models\SesiWig::where('bulan', $bulan)
             ->where('tahun', $tahun)
+            ->where('tanggal_pelaksanaan', '<=', now())
             ->orderBy('minggu_ke', 'desc')
             ->first();
+            
+        if (!$latestSesiWig) {
+            $latestSesiWig = \App\Models\SesiWig::where('bulan', $bulan)
+                ->where('tahun', $tahun)
+                ->orderBy('minggu_ke', 'asc')
+                ->first();
+        }
             
         $sesi_wigs_matrix = collect();
         $matrixTargets = [];
@@ -694,6 +702,18 @@ class DashboardController extends Controller
         }
 
         // Calculate Menang Kalah for latest sesi (or end of month if no sesi)
+        $calcCapaian = function($target, $realisasi, $polaritas) {
+            $target = (float)$target;
+            $realisasi = (float)$realisasi;
+            $pol = strtolower(trim($polaritas ?? 'positif'));
+            if ($pol === 'negatif' || $pol === '3') {
+                if ($target == 0) return $realisasi == 0 ? 100 : 0;
+                return $realisasi == 0 ? 100 : max(0, min(($target / $realisasi) * 100, 100));
+            } else {
+                if ($target == 0) return $realisasi > 0 ? 100 : 0;
+                return max(0, min(($realisasi / $target) * 100, 100));
+            }
+        };
         $rtRealQuery = \Illuminate\Support\Facades\DB::table('realisasis')
             ->whereMonth('tanggal_input', $bulan)
             ->whereYear('tanggal_input', $tahun);
@@ -737,8 +757,8 @@ class DashboardController extends Controller
                 
                 $target = $matrixTargets[$lm->id][1][$sid] ?? 0;
                 $realisasi = $matrixRealisasi[$lm->id][1][$sid] ?? 0;
-                if ($target > 0) {
-                    $pct = min($realisasi / $target * 100, 100);
+                if ($target > 0 || ($target == 0 && $realisasi == 0 && strtolower(trim($lm->polaritas ?? 'positif')) === 'negatif') || $realisasi > 0) {
+                    $pct = $calcCapaian($target, $realisasi, $lm->polaritas ?? 'positif');
                     foreach ($divs as $name) {
                         $rtMenangKalah[$lm->id]['divisi'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $name, 'score' => round($pct, 1)];
                     }
@@ -747,17 +767,17 @@ class DashboardController extends Controller
 
             foreach ($up3s as $up3) {
                 $target = $matrixTargets[$lm->id][$up3->id][$sid] ?? 0;
-                if ($target <= 0) continue;
                 $sum = $matrixRealisasi[$lm->id][$up3->id][$sid] ?? 0;
-                $pct = min($sum / $target * 100, 100);
+                if ($target <= 0 && $sum <= 0 && strtolower(trim($lm->polaritas ?? 'positif')) !== 'negatif') continue;
+                $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
                 $rtMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => round($pct, 1)];
             }
 
             foreach ($ulps as $ulp) {
                 $target = $matrixTargets[$lm->id][$ulp->id][$sid] ?? 0;
-                if ($target <= 0) continue;
                 $sum = $matrixRealisasi[$lm->id][$ulp->id][$sid] ?? 0;
-                $pct = min($sum / $target * 100, 100);
+                if ($target <= 0 && $sum <= 0 && strtolower(trim($lm->polaritas ?? 'positif')) !== 'negatif') continue;
+                $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
                 $rtMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => round($pct, 1)];
             }
 
@@ -776,7 +796,7 @@ class DashboardController extends Controller
             foreach ($allUlps->filter(fn($u) => $u->latitude && $u->longitude) as $ulp) {
                 $target = $matrixTargets[$lm->id][$ulp->id][$sid] ?? 0;
                 $sum = $matrixRealisasi[$lm->id][$ulp->id][$sid] ?? 0;
-                $pct = $target > 0 ? min(($sum / $target) * 100, 100) : 0;
+                $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
                 
                 $komitmenVal = '';
                 if ($latestSesiWig) {
@@ -799,7 +819,7 @@ class DashboardController extends Controller
             foreach ($up3s->filter(fn($u) => $u->latitude && $u->longitude) as $up3) {
                 $target = $matrixTargets[$lm->id][$up3->id][$sid] ?? 0;
                 $sum = $matrixRealisasi[$lm->id][$up3->id][$sid] ?? 0;
-                $pct = $target > 0 ? min(($sum / $target) * 100, 100) : 0;
+                $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
                 
                 $komitmenVal = '';
                 if ($latestSesiWig) {
