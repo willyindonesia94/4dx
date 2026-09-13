@@ -794,7 +794,7 @@ $formatLmValue = function($value, $satuan) {
                                                                         class="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
                                                                         title="{{ $hasKom ? ($canEditUp3Komitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUp3Komitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
                                                                         @if($canEditUp3Komitmen)
-                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M12 4v16m8-8H4' }}"></path></svg>
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' : 'M12 4v16m8-8H4' }}"></path></svg>
                                                                         @else
                                                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                                                                         @endif
@@ -915,13 +915,7 @@ $formatLmValue = function($value, $satuan) {
                                                                     }
                                                                 @endphp
                                                             <td class="px-2 py-2 border border-gray-300 text-center {{ $komBg }}">
-                                                                @if($canEditUlpKomitmen)
-                                                                        <input type="number" step="any" class="w-16 text-xs p-1 border rounded komitmen-input {{ $komInputClass }}" 
-                                                                            data-lm="{{ $lm->id }}" data-unit="{{ $u->id }}" data-sesi="{{ $sw->id }}" data-type="komitmen" data-satuan="{{ trim($lm->satuan->name ?? '') }}"
-                                                                            value="{{ $komitmenVal }}" placeholder="-">
-                                                                    @else
-                                                                        <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? (float)$komitmenVal : '-' }}</span>
-                                                                    @endif
+                                                                <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? (float)$komitmenVal : '-' }}</span>
                                                                 </td>
                                                                 <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
                                                                 @if($canEditUlpKomitmen || $hasKom)
@@ -930,7 +924,7 @@ $formatLmValue = function($value, $satuan) {
                                                                         class="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
                                                                         title="{{ $hasKom ? ($canEditUlpKomitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUlpKomitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
                                                                         @if($canEditUlpKomitmen)
-                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M5 13l4 4L19 7' : 'M12 4v16m8-8H4' }}"></path></svg>
+                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' : 'M12 4v16m8-8H4' }}"></path></svg>
                                                                         @else
                                                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                                                                         @endif
