@@ -1,4 +1,4 @@
-<x-app-layout>
+﻿<x-app-layout>
 @php
 $komitmenLocks = [];
 foreach($sesi_wigs_matrix as $sw) {
@@ -14,12 +14,13 @@ foreach($sesi_wigs_matrix as $sw) {
 
 $formatLmValue = function($value, $satuan) {
     if ($value === null || $value === '') return '-';
+    $formatted = number_format((float)$value, 2, ",", ".");
+    $formatted = rtrim(rtrim($formatted, '0'), ',');
+    if ($formatted === '') $formatted = '0';
     if (trim($satuan) === '%') {
-        $formatted = number_format((float)$value, 2, ",", ".");
-        $formatted = rtrim(rtrim($formatted, '0'), ',');
         return $formatted . '%';
     }
-    return number_format((float)$value, 2, ",", ".");
+    return $formatted;
 };
 @endphp
 
@@ -664,7 +665,7 @@ $formatLmValue = function($value, $satuan) {
                                                     @endphp
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ $formatLmValue($uidTarget, $lm->satuan->name ?? '') }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black text-purple-900 bg-purple-50">{{ $formatLmValue($uidTargetPlusCarryOver, $lm->satuan->name ?? '') }}</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $hasUidKom ? 'text-indigo-900 bg-indigo-50' : 'text-gray-400 bg-slate-50' }}">{{ $hasUidKom ? (float)$uidKomitmen : '-' }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $hasUidKom ? 'text-indigo-900 bg-indigo-50' : 'text-gray-400 bg-slate-50' }}">{{ $hasUidKom ? $formatLmValue($uidKomitmen, $lm->satuan->name ?? '') : '-' }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ $formatLmValue($uidRealisasi, $lm->satuan->name ?? '') }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $uidBgColor }}">{{ $uidPencapaian }}%</td>
@@ -777,7 +778,7 @@ $formatLmValue = function($value, $satuan) {
                                                                     }
                                                                 @endphp
                                                             <td class="px-2 py-2 border border-gray-300 text-center {{ $komBg }}">
-                                                                <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? (float)$komitmenVal : '-' }}</span>
+                                                                <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
                                                                 </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
                                                                 @if($canEditUp3Komitmen || $hasKom)
@@ -900,7 +901,7 @@ $formatLmValue = function($value, $satuan) {
                                                                     }
                                                                 @endphp
                                                             <td class="px-2 py-2 border border-gray-300 text-center {{ $komBg }}">
-                                                                <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? (float)$komitmenVal : '-' }}</span>
+                                                                <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
                                                                 </td>
                                                                 <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
                                                                 @if($canEditUlpKomitmen || $hasKom)
@@ -1607,3 +1608,4 @@ $formatLmValue = function($value, $satuan) {
 
 
 </x-app-layout>
+
