@@ -88,7 +88,8 @@
                                         <div class="{{ $bgColor }} h-2 rounded-full transition-all duration-700 ease-out" style="width: {{ min($wig['progress'], 100) }}%"></div>
                                     </div>
 
-                                    <!-- LM Drill-down List -->
+                                    <!-- LM Drill-down List (HIDDEN PER USER REQUEST) -->
+                                    {{--
                                     <div x-show="expanded" x-collapse x-cloak class="mt-4 pt-3 border-t border-gray-200/60 space-y-3">
                                         @if(isset($wig['lms']) && count($wig['lms']) > 0)
                                             @foreach($wig['lms'] as $lm)
@@ -117,6 +118,7 @@
                                             <div class="text-xs text-gray-400 italic py-1">Tidak ada data LM yang aktif.</div>
                                         @endif
                                     </div>
+                                    --}}
                                 </div>
                             @empty
                                 <div class="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-100">Belum ada WIG yang didefinisikan.</div>
@@ -293,7 +295,8 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- KANAN: LM Cards Container -->
+                                    <!-- KANAN: LM Cards Container (HIDDEN PER USER REQUEST) -->
+                                    {{--
                                     <div class="w-full bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
                                         <div class="text-[10px] font-bold text-[#0b2256] uppercase mb-3 border-b border-gray-200 pb-2">PERFORMA LEAD MEASURE</div>
                                         @if($wigLms->count() > 0)
@@ -325,6 +328,7 @@
                                             </div>
                                         @endif
                                     </div>
+                                    --}}
                                 </div>
                             </div>
                         @empty
