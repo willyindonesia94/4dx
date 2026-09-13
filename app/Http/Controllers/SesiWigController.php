@@ -139,6 +139,22 @@ class SesiWigController extends Controller
         }
         $wigs = $wigsQuery->get();
 
+        $calcCapaian = function($target, $realisasi, $polaritas) {
+            if ($target < 0) return 0;
+            $isNeg = (strtolower(trim($polaritas)) === 'negatif' || trim($polaritas) === '3');
+            if ($target == 0) {
+                if ($isNeg) {
+                    return ($realisasi == 0) ? 100 : 0;
+                } else {
+                    return ($realisasi >= 0) ? 100 : 0;
+                }
+            }
+            if ($isNeg) {
+                return ($realisasi == 0) ? 100 : ($target / $realisasi) * 100;
+            }
+            return ($realisasi / $target) * 100;
+        };
+
         $lmsQuery = MasterLm::with('wig', 'satuan');
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
@@ -253,25 +269,8 @@ class SesiWigController extends Controller
             $wig->total_target_prev = $prevTarget;
             $wig->total_realisasi_prev = $prevRealisasi;
             
-            $capaian = 0;
-            if ($target > 0) {
-                if (strtolower($wig->polaritas) === 'negatif' || $wig->polaritas === '3') {
-                    $capaian = ($target / max(0.0001, $realisasi)) * 100;
-                } else {
-                    $capaian = ($realisasi / $target) * 100;
-                }
-            }
-            $wig->capaian = round($capaian, 2);
-
-            $prevCapaian = 0;
-            if ($prevTarget > 0) {
-                if (strtolower($wig->polaritas) === 'negatif' || $wig->polaritas === '3') {
-                    $prevCapaian = ($prevTarget / max(0.0001, $prevRealisasi)) * 100;
-                } else {
-                    $prevCapaian = ($prevRealisasi / $prevTarget) * 100;
-                }
-            }
-            $wig->capaian_prev = round($prevCapaian, 2);
+            $wig->capaian = round($calcCapaian($target, $realisasi, $wig->polaritas), 2);
+            $wig->capaian_prev = round($calcCapaian($prevTarget, $prevRealisasi, $wig->polaritas), 2);
             
             // --- CALC TREND CAPAIAN WIG PER BULAN ---
             $trend = [];
@@ -294,15 +293,7 @@ class SesiWigController extends Controller
                     $rM = $isNonSummable ? ($rMQ->avg('angka_realisasi') ?? 0) : ($rMQ->sum('angka_realisasi') ?? 0);
                 }
                 
-                $cM = 0;
-                if ($tM > 0) {
-                    if (strtolower($wig->polaritas) === 'negatif' || $wig->polaritas === '3') {
-                        $cM = ($tM / max(0.0001, $rM)) * 100;
-                    } else {
-                        $cM = ($rM / $tM) * 100;
-                    }
-                }
-                $trend[$m] = round($cM, 2);
+                $trend[$m] = round($calcCapaian($tM, $rM, $wig->polaritas), 2);
             }
             $wig->trend_capaian = $trend;
             
@@ -315,14 +306,7 @@ class SesiWigController extends Controller
                 $curR = \App\Models\RealisasiWig::where('wig_id', $wig->id)
                             ->where('tahun', $endDate->year)->where('bulan', $targetBulan)->where('unit_id', $up3->id)->sum('angka_realisasi') ?? 0;
                 
-                $curPct = 0;
-                if ($curT > 0 || $curR > 0) {
-                    if (strtolower($wig->polaritas) === 'negatif' || $wig->polaritas === '3') {
-                        $curPct = $curT > 0 ? ($curT / max(0.0001, $curR)) * 100 : 0;
-                    } else {
-                        $curPct = $curT > 0 ? ($curR / $curT) * 100 : 0;
-                    }
-                }
+                $curPct = $calcCapaian($curT, $curR, $wig->polaritas);
                 
                 // Previous Month
                 $prevT = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
@@ -330,14 +314,7 @@ class SesiWigController extends Controller
                 $prevR = \App\Models\RealisasiWig::where('wig_id', $wig->id)
                             ->where('tahun', $prevTahun)->where('bulan', $prevBulan)->where('unit_id', $up3->id)->sum('angka_realisasi') ?? 0;
                 
-                $prevPct = 0;
-                if ($prevT > 0 || $prevR > 0) {
-                    if (strtolower($wig->polaritas) === 'negatif' || $wig->polaritas === '3') {
-                        $prevPct = $prevT > 0 ? ($prevT / max(0.0001, $prevR)) * 100 : 0;
-                    } else {
-                        $prevPct = $prevT > 0 ? ($prevR / $prevT) * 100 : 0;
-                    }
-                }
+                $prevPct = $calcCapaian($prevT, $prevR, $wig->polaritas);
                 
                 $wigUnitData[$wig->id][$up3->id] = [
                     'cur' => ['t' => $curT, 'r' => $curR, 'pct' => round($curPct, 2)],
@@ -400,15 +377,7 @@ class SesiWigController extends Controller
             $lm->total_target = $target;
             $lm->total_realisasi = $realisasi;
             
-            $capaian = 0;
-            if ($target > 0) {
-                if (strtolower($lm->polaritas) === 'negatif' || $lm->polaritas === '3') {
-                    $capaian = ($target / max(0.0001, $realisasi)) * 100;
-                } else {
-                    $capaian = ($realisasi / $target) * 100;
-                }
-            }
-            $lm->capaian = round($capaian, 2);
+            $lm->capaian = round($calcCapaian($target, $realisasi, $lm->polaritas), 2);
         }
         
         // Filter Unit sesuai tingkatan akses User (ULP/UP3/UID)
@@ -619,18 +588,18 @@ class SesiWigController extends Controller
         foreach ($up3s as $up3) {
             foreach ($lms as $lm) {
                 $target = $matrixTargets[$lm->id][$up3->id][$sid] ?? 0;
-                if ($target <= 0) continue;
                 $realisasi = $matrixRealisasi[$lm->id][$up3->id][$sid] ?? 0;
-                $pct = round(($realisasi / $target) * 100, 2);
+                if ($target <= 0 && $realisasi <= 0 && strtolower(trim($lm->polaritas ?? 'positif')) !== 'negatif') continue;
+                $pct = round($calcCapaian($target, $realisasi, $lm->polaritas ?? 'positif'), 2);
                 $lmMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => $pct];
             }
         }
         foreach ($allUlps as $ulp) {
             foreach ($lms as $lm) {
                 $target = $matrixTargets[$lm->id][$ulp->id][$sid] ?? 0;
-                if ($target <= 0) continue;
                 $realisasi = $matrixRealisasi[$lm->id][$ulp->id][$sid] ?? 0;
-                $pct = round(($realisasi / $target) * 100, 2);
+                if ($target <= 0 && $realisasi <= 0 && strtolower(trim($lm->polaritas ?? 'positif')) !== 'negatif') continue;
+                $pct = round($calcCapaian($target, $realisasi, $lm->polaritas ?? 'positif'), 2);
                 $lmMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => $pct];
             }
         }
@@ -641,7 +610,7 @@ class SesiWigController extends Controller
             }
         }
 
-        return view('sesi-wigs.show', compact('sesi_wig', 'previousSesi', 'wigs', 'lms', 'units', 'wig_bulan', 'lm_unit', 'leaderboard', 'lmMenangKalah', 'presenters', 'up3s', 'filteredUp3sByWig', 'allUlps', 'sesi_wigs_matrix', 'sesi_wigs_month', 'matrixTargets', 'matrixRealisasi', 'matrixKomitmen', 'isUlpLevel', 'isUp3Level', 'userMatrixGroup', 'canEditSesiWig', 'wigUnitData', 'targetBulan', 'prevBulan'));
+        return view('sesi-wigs.show', compact('sesi_wig', 'previousSesi', 'wigs', 'lms', 'units', 'wig_bulan', 'lm_unit', 'leaderboard', 'lmMenangKalah', 'presenters', 'up3s', 'filteredUp3sByWig', 'allUlps', 'sesi_wigs_matrix', 'sesi_wigs_month', 'matrixTargets', 'matrixRealisasi', 'matrixKomitmen', 'isUlpLevel', 'isUp3Level', 'userMatrixGroup', 'canEditSesiWig', 'wigUnitData', 'targetBulan', 'prevBulan', 'calcCapaian'));
     }
 
     public function drawPresenter(Request $request, SesiWig $sesi_wig)
