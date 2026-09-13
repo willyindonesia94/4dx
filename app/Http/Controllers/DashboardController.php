@@ -595,8 +595,33 @@ class DashboardController extends Controller
         $rtBdMap = [];
         $rtRealMap = [];
         $dynamicMapData = [];
-        $lms = \App\Models\MasterLm::all();
+        $lms = \App\Models\MasterLm::with('satuan')->get()->sortBy(function($lm) {
+            preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
+            return (int)($m[1] ?? 999);
+        })->values();
         $sesi_wigs_month = collect();
+
+        // Inject capaian, total_target, total_realisasi into each LM using scoped data
+        $nonSummableLmSatuans = [1, 2, 6, 14];
+        $calcLmCapaian = function($target, $realisasi, $polaritas) {
+            $target = (float)$target;
+            $realisasi = (float)$realisasi;
+            $pol = strtolower(trim($polaritas ?? 'positif'));
+            if ($pol === 'negatif' || $pol === '3') {
+                if ($target == 0) return $realisasi == 0 ? 100 : 0;
+                return $realisasi == 0 ? 100 : ($target / $realisasi) * 100;
+            } else {
+                if ($target == 0) return $realisasi > 0 ? 100 : 0;
+                return ($realisasi / $target) * 100;
+            }
+        };
+        foreach ($lms as $lm) {
+            $lmTarget    = $scopedTarget[$lm->id] ?? 0;
+            $lmRealisasi = $scopedRealisasi[$lm->id] ?? 0;
+            $lm->total_target    = $lmTarget;
+            $lm->total_realisasi = $lmRealisasi;
+            $lm->capaian         = round($calcLmCapaian($lmTarget, $lmRealisasi, $lm->polaritas), 2);
+        }
 
         if ($latestSesiWig) {
             $sesi_wigs_month = \App\Models\SesiWig::where('tahun', $tahun)
