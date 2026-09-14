@@ -229,7 +229,7 @@ class LaporanBulananController extends Controller
             $wigTargetTot = 0;
             $wigRealTot = 0;
             
-            $nonSummableSatuans = [1, 2, 6, 14];
+            $nonSummableSatuans = [1, 2, 14];
             $isNonSummableWig = in_array($wig->satuan_id, $nonSummableSatuans);
             $targetBulan = $isAllBulan ? 12 : $bulanT;
             $colBln = 'target_' . [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'][$targetBulan];

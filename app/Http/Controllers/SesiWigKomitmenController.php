@@ -18,12 +18,20 @@ class SesiWigKomitmenController extends Controller
         $defaultKomitmen = null;
         if (!$komitmen || is_null($komitmen->komitmen)) {
             $sesiWig = \App\Models\SesiWig::find($sesi_wig_id);
-            if ($sesiWig && $sesiWig->tanggal_pelaksanaan) {
-                $breakdownLm = \App\Models\BreakdownLm::where('lm_id', $lm_id)
-                    ->where('unit_id', $unit_id)
-                    ->where('periode_start', '<=', $sesiWig->tanggal_pelaksanaan->format('Y-m-d'))
-                    ->where('periode_end', '>=', $sesiWig->tanggal_pelaksanaan->format('Y-m-d'))
-                    ->first();
+            if ($sesiWig) {
+                $masterPeriode = \App\Models\MasterPeriode::where('tahun', $sesiWig->tahun)->where('bulan', $sesiWig->bulan)->first();
+                $targetStart = null;
+                if ($masterPeriode) {
+                    $col = 'start_m' . $sesiWig->minggu_ke;
+                    $targetStart = $masterPeriode->$col;
+                }
+                if ($targetStart) {
+                    $breakdownLm = \App\Models\BreakdownLm::where('lm_id', $lm_id)
+                        ->where('unit_id', $unit_id)
+                        ->where('periode_start', '<=', $targetStart)
+                        ->where('periode_end', '>=', $targetStart)
+                        ->orderByRaw('DATEDIFF(periode_end, periode_start) ASC')
+                        ->first();
                 if ($breakdownLm) {
                     $defaultKomitmen = $breakdownLm->angka_target;
                 }

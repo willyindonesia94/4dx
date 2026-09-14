@@ -10,12 +10,12 @@
             <div class="flex flex-wrap justify-between items-center gap-4 mb-6 w-full">
                 <p class="text-gray-600 text-sm sm:text-base flex-1 min-w-[250px]">Berikut adalah daftar realisasi pencapaian Lead Measures yang telah diinput.</p>
                 <div class="flex flex-wrap items-center justify-end gap-2 shrink-0">
-                    @if(auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin') || auth()->user()->role_name === 'Perencanaan UID' || auth()->user()->hasRole('Perencanaan UID') || auth()->user()->hasRole('Asman Perencanaan UP3') || auth()->user()->hasRole('Asman Bidang UP3') || auth()->user()->hasRole('Bidang K3L (MSB)') || strtolower(auth()->user()->username) === 'admin.k3l')
+                    @if(auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin') || auth()->user()->role_name === 'Perencanaan UID' || auth()->user()->hasRole('Perencanaan UID') || auth()->user()->hasRole('Asman Perencanaan UP3') || auth()->user()->hasRole('Asman Bidang UP3') || auth()->user()->hasRole('Bidang K3L (MSB)') || in_array(strtolower(auth()->user()->username), ['admin.k3l', 'msb.k3l']))
                         <a href="{{ route('realisasis.template') }}" class="w-full sm:w-auto justify-center bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2.5 px-4 rounded-lg shadow-sm border border-indigo-200 transition-colors text-sm flex items-center whitespace-nowrap">
                             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                             Template K3L (ULP & UP2D) - Harian
                         </a>
-                        @if(auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Bidang K3L (MSB)') || strtoupper(trim((string)auth()->user()->matrix_group_id)) === 'K3L' || strtolower(auth()->user()->username) === 'admin.k3l')
+                        @if(auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Bidang K3L (MSB)') || strtoupper(trim((string)auth()->user()->matrix_group_id)) === 'K3L' || in_array(strtolower(auth()->user()->username), ['admin.k3l', 'msb.k3l']))
                         <a href="{{ route('realisasis.template-k3l') }}" class="w-full sm:w-auto justify-center bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-2.5 px-4 rounded-lg shadow-sm border border-emerald-200 transition-colors text-sm flex items-center whitespace-nowrap">
                             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                             Template K3L (ULP & UP2D) - Mingguan
@@ -126,8 +126,18 @@
                 </div>
                 @endif
 
-                <!-- Submit Button Removed for Auto-submit -->
+                <!-- Pencarian -->
+                <div class="flex flex-col gap-1 min-w-[200px] flex-1">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Cari Data</label>
+                    <div class="relative">
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari unit atau capaian..." class="text-sm border border-gray-200 rounded-lg pl-9 pr-3 py-2 bg-gray-50 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-700 font-medium w-full">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                    </div>
+                </div>
 
+                <!-- Submit Button Removed for Auto-submit -->
                 <!-- Info -->
                 @php
                     $totalRealisasis = 0;
@@ -283,24 +293,25 @@
 
         <!-- Floating Action Button for Bulk Actions -->
         <div x-show="selectedRealisasis.length > 0" 
+             style="display: none;"
              x-transition:enter="transition ease-out duration-300 transform"
              x-transition:enter-start="opacity-0 translate-y-10"
              x-transition:enter-end="opacity-100 translate-y-0"
              x-transition:leave="transition ease-in duration-200 transform"
              x-transition:leave-start="opacity-100 translate-y-0"
              x-transition:leave-end="opacity-0 translate-y-10"
-             class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 z-50 border border-slate-700" style="display: none;">
+             class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-red-600 shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 z-50 border border-red-500" style="display: none;">
             <span class="font-bold text-white text-sm"><span x-text="selectedRealisasis.length"></span> Terpilih</span>
-            <div class="h-5 w-px bg-slate-600"></div>
+            <div class="h-5 w-px bg-red-400"></div>
             
-            <button @click="openBulkEdit()" class="text-blue-400 hover:text-blue-300 font-bold text-sm flex items-center transition-colors">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            <button @click="openBulkEdit()" class="text-white hover:text-blue-100 font-bold text-sm flex items-center transition-colors">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                 Edit Sekaligus
             </button>
 
-            <div class="h-5 w-px bg-slate-600"></div>
+            <div class="h-5 w-px bg-red-400"></div>
 
-            <button @click="bulkDelete()" class="text-red-400 hover:text-red-300 font-bold text-sm flex items-center transition-colors">
+            <button @click="bulkDelete()" class="text-white hover:text-red-100 font-bold text-sm flex items-center transition-colors">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 Hapus Sekaligus
             </button>
@@ -323,6 +334,7 @@
 
         <!-- Bulk Edit Modal -->
         <div x-show="showBulkEditModal"
+             style="display: none;"
              x-cloak
              class="fixed inset-0 z-[9999] flex items-center justify-center"
              x-transition:enter="transition ease-out duration-200"
@@ -371,6 +383,7 @@
 
         <!-- Custom Confirm Delete Modal -->
         <div x-show="showConfirmModal"
+             style="display: none;"
              x-cloak
              class="fixed inset-0 z-[9999] flex items-center justify-center"
              x-transition:enter="transition ease-out duration-200"
@@ -501,17 +514,17 @@
                                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Format File Excel</label>
                                     <div class="space-y-2">
                                         <label class="flex items-start gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-indigo-50 transition">
-                                            <input type="radio" name="format_import" value="standar" checked class="mt-0.5 text-indigo-600">
+                                            <input type="radio" name="format_import" value="k3l_harian" checked class="mt-0.5 text-indigo-600">
                                             <div>
-                                                <div class="text-sm font-semibold text-slate-700">Format Standar (Template Sistem)</div>
-                                                <div class="text-[11px] text-slate-400">Kolom: judul_wig, judul_lm, angka_realisasi, tanggal_input, email_penginput</div>
+                                                <div class="text-sm font-semibold text-slate-700">Format K3L Harian</div>
+                                                <div class="text-[11px] text-slate-400">Sesuai dengan Template K3L (ULP & UP2D) - Harian</div>
                                             </div>
                                         </label>
                                         <label class="flex items-start gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-indigo-50 transition">
-                                            <input type="radio" name="format_import" value="bidang" class="mt-0.5 text-indigo-600">
+                                            <input type="radio" name="format_import" value="k3l_mingguan" class="mt-0.5 text-indigo-600">
                                             <div>
-                                                <div class="text-sm font-semibold text-slate-700">Format Scoreboard Bidang</div>
-                                                <div class="text-[11px] text-slate-400">Kolom: PRIMARY, KM, UNIT, INDIKATOR KINERJA, REALISASI MINGGU-1 s/d REALISASI MINGGU-5 (seperti spreadsheet monitoring bidang)</div>
+                                                <div class="text-sm font-semibold text-slate-700">Format K3L Mingguan</div>
+                                                <div class="text-[11px] text-slate-400">Sesuai dengan Template K3L (ULP & UP2D) - Mingguan</div>
                                             </div>
                                         </label>
                                     </div>

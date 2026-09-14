@@ -218,9 +218,11 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="flex-1 w-full">
-                                <label class="block text-xs font-semibold text-gray-700 mb-1">File Excel</label>
-                                <input type="file" name="file_excel" accept=".xlsx, .xls" required class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200 border border-slate-300 rounded-md bg-white">
+                            <div class="flex-1 w-full flex flex-col sm:flex-row gap-4 items-end">
+                                <div class="flex-1 w-full">
+                                    <label class="block text-xs font-semibold text-gray-700 mb-1">File Excel</label>
+                                    <input type="file" name="file_excel" accept=".xlsx, .xls" required class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200 border border-slate-300 rounded-md bg-white">
+                                </div>
                             </div>
                             <button type="submit" :disabled="isSubmitting" class="w-full sm:w-auto px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                 <span x-text="isSubmitting ? 'Memproses...' : 'Proses Upload'"></span>
@@ -914,6 +916,7 @@
     @if($canEditDelete || (isset($canApproveLm) && $canApproveLm))
     <!-- Floating Action Button for Bulk Delete -->
     <div x-show="selectedBreakdowns.length > 0" 
+         style="display: none;"
          x-transition:enter="transition ease-out duration-300 transform"
          x-transition:enter-start="opacity-0 translate-y-10"
          x-transition:enter-end="opacity-100 translate-y-0"
@@ -967,6 +970,7 @@
 
     <!-- Bulk Edit Modal -->
     <div x-show="bulkEditModal"
+         style="display: none;"
          x-cloak
          class="fixed inset-0 z-[9999] flex items-center justify-center"
          x-transition:enter="transition ease-out duration-200"
@@ -1016,6 +1020,7 @@
 
     <!-- Custom Confirm Delete Modal -->
     <div x-show="showConfirmModal"
+         style="display: none;"
          x-cloak
          class="fixed inset-0 z-[9999] flex items-center justify-center"
          x-transition:enter="transition ease-out duration-200"

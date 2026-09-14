@@ -20,6 +20,7 @@ class RealizationController extends Controller
         $lmIdFilter = $request->input('lm_id_filter');
         $up3IdFilter = $request->input('up3_id');
         $filterTanggal = $request->input('filter_tanggal');
+        $search     = $request->input('search');
 
         $user = auth()->user();
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
@@ -51,7 +52,7 @@ class RealizationController extends Controller
         $displayWigs = $displayWigsQuery->get();
 
         // Eager load realisasis and apply filters
-        $displayWigs->load(['masterLms.realisasis' => function($q) use ($bulan, $tahun, $up3IdFilter, $lmIdFilter, $isSuperAdmin, $user, $filterTanggal) {
+        $displayWigs->load(['masterLms.realisasis' => function($q) use ($bulan, $tahun, $up3IdFilter, $lmIdFilter, $isSuperAdmin, $user, $filterTanggal, $search) {
             if ($filterTanggal) {
                 $q->whereDate('tanggal_input', $filterTanggal);
             } else {
@@ -87,6 +88,17 @@ class RealizationController extends Controller
                     $subq->select('id')->from('master_units')
                       ->where('id', $up3IdFilter)
                       ->orWhere('parent_id', $up3IdFilter);
+                });
+            }
+
+            if ($search) {
+                $q->where(function($qSearch) use ($search) {
+                    $qSearch->whereHas('unit', function($qUnit) use ($search) {
+                        $qUnit->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhere('angka_realisasi', 'like', "%{$search}%")
+                    ->orWhere('keterangan_tambahan', 'like', "%{$search}%")
+                    ->orWhere('bukti_file', 'like', "%{$search}%");
                 });
             }
 
@@ -385,7 +397,7 @@ class RealizationController extends Controller
      */
     public function import(Request $request)
     {
-        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3', 'Asman Bidang UP3']) && strtolower(auth()->user()->username) !== 'admin.k3l') {
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3', 'Asman Bidang UP3']) && !in_array(strtolower(auth()->user()->username), ['admin.k3l', 'msb.k3l'])) {
             abort(403, 'USER DOES NOT HAVE THE RIGHT ROLES.');
         }
 
@@ -404,9 +416,9 @@ class RealizationController extends Controller
             $tanggalSelesai = $request->input('tanggal_selesai');
             $bulanImport = (int) $request->input('bulan_import', date('n'));
             $tahunImport = (int) $request->input('tahun_import', date('Y'));
-            $formatImport = $request->input('format_import', 'standar');
+            $formatImport = $request->input('format_import', 'k3l_harian');
 
-            if ($formatImport === 'bidang') {
+            if ($formatImport === 'k3l_mingguan') {
                 Excel::import(new RealisasiLmFormatBidangImport($bulanImport, $tahunImport), $request->file($fileKey));
             } else {
                 Excel::import(new RealisasiLmMassImport($isProrata, $tanggalMulai, $tanggalSelesai, $bulanImport, $tahunImport), $request->file($fileKey));
@@ -422,7 +434,7 @@ class RealizationController extends Controller
      */
     public function downloadTemplate()
     {
-        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3', 'Asman Bidang UP3']) && strtolower(auth()->user()->username) !== 'admin.k3l') {
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3', 'Asman Bidang UP3']) && !in_array(strtolower(auth()->user()->username), ['admin.k3l', 'msb.k3l'])) {
             abort(403, 'USER DOES NOT HAVE THE RIGHT ROLES.');
         }
 
@@ -555,7 +567,7 @@ class RealizationController extends Controller
      */
     public function downloadTemplateK3L()
     {
-        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3', 'Asman Bidang UP3', 'Bidang K3L (MSB)']) && strtolower(auth()->user()->username) !== 'admin.k3l') {
+        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3', 'Asman Bidang UP3', 'Bidang K3L (MSB)']) && !in_array(strtolower(auth()->user()->username), ['admin.k3l', 'msb.k3l'])) {
             abort(403, 'USER DOES NOT HAVE THE RIGHT ROLES.');
         }
 

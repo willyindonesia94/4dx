@@ -83,9 +83,9 @@ class MasterPeriode extends Model
             $wStart = $w['start'];
             
             // Sebuah minggu masuk ke $bulan jika:
-            // a) start date-nya ada di bulan tersebut
+            // a) start date-nya ada di bulan tersebut (dan di tahun yang sama)
             // b) ATAU ini adalah minggu PERTAMA dari array (index 0) dan kita sedang mencari bulan Januari (1), meskipun start date-nya di Desember tahun lalu
-            if ($wStart->month == $bulan || ($index === 0 && $bulan == 1 && $wStart->month == 12)) {
+            if (($wStart->month == $bulan && $wStart->year == $tahun) || ($index === 0 && $bulan == 1 && $wStart->month == 12)) {
                 $monthWeeks[] = $w;
             }
         }

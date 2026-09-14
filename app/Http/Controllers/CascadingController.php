@@ -105,9 +105,8 @@ class CascadingController extends Controller
                         $subq->where('master_units.type', '!=', 'ULP')
                              ->orWhere('master_units.parent_id', $up3IdFilter);
                     });
-                } else {
-                    $q->where('master_units.type', '!=', 'ULP');
                 }
+                // Jika tidak ada filter UP3 dan bukan user UP3, biarkan memuat semua data (termasuk ULP) agar terlihat oleh Admin.
 
                 $q->orderByRaw("CASE WHEN UPPER(TRIM(master_units.type)) IN ('UP2D', 'UP2K') THEN 2 ELSE 1 END")
                   ->orderBy('master_units.name', 'asc')
@@ -679,9 +678,104 @@ class CascadingController extends Controller
         try {
             $request->file("file_excel")->storeAs('logs', 'uploaded_lm.xlsx', 'local');
             \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\BreakdownLmMassImport($request->bulan, $request->tahun), $request->file("file_excel"));
+            
+            if (in_array(strtolower(auth()->user()->username), ['admin.k3l', 'msb.k3l'])) {
+                $this->accumulateK3LBreakdown($request->bulan, $request->tahun);
+            }
+
             return redirect()->back()->with("success", "Breakdown Target LM berhasil di-upload secara massal.");
         } catch (\Exception $e) {
             return redirect()->back()->with("error", "Terjadi kesalahan saat upload data: " . $e->getMessage());
+        }
+    }
+
+    private function accumulateK3LBreakdown($bulan, $tahun)
+    {
+        $lms = \App\Models\MasterLm::whereHas('wig', function($q) {
+            $q->where('divisi', 'LIKE', '%K3L%');
+        })->with('satuan')->get();
+
+        $uidUnit = \App\Models\MasterUnit::where('type', 'UID')->first();
+        $up3Units = \App\Models\MasterUnit::where('type', 'UP3')->with('children')->get();
+        $periodes = \App\Models\BreakdownLm::where('bulan', $bulan)
+            ->where('tahun', $tahun)
+            ->select('periode_start', 'periode_end')
+            ->distinct()
+            ->get();
+
+        foreach ($lms as $lm) {
+            $isPersen = false;
+            if ($lm->satuan && (str_contains(strtolower($lm->satuan->name), '%') || str_contains(strtolower($lm->satuan->name), 'persen'))) {
+                $isPersen = true;
+            }
+
+            foreach ($periodes as $periode) {
+                $periodeStart = $periode->periode_start;
+                $periodeEnd = $periode->periode_end;
+                
+                foreach ($up3Units as $up3) {
+                    $ulpIds = $up3->children->pluck('id')->toArray();
+                    
+                    $childTargets = \App\Models\BreakdownLm::where('lm_id', $lm->id)
+                        ->where('bulan', $bulan)
+                        ->where('tahun', $tahun)
+                        ->where('periode_start', $periodeStart)
+                        ->where('periode_end', $periodeEnd)
+                        ->whereIn('unit_id', $ulpIds)
+                        ->pluck('angka_target');
+
+                    if ($childTargets->count() > 0) {
+                        $up3Target = $isPersen ? $childTargets->avg() : $childTargets->sum();
+
+                        \App\Models\BreakdownLm::updateOrCreate(
+                            [
+                                'lm_id' => $lm->id,
+                                'unit_id' => $up3->id,
+                                'bulan' => $bulan,
+                                'tahun' => $tahun,
+                                'periode_start' => $periodeStart,
+                                'periode_end' => $periodeEnd
+                            ],
+                            [
+                                'angka_target' => $up3Target,
+                                'satuan_id' => $lm->satuan_id,
+                                'is_approved' => true
+                            ]
+                        );
+                    }
+                }
+
+                if ($uidUnit) {
+                    $up3Ids = $up3Units->pluck('id')->toArray();
+                    $up3Targets = \App\Models\BreakdownLm::where('lm_id', $lm->id)
+                        ->where('bulan', $bulan)
+                        ->where('tahun', $tahun)
+                        ->where('periode_start', $periodeStart)
+                        ->where('periode_end', $periodeEnd)
+                        ->whereIn('unit_id', $up3Ids)
+                        ->pluck('angka_target');
+
+                    if ($up3Targets->count() > 0) {
+                        $uidTarget = $isPersen ? $up3Targets->avg() : $up3Targets->sum();
+
+                        \App\Models\BreakdownLm::updateOrCreate(
+                            [
+                                'lm_id' => $lm->id,
+                                'unit_id' => $uidUnit->id,
+                                'bulan' => $bulan,
+                                'tahun' => $tahun,
+                                'periode_start' => $periodeStart,
+                                'periode_end' => $periodeEnd
+                            ],
+                            [
+                                'angka_target' => $uidTarget,
+                                'satuan_id' => $lm->satuan_id,
+                                'is_approved' => true
+                            ]
+                        );
+                    }
+                }
+            }
         }
     }
 

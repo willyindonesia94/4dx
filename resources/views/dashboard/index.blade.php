@@ -455,7 +455,25 @@
                                                             <tr>
                                                                 <th rowspan="2" class="px-3 py-2 border border-gray-300 text-left font-bold text-gray-800 sticky left-0 bg-gray-100 z-10">UNIT</th>
                                                                 @foreach($sesi_wigs_matrix as $sw)
-                                                                    <th colspan="4" class="px-2 py-1 border border-gray-300 text-center font-bold text-gray-800 bg-indigo-50">WEEK {{ $sw->minggu_ke }}</th>
+                                                                    <th colspan="4" class="px-2 py-1 border border-gray-300 text-center font-bold text-gray-800 bg-indigo-50">
+                                                                        @php
+                                                                            $headerLabel = 'MINGGU ' . $sw->minggu_ke;
+                                                                            if (strtolower(trim($sw->tipe_sesi ?? 'mingguan')) === 'mingguan') {
+                                                                                $swTahun = isset($sw->tahun) ? $sw->tahun : (isset($tahun) ? $tahun : date('Y'));
+                                                                                $swBulan = isset($sw->bulan) ? $sw->bulan : (isset($bulan) ? $bulan : date('m'));
+                                                                                $weeks = \App\Models\MasterPeriode::getWeekDates($swTahun, $swBulan);
+                                                                                $weekKey = 'target_m' . $sw->minggu_ke;
+                                                                                if (isset($weeks[$weekKey])) {
+                                                                                    $start = \Carbon\Carbon::parse($weeks[$weekKey]['start'])->format('d M');
+                                                                                    $end = \Carbon\Carbon::parse($weeks[$weekKey]['end'])->format('d M');
+                                                                                    $headerLabel .= '<br><span class="text-[9px] font-normal text-slate-500 leading-tight">(' . $start . ' - ' . $end . ')</span>';
+                                                                                }
+                                                                            } elseif (strtolower(trim($sw->tipe_sesi)) === 'bulanan') {
+                                                                                $headerLabel = 'BULANAN';
+                                                                            }
+                                                                        @endphp
+                                                                        {!! $headerLabel !!}
+                                                                    </th>
                                                                 @endforeach
                                                             </tr>
                                                             <tr>
@@ -878,6 +896,28 @@
                             
                         this.markers.push(marker);
                     });
+                }
+            }
+        }
+    </script>
+    <script>
+        function toggleUlpsRt(id) {
+            const rows = document.querySelectorAll('.ulp-row-rt-' + id);
+            const icon = document.getElementById('icon-rt-' + id);
+            let isHidden = false;
+            rows.forEach(r => {
+                if (r.classList.contains('hidden')) {
+                    r.classList.remove('hidden');
+                    isHidden = true;
+                } else {
+                    r.classList.add('hidden');
+                }
+            });
+            if (icon) {
+                if (isHidden) {
+                    icon.classList.add('rotate-180');
+                } else {
+                    icon.classList.remove('rotate-180');
                 }
             }
         }

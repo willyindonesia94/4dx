@@ -26,7 +26,7 @@ class SesiWigController extends Controller
             // Find the closest session in the current month (or just the latest one)
             $currentSesi = SesiWig::where('tahun', $currentYear)
                                   ->where('bulan', $currentMonth)
-                                  ->where('tanggal_pelaksanaan', '>=', now())
+                                  ->where('tanggal_pelaksanaan', '>=', now()->subDays(3))
                                   ->orderBy('tanggal_pelaksanaan', 'asc')
                                   ->first();
                                   
@@ -207,7 +207,7 @@ class SesiWigController extends Controller
             }
         }
 
-        $nonSummableSatuans = [1, 2, 6, 14];
+        $nonSummableSatuans = [1, 2, 14];
 
         $wigUnitData = []; // Store Unit-level data for WIGs
         $up3List = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->orderBy('name')->get();

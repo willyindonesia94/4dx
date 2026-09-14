@@ -747,7 +747,7 @@ class DashboardController extends Controller
         }
 
         // --- Aggregation (Rollup) ULP -> UP3 -> UID ---
-        $nonSummableSatuans = [1, 2, 6, 14];
+        $nonSummableSatuans = [1, 2, 14];
         foreach ($lms as $lm) {
             $isNonSummable = in_array($lm->satuan_id, $nonSummableSatuans);
             foreach ($sesi_wigs_matrix as $sw) {
