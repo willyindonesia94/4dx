@@ -50,6 +50,8 @@
             
         @php
             $namaBulan = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+            $isAsmanUP3User = auth()->user()->hasAnyRole(['Asman Bidang UP3', 'Asman Perencanaan UP3']) || in_array(auth()->user()->role_name, ['Asman Bidang UP3', 'Asman Perencanaan UP3']);
+            $canBulkEdit = (isset($isSuperAdmin) && $isSuperAdmin) || auth()->user()->hasRole('Perencanaan UID') || $isAsmanUP3User;
         @endphp
 
         <!-- Filter Dropdown Bar -->
