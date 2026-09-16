@@ -447,28 +447,47 @@ class LaporanBulananController extends Controller
                         $unitLmTotalT = $isNonSummableLm ? ($ulpTargets / count($ulpsOfUp3)) : $ulpTargets;
                     }
                     
-                    $realQuery = \App\Models\Realisasi::where('lm_id', $lm->id)
-                                ->where(function($q) use ($unit, $ulpsOfUp3) {
-                                    $q->where('unit_id', $unit->id);
-                                    if (count($ulpsOfUp3) > 0) {
-                                        $q->orWhereIn('unit_id', $ulpsOfUp3);
-                                    }
-                                })
+                    $up3RealQuery = \App\Models\Realisasi::where('lm_id', $lm->id)
+                                ->where('unit_id', $unit->id)
                                 ->where('tanggal_input', '>=', $monthStart . ' 00:00:00')
                                 ->where('tanggal_input', '<=', $monthEnd . ' 23:59:59');
                     
                     if ($isNonSummableLm) {
-                        $unitLmTotalR = $realQuery->avg('angka_realisasi') ?? 0;
+                        $unitLmTotalR = $up3RealQuery->avg('angka_realisasi') ?? 0;
                     } else {
-                        $unitLmTotalR = $realQuery->sum('angka_realisasi') ?? 0;
+                        $unitLmTotalR = $up3RealQuery->sum('angka_realisasi') ?? 0;
+                    }
+
+                    // Jika UP3 tidak ada data (0), barulah rollup dari ULP
+                    if ($unitLmTotalR == 0 && count($ulpsOfUp3) > 0) {
+                        $ulpRealQuery = \App\Models\Realisasi::where('lm_id', $lm->id)
+                                ->whereIn('unit_id', $ulpsOfUp3)
+                                ->where('tanggal_input', '>=', $monthStart . ' 00:00:00')
+                                ->where('tanggal_input', '<=', $monthEnd . ' 23:59:59');
+                        
+                        if ($isNonSummableLm) {
+                            $unitLmTotalR = $ulpRealQuery->avg('angka_realisasi') ?? 0;
+                        } else {
+                            $unitLmTotalR = $ulpRealQuery->sum('angka_realisasi') ?? 0;
+                        }
                     }
 
                     $unitLmPct = 0;
                     if ($unitLmTotalT > 0 || $unitLmTotalR > 0) {
-                        if ($lmPolaritas === 'negatif' || $lmPolaritas === '3') {
-                            $unitLmPct = $unitLmTotalT > 0 ? ($unitLmTotalT / max(0.0001, $unitLmTotalR)) * 100 : 0;
+                        // Handle calcCapaian logic
+                        $isNeg = ($lmPolaritas === 'negatif' || $lmPolaritas === '3');
+                        if ($unitLmTotalT == 0) {
+                            if ($isNeg) {
+                                $unitLmPct = ($unitLmTotalR == 0) ? 100 : 0;
+                            } else {
+                                $unitLmPct = ($unitLmTotalR >= 0) ? 100 : 0;
+                            }
                         } else {
-                            $unitLmPct = $unitLmTotalT > 0 ? ($unitLmTotalR / $unitLmTotalT) * 100 : 0;
+                            if ($isNeg) {
+                                $unitLmPct = ($unitLmTotalT / max(0.0001, $unitLmTotalR)) * 100;
+                            } else {
+                                $unitLmPct = ($unitLmTotalR / $unitLmTotalT) * 100;
+                            }
                         }
                     }
 
@@ -520,10 +539,19 @@ class LaporanBulananController extends Controller
 
                 $lmOverallPct = 0;
                 if ($lmTotalTarget > 0 || $lmTotalReal > 0) {
-                    if ($lmPolaritas === 'negatif' || $lmPolaritas === '3') {
-                        $lmOverallPct = $lmTotalTarget > 0 ? ($lmTotalTarget / max(0.0001, $lmTotalReal)) * 100 : 0;
+                    $isNeg = ($lmPolaritas === 'negatif' || $lmPolaritas === '3');
+                    if ($lmTotalTarget == 0) {
+                        if ($isNeg) {
+                            $lmOverallPct = ($lmTotalReal == 0) ? 100 : 0;
+                        } else {
+                            $lmOverallPct = ($lmTotalReal >= 0) ? 100 : 0;
+                        }
                     } else {
-                        $lmOverallPct = $lmTotalTarget > 0 ? ($lmTotalReal / $lmTotalTarget) * 100 : 0;
+                        if ($isNeg) {
+                            $lmOverallPct = ($lmTotalTarget / max(0.0001, $lmTotalReal)) * 100;
+                        } else {
+                            $lmOverallPct = ($lmTotalReal / $lmTotalTarget) * 100;
+                        }
                     }
                 }
 
