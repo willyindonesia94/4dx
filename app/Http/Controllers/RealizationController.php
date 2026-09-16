@@ -386,11 +386,28 @@ class RealizationController extends Controller
 
     private function checkEditRule(Realisasi $realisasi)
     {
-        if (auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3', 'Asman Perencanaan UP3']) || in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3', 'Asman Perencanaan UP3']) || $this->isMsbK3L()) {
-            return; // Superadmin & Asman UP3 have full access
+        $user = auth()->user();
+        
+        // Super Admin, Perencanaan UID, MSB K3L punya akses edit tanpa batas waktu
+        if ($user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array($user->role_name, ['Super Admin', 'Perencanaan UID']) || $this->isMsbK3L()) {
+            return;
         }
 
-        if (!Carbon::parse($realisasi->tanggal_input)->isSameDay(now())) {
+        $tanggalRealisasi = \Carbon\Carbon::parse($realisasi->tanggal_input)->startOfDay();
+        $hariIni = now()->startOfDay();
+
+        // Asman UP3 bisa edit maksimal H+1
+        $isAsmanUP3 = $user->hasAnyRole(['Asman Bidang UP3', 'Asman Perencanaan UP3']) || in_array($user->role_name, ['Asman Bidang UP3', 'Asman Perencanaan UP3']);
+        if ($isAsmanUP3) {
+            $daysDiff = $tanggalRealisasi->diffInDays($hariIni, false);
+            if ($daysDiff > 1) {
+                abort(403, 'Akses Ditolak: Asman UP3 hanya dapat merevisi realisasi maksimal H+1 (48 Jam) dari tanggal realisasi.');
+            }
+            return;
+        }
+
+        // ULP hanya bisa edit di hari yang sama
+        if (!$tanggalRealisasi->isSameDay($hariIni)) {
             abort(403, 'Akses Ditolak: Data realisasi LM hanya dapat diedit pada hari yang sama dengan tanggal pelaksanaannya.');
         }
     }

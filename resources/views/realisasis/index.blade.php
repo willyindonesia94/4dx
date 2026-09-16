@@ -261,7 +261,17 @@
                                                 <td class="px-4 py-3 whitespace-nowrap text-center text-sm font-medium space-x-2">
                                                     @php
                                                         $isAsmanUP3 = auth()->user()->hasAnyRole(['Asman Bidang UP3', 'Asman Perencanaan UP3']) || in_array(auth()->user()->role_name, ['Asman Bidang UP3', 'Asman Perencanaan UP3']);
-                                                        $canEdit = (isset($isSuperAdmin) && $isSuperAdmin) || $isAsmanUP3 || \Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now());
+                                                        
+                                                        $tglInput = \Carbon\Carbon::parse($realisasi->tanggal_input)->startOfDay();
+                                                        $hariIni = now()->startOfDay();
+                                                        
+                                                        if (isset($isSuperAdmin) && $isSuperAdmin) {
+                                                            $canEdit = true;
+                                                        } elseif ($isAsmanUP3) {
+                                                            $canEdit = $tglInput->diffInDays($hariIni, false) <= 1;
+                                                        } else {
+                                                            $canEdit = $tglInput->isSameDay($hariIni);
+                                                        }
                                                         $canDelete = (isset($isSuperAdmin) && $isSuperAdmin) || auth()->user()->hasRole('Perencanaan UID');
                                                     @endphp
 
