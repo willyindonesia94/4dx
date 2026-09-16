@@ -386,7 +386,7 @@ class RealizationController extends Controller
 
     private function checkEditRule(Realisasi $realisasi)
     {
-        if (auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3']) || in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3']) || $this->isMsbK3L()) {
+        if (auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3', 'Asman Perencanaan UP3']) || in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID', 'Asman Bidang UP3', 'Asman Perencanaan UP3']) || $this->isMsbK3L()) {
             return; // Superadmin & Asman UP3 have full access
         }
 
