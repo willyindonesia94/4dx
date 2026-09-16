@@ -13,7 +13,11 @@
                     @if(auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin') || auth()->user()->role_name === 'Perencanaan UID' || auth()->user()->hasRole('Perencanaan UID') || auth()->user()->hasRole('Asman Perencanaan UP3') || auth()->user()->hasRole('Asman Bidang UP3') || auth()->user()->hasRole('Bidang K3L (MSB)') || in_array(strtolower(auth()->user()->username), ['admin.k3l', 'msb.k3l']))
                         <a href="{{ route('realisasis.template') }}" class="w-full sm:w-auto justify-center bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2.5 px-4 rounded-lg shadow-sm border border-indigo-200 transition-colors text-sm flex items-center whitespace-nowrap">
                             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            Template K3L (ULP & UP2D) - Harian
+                            @if(in_array(strtolower(auth()->user()->username), ['admin.k3l', 'msb.k3l']) || strtoupper(trim((string)auth()->user()->matrix_group_id)) === 'K3L' || auth()->user()->hasRole('Bidang K3L (MSB)'))
+                                Template K3L (ULP & UP2D) - Harian
+                            @else
+                                Template Realisasi LM
+                            @endif
                         </a>
                         @if(auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Bidang K3L (MSB)') || strtoupper(trim((string)auth()->user()->matrix_group_id)) === 'K3L' || in_array(strtolower(auth()->user()->username), ['admin.k3l', 'msb.k3l']))
                         <a href="{{ route('realisasis.template-k3l') }}" class="w-full sm:w-auto justify-center bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold py-2.5 px-4 rounded-lg shadow-sm border border-emerald-200 transition-colors text-sm flex items-center whitespace-nowrap">
@@ -516,10 +520,16 @@
                                         <label class="flex items-start gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-indigo-50 transition">
                                             <input type="radio" name="format_import" value="k3l_harian" checked class="mt-0.5 text-indigo-600">
                                             <div>
-                                                <div class="text-sm font-semibold text-slate-700">Format K3L Harian</div>
-                                                <div class="text-[11px] text-slate-400">Sesuai dengan Template K3L (ULP & UP2D) - Harian</div>
+                                                @if(in_array(strtolower(auth()->user()->username), ['admin.k3l', 'msb.k3l']) || strtoupper(trim((string)auth()->user()->matrix_group_id)) === 'K3L' || auth()->user()->hasRole('Bidang K3L (MSB)'))
+                                                    <div class="text-sm font-semibold text-slate-700">Format K3L Harian</div>
+                                                    <div class="text-[11px] text-slate-400">Sesuai dengan Template K3L (ULP & UP2D) - Harian</div>
+                                                @else
+                                                    <div class="text-sm font-semibold text-slate-700">Format Realisasi Harian</div>
+                                                    <div class="text-[11px] text-slate-400">Sesuai dengan Template Realisasi LM</div>
+                                                @endif
                                             </div>
                                         </label>
+                                        @if(auth()->user()->hasRole('Super Admin') || auth()->user()->hasRole('Bidang K3L (MSB)') || strtoupper(trim((string)auth()->user()->matrix_group_id)) === 'K3L' || in_array(strtolower(auth()->user()->username), ['admin.k3l', 'msb.k3l']))
                                         <label class="flex items-start gap-3 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-indigo-50 transition">
                                             <input type="radio" name="format_import" value="k3l_mingguan" class="mt-0.5 text-indigo-600">
                                             <div>
@@ -527,6 +537,7 @@
                                                 <div class="text-[11px] text-slate-400">Sesuai dengan Template K3L (ULP & UP2D) - Mingguan</div>
                                             </div>
                                         </label>
+                                        @endif
                                     </div>
                                 </div>
 
