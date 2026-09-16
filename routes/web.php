@@ -92,6 +92,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/realisasis/import', [\App\Http\Controllers\RealizationController::class, 'import'])->name('realisasis.import');
     Route::put('/realisasis/bulk-update', [\App\Http\Controllers\RealizationController::class, 'bulkUpdate'])->name('realisasis.bulk-update');
     Route::delete('/realisasis/bulk-destroy', [\App\Http\Controllers\RealizationController::class, 'bulkDestroy'])->name('realisasis.bulk-destroy');
+    Route::post('/realisasis/toggle-unlock', [\App\Http\Controllers\RealizationController::class, 'toggleUnlock'])->name('realisasis.toggle-unlock');
     Route::resource('realisasis', \App\Http\Controllers\RealizationController::class)->except(['show']);
     
     // Realisasi WIG

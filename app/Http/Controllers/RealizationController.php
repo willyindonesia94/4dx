@@ -300,6 +300,19 @@ class RealizationController extends Controller
         return redirect()->back()->with('success', 'Realisasi berhasil dihapus.')->with('active_wig', $wig_id)->with('expanded_lm', $lm_id);
     }
 
+    public function toggleUnlock(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user->hasAnyRole(['Super Admin', 'Perencanaan UID']) && !in_array($user->role_name, ['Super Admin', 'Perencanaan UID'])) {
+            abort(403, 'Akses Ditolak');
+        }
+
+        $currentState = \Illuminate\Support\Facades\Cache::get('unlock_asman_edit', false);
+        \Illuminate\Support\Facades\Cache::forever('unlock_asman_edit', !$currentState);
+
+        $msg = !$currentState ? 'Batas waktu edit untuk Asman UP3 telah DIBUKA (Tanpa Batas Waktu).' : 'Batas waktu edit untuk Asman UP3 kembali DITUTUP (Maksimal H+1).';
+        return redirect()->back()->with('success', $msg);
+    }
     public function bulkDestroy(Request $request)
     {
         $ids = json_decode($request->input('ids', '[]'), true);
@@ -390,12 +403,15 @@ class RealizationController extends Controller
         $tanggalRealisasi = \Carbon\Carbon::parse($realisasi->tanggal_input)->startOfDay();
         $hariIni = now()->startOfDay();
 
-        // Asman UP3 bisa edit maksimal H+1
+        // Asman UP3 bisa edit maksimal H+1, KECUALI jika fitur Unlock diaktifkan oleh UID
         $isAsmanUP3 = $user->hasAnyRole(['Asman Bidang UP3', 'Asman Perencanaan UP3']) || in_array($user->role_name, ['Asman Bidang UP3', 'Asman Perencanaan UP3']);
         if ($isAsmanUP3) {
-            $daysDiff = $tanggalRealisasi->diffInDays($hariIni, false);
-            if ($daysDiff > 1) {
-                abort(403, 'Akses Ditolak: Asman UP3 hanya dapat merevisi realisasi maksimal H+1 (48 Jam) dari tanggal realisasi.');
+            $isUnlocked = \Illuminate\Support\Facades\Cache::get('unlock_asman_edit', false);
+            if (!$isUnlocked) {
+                $daysDiff = $tanggalRealisasi->diffInDays($hariIni, false);
+                if ($daysDiff > 1) {
+                    abort(403, 'Akses Ditolak: Asman UP3 hanya dapat merevisi realisasi maksimal H+1 (48 Jam) dari tanggal realisasi.');
+                }
             }
             return;
         }
@@ -418,12 +434,15 @@ class RealizationController extends Controller
         $tanggalRealisasi = \Carbon\Carbon::parse($realisasi->tanggal_input)->startOfDay();
         $hariIni = now()->startOfDay();
 
-        // Asman UP3 bisa delete maksimal H+1
+        // Asman UP3 bisa delete maksimal H+1, KECUALI jika fitur Unlock diaktifkan oleh UID
         $isAsmanUP3 = $user->hasAnyRole(['Asman Bidang UP3', 'Asman Perencanaan UP3']) || in_array($user->role_name, ['Asman Bidang UP3', 'Asman Perencanaan UP3']);
         if ($isAsmanUP3) {
-            $daysDiff = $tanggalRealisasi->diffInDays($hariIni, false);
-            if ($daysDiff > 1) {
-                abort(403, 'Akses Ditolak: Asman UP3 hanya dapat menghapus realisasi maksimal H+1 (48 Jam) dari tanggal realisasi.');
+            $isUnlocked = \Illuminate\Support\Facades\Cache::get('unlock_asman_edit', false);
+            if (!$isUnlocked) {
+                $daysDiff = $tanggalRealisasi->diffInDays($hariIni, false);
+                if ($daysDiff > 1) {
+                    abort(403, 'Akses Ditolak: Asman UP3 hanya dapat menghapus realisasi maksimal H+1 (48 Jam) dari tanggal realisasi.');
+                }
             }
             return;
         }

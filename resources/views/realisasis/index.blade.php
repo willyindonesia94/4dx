@@ -6,8 +6,33 @@
     </x-slot>
 
     <div class="py-12" x-data="realisasiForm()">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-wrap justify-between items-center gap-4 mb-6 w-full">
+        <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto" x-data="realisasiManager()">
+        @php
+            $isUIDAdmin = auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID']);
+            $isUnlocked = \Illuminate\Support\Facades\Cache::get('unlock_asman_edit', false);
+        @endphp
+
+        @if($isUIDAdmin)
+        <div class="mb-6 bg-white border {{ $isUnlocked ? 'border-amber-400' : 'border-gray-200' }} rounded-xl p-4 flex items-center justify-between shadow-sm transition-colors">
+            <div class="flex items-center gap-4">
+                <div class="p-2 {{ $isUnlocked ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500' }} rounded-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+                <div>
+                    <h3 class="font-bold {{ $isUnlocked ? 'text-amber-800' : 'text-gray-800' }}">Akses Edit Asman UP3: {{ $isUnlocked ? 'TERBUKA (Tanpa Batas)' : 'TERKUNCI (Maks. H+1)' }}</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">Saat ini Asman UP3 {{ $isUnlocked ? 'bisa merevisi data tanggal berapapun (Unlock Mode).' : 'hanya bisa merevisi data maksimal H+1 / 48 jam.' }}</p>
+                </div>
+            </div>
+            <form action="{{ route('realisasis.toggle-unlock') }}" method="POST">
+                @csrf
+                <button type="submit" class="px-4 py-2 rounded-lg font-bold text-sm shadow-sm transition-colors {{ $isUnlocked ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-amber-500 text-white hover:bg-amber-600' }}">
+                    {{ $isUnlocked ? 'Kunci Kembali (H+1)' : 'Buka Akses Edit (Unlock)' }}
+                </button>
+            </form>
+        </div>
+        @endif
+
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-6 w-full">
                 <p class="text-gray-600 text-sm sm:text-base flex-1 min-w-[250px]">Berikut adalah daftar realisasi pencapaian Lead Measures yang telah diinput.</p>
                 <div class="flex flex-wrap items-center justify-end gap-2 shrink-0">
                     @if(auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin') || auth()->user()->role_name === 'Perencanaan UID' || auth()->user()->hasRole('Perencanaan UID') || auth()->user()->hasRole('Asman Perencanaan UP3') || auth()->user()->hasRole('Asman Bidang UP3') || auth()->user()->hasRole('Bidang K3L (MSB)') || in_array(strtolower(auth()->user()->username), ['admin.k3l', 'msb.k3l']))
@@ -271,7 +296,8 @@
                                                             $canEdit = true;
                                                             $canDelete = true;
                                                         } elseif ($isAsmanUP3) {
-                                                            $canEdit = $tglInput->diffInDays($hariIni, false) <= 1;
+                                                            $isUnlocked = \Illuminate\Support\Facades\Cache::get('unlock_asman_edit', false);
+                                                            $canEdit = $isUnlocked ? true : ($tglInput->diffInDays($hariIni, false) <= 1);
                                                             $canDelete = $canEdit;
                                                         } else {
                                                             $canEdit = $tglInput->isSameDay($hariIni);
