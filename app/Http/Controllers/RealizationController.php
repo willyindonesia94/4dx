@@ -307,25 +307,22 @@ class RealizationController extends Controller
             return redirect()->back()->with('error', 'Tidak ada data yang dipilih.');
         }
 
-        $user = auth()->user();
-        $isMsbK3L = $user->hasRole('MSB UID') && strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L';
-        $isSuperAdmin = $user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array($user->role_name, ['Super Admin', 'Perencanaan UID']) || $isMsbK3L;
-
         $deletedCount = 0;
         foreach ($ids as $id) {
             $realisasi = Realisasi::find($id);
             if ($realisasi) {
-                // If not superadmin, ensure it is the same day as tanggal_input
-                if (!$isSuperAdmin && !\Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now())) {
-                    continue; // skip if cannot delete
+                try {
+                    $this->checkDeleteRule($realisasi);
+                    $realisasi->delete();
+                    $deletedCount++;
+                } catch (\Exception $e) {
+                    continue;
                 }
-                $realisasi->delete();
-                $deletedCount++;
             }
         }
 
         if ($deletedCount === 0) {
-            return redirect()->back()->with('error', 'Tidak ada data yang berhasil dihapus (mungkin Anda tidak memiliki izin untuk menghapus data di luar hari ini).');
+            return redirect()->back()->with('error', 'Tidak ada data yang berhasil dihapus (Anda mungkin tidak memiliki izin atau telah melewati batas waktu).');
         }
 
         $first = Realisasi::with('lm')->whereIn('id', $ids)->first();
@@ -349,25 +346,22 @@ class RealizationController extends Controller
             'angka_realisasi' => 'required|numeric',
         ]);
 
-        $user = auth()->user();
-        $isMsbK3L = $user->hasRole('MSB UID') && strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L';
-        // Asman UP3 can edit their own today, but bulk update is restricted to those with real bulk edit power
-        $isSuperAdmin = $user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array($user->role_name, ['Super Admin', 'Perencanaan UID']) || $isMsbK3L;
-
         $updatedCount = 0;
         foreach ($ids as $id) {
             $realisasi = Realisasi::find($id);
             if ($realisasi) {
-                if (!$isSuperAdmin && !\Carbon\Carbon::parse($realisasi->tanggal_input)->isSameDay(now())) {
-                    continue; 
+                try {
+                    $this->checkEditRule($realisasi);
+                    $realisasi->update(['angka_realisasi' => $request->angka_realisasi]);
+                    $updatedCount++;
+                } catch (\Exception $e) {
+                    continue;
                 }
-                $realisasi->update(['angka_realisasi' => $request->angka_realisasi]);
-                $updatedCount++;
             }
         }
 
         if ($updatedCount === 0) {
-            return redirect()->back()->with('error', 'Tidak ada data yang berhasil diubah (mungkin Anda tidak memiliki izin untuk mengedit data di luar hari ini).');
+            return redirect()->back()->with('error', 'Tidak ada data yang berhasil diubah (Anda mungkin tidak memiliki izin atau telah melewati batas waktu).');
         }
 
         $first = Realisasi::with('lm')->whereIn('id', $ids)->first();
@@ -414,8 +408,29 @@ class RealizationController extends Controller
 
     private function checkDeleteRule(Realisasi $realisasi)
     {
-        if (!auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID']) && !in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID']) && !$this->isMsbK3L()) {
-            abort(403, 'Akses Ditolak: Hanya Superadmin yang dapat menghapus data realisasi LM.');
+        $user = auth()->user();
+        
+        // Super Admin, Perencanaan UID, MSB K3L punya akses delete tanpa batas waktu
+        if ($user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array($user->role_name, ['Super Admin', 'Perencanaan UID']) || $this->isMsbK3L()) {
+            return;
+        }
+
+        $tanggalRealisasi = \Carbon\Carbon::parse($realisasi->tanggal_input)->startOfDay();
+        $hariIni = now()->startOfDay();
+
+        // Asman UP3 bisa delete maksimal H+1
+        $isAsmanUP3 = $user->hasAnyRole(['Asman Bidang UP3', 'Asman Perencanaan UP3']) || in_array($user->role_name, ['Asman Bidang UP3', 'Asman Perencanaan UP3']);
+        if ($isAsmanUP3) {
+            $daysDiff = $tanggalRealisasi->diffInDays($hariIni, false);
+            if ($daysDiff > 1) {
+                abort(403, 'Akses Ditolak: Asman UP3 hanya dapat menghapus realisasi maksimal H+1 (48 Jam) dari tanggal realisasi.');
+            }
+            return;
+        }
+
+        // ULP hanya bisa delete di hari yang sama
+        if (!$tanggalRealisasi->isSameDay($hariIni)) {
+            abort(403, 'Akses Ditolak: Data realisasi LM hanya dapat dihapus pada hari yang sama dengan tanggal pelaksanaannya.');
         }
     }
 
