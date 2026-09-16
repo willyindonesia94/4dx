@@ -80,9 +80,7 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                 $unit_id = $user->unit_id;
                 if ($namaUlp) {
                     $searchUlp = trim((string)$namaUlp);
-                    $ulp = \App\Models\MasterUnit::where('name', 'like', '%' . $searchUlp . '%')
-                                ->where('type', 'ULP')
-                                ->first();
+                    $ulp = \App\Models\MasterUnit::where('name', 'like', '%' . $searchUlp . '%')->first();
                     if ($ulp) {
                         $unit_id = $ulp->id;
                     }
@@ -113,9 +111,9 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                                 "lm_id"         => $lm->id,
                                 "user_id"       => $user->id,
                                 "tanggal_input" => $currentDate,
+                                "unit_id"       => $unit_id,
                             ],
                             [
-                                "unit_id"             => $unit_id,
                                 "angka_realisasi"     => $angkaPerHari,
                                 "bukti_file"          => $buktiFile,
                                 "keterangan_tambahan" => $buktiText . " (Prorata)",
@@ -147,9 +145,9 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                             "lm_id"         => $lm->id,
                             "user_id"       => $user->id,
                             "tanggal_input" => $parsedDate,
+                            "unit_id"       => $unit_id,
                         ],
                         [
-                            "unit_id"             => $unit_id,
                             "angka_realisasi"     => $angkaRealisasi,
                             "bukti_file"          => $buktiFile,
                             "keterangan_tambahan" => $buktiText,
