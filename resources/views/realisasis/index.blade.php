@@ -6,7 +6,7 @@
     </x-slot>
 
     <div class="py-12" x-data="realisasiForm()">
-        <div class="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto" x-data="realisasiManager()">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" x-data="realisasiManager()">
         @php
             $isUIDAdmin = auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID']);
             $isUnlocked = \Illuminate\Support\Facades\Cache::get('unlock_asman_edit', false);
