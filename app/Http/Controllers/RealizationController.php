@@ -111,6 +111,16 @@ class RealizationController extends Controller
                 preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
                 return (int)($m[1] ?? 999);
             })->values());
+
+            // Sort Realisasis by tanggal_input desc, then unit->name asc
+            $wig->masterLms->each(function($lm) {
+                $lm->setRelation('realisasis', $lm->realisasis->sort(function($a, $b) {
+                    if ($a->tanggal_input === $b->tanggal_input) {
+                        return strcmp($a->unit->name ?? 'Z', $b->unit->name ?? 'Z');
+                    }
+                    return strcmp($b->tanggal_input, $a->tanggal_input);
+                })->values());
+            });
         });
 
         // Filter dropdown WIG & LM pada Modal Input agar sesuai Matrix Bidang User
