@@ -637,12 +637,29 @@ class RealizationController extends Controller
         $sheet->getStyle('A1:I1')->applyFromArray($headerStyle);
         $sheet->getRowDimension(1)->setRowHeight(28);
 
-        // Fetch all LMs belonging to K3L
-        // (WIG yang divisinya adalah K3L atau related to K3L)
-        // Kita cari WIG yang divisinya mengandung 'K3L'
+        $user = auth()->user();
+        $isK3L = in_array(strtolower($user->username), ['admin.k3l', 'msb.k3l']) || strtoupper(trim((string)$user->matrix_group_id)) === 'K3L' || $user->hasRole('Bidang K3L (MSB)');
+        $isUP3 = $user->hasRole('Asman Perencanaan UP3') || $user->hasRole('Asman Bidang UP3');
+
         $k3lWigs = \App\Models\MasterWig::where('divisi', 'LIKE', '%K3L%')->pluck('id');
-        
-        $lms = \App\Models\MasterLm::with('wig')->whereIn('wig_id', $k3lWigs)->get()->sort(function($a, $b) {
+
+        if ($isK3L) {
+            $lmsQuery = \App\Models\MasterLm::with('wig')->whereIn('wig_id', $k3lWigs);
+            $ulpsQuery = \App\Models\MasterUnit::whereIn('type', ['ULP', 'UP2D']);
+        } else {
+            $lmsQuery = \App\Models\MasterLm::with('wig')->whereNotIn('wig_id', $k3lWigs);
+            
+            if ($isUP3 && $user->unit_id) {
+                // Get UP2D and ULPs specifically under this UP3
+                $ulpsQuery = \App\Models\MasterUnit::where(function($q) use ($user) {
+                    $q->where('parent_id', $user->unit_id)->where('type', 'ULP');
+                });
+            } else {
+                $ulpsQuery = \App\Models\MasterUnit::whereIn('type', ['ULP', 'UP2D']);
+            }
+        }
+
+        $lms = $lmsQuery->get()->sort(function($a, $b) {
             if ($a->wig_id === $b->wig_id) {
                 preg_match('/LM-?(\d+)/i', $a->judul_lm, $mA);
                 preg_match('/LM-?(\d+)/i', $b->judul_lm, $mB);
@@ -651,13 +668,18 @@ class RealizationController extends Controller
             return $a->wig_id <=> $b->wig_id;
         });
 
-        // Jika tidak ada LM K3L secara spesifik, fallback ambil semua LM
+        // Fallback jika kosong
         if ($lms->count() == 0) {
             $lms = \App\Models\MasterLm::with('wig')->get();
         }
 
-        // Ambil semua ULP dan UP2D
-        $ulps = \App\Models\MasterUnit::whereIn('type', ['ULP', 'UP2D'])->orderBy('type')->orderBy('name')->get();
+        $ulps = $ulpsQuery->orderBy('type')->orderBy('name')->get();
+        
+        // Pastikan UP2D masuk jika role bukan UP3
+        if (!$isUP3 && !$isK3L && $ulps->where('type', 'UP2D')->count() === 0) {
+            $up2ds = \App\Models\MasterUnit::where('type', 'UP2D')->get();
+            $ulps = $ulps->concat($up2ds);
+        }
 
         $rowNum = 2;
         $no = 1;
