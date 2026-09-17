@@ -58,6 +58,9 @@ class CascadingController extends Controller
 
     public function lmIndex()
     {
+        ini_set('memory_limit', '1024M');
+        set_time_limit(300);
+        
         $user = Auth::user();
         $unitType = $user->unit ? strtoupper(trim((string)$user->unit->type)) : '';
         $userMatrixGroup = $user ? trim((string)($user->matrix_group_id ?? 'ALL')) : 'ALL';
