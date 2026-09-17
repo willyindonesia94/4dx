@@ -80,7 +80,16 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                 $unit_id = $user->unit_id;
                 if ($namaUlp) {
                     $searchUlp = trim((string)$namaUlp);
-                    $ulp = \App\Models\MasterUnit::where('name', 'like', '%' . $searchUlp . '%')->first();
+                    // 1. Coba exact match
+                    $ulp = \App\Models\MasterUnit::where('name', $searchUlp)->first();
+                    if (!$ulp) {
+                        // 2. Coba match kata utuh di akhir (menghindari Banjar match dengan Banjaran)
+                        $ulp = \App\Models\MasterUnit::where('name', 'like', '% ' . $searchUlp)->first();
+                    }
+                    if (!$ulp) {
+                        // 3. Fallback like biasa
+                        $ulp = \App\Models\MasterUnit::where('name', 'like', '%' . $searchUlp . '%')->first();
+                    }
                     if ($ulp) {
                         $unit_id = $ulp->id;
                     }
