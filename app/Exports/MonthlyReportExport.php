@@ -42,6 +42,7 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
                     }
                 });
             });
+        }
         $lms = $lmsQuery->get()->sort(function($a, $b) {
             if ($a->wig_id === $b->wig_id) {
                 preg_match('/LM-?(\d+)/i', $a->judul_lm, $mA);
