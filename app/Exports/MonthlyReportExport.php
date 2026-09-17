@@ -94,7 +94,9 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
             $uidTotal = [
                 'target' => 0,
                 'r1' => 0, 'r2' => 0, 'r3' => 0, 'r4' => 0, 'r5' => 0,
-                'total' => 0
+                'k1' => 0, 'k2' => 0, 'k3' => 0, 'k4' => 0, 'k5' => 0,
+                'total' => 0,
+                'total_komitmen' => 0
             ];
             $hasUp3s = false;
 
@@ -130,6 +132,28 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
                 }
 
                 $totalRealisasi = $r1 + $r2 + $r3 + $r4 + $r5;
+
+                // Fetch Komitmen for this month
+                $komitmens = \App\Models\SesiWigKomitmen::where('lm_id', $lm->id)
+                    ->where('unit_id', $unit->id)
+                    ->whereHas('sesiWig', function($q) {
+                        $q->where('bulan', $this->month)->where('tahun', $this->year);
+                    })
+                    ->with('sesiWig')
+                    ->get();
+                
+                $k1 = $k2 = $k3 = $k4 = $k5 = 0;
+                foreach ($komitmens as $k) {
+                    $m = $k->sesiWig->minggu_ke ?? 1;
+                    $val = floatval($k->komitmen);
+                    if ($m == 1) $k1 += $val;
+                    elseif ($m == 2) $k2 += $val;
+                    elseif ($m == 3) $k3 += $val;
+                    elseif ($m == 4) $k4 += $val;
+                    elseif ($m == 5) $k5 += $val;
+                }
+                $totalKomitmen = $k1 + $k2 + $k3 + $k4 + $k5;
+
                 $capaian = 0;
                 if ($angkaTarget > 0) {
                     if (($lm->polaritas ?? 'positif') === 'negatif') {
@@ -149,7 +173,9 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
                     'unit' => $unit->name,
                     'target' => $angkaTarget,
                     'r1' => $r1, 'r2' => $r2, 'r3' => $r3, 'r4' => $r4, 'r5' => $r5,
+                    'k1' => $k1, 'k2' => $k2, 'k3' => $k3, 'k4' => $k4, 'k5' => $k5,
                     'total' => $totalRealisasi,
+                    'total_komitmen' => $totalKomitmen,
                     'capaian' => round($capaian, 2),
                     'is_uid' => ($unit->type === 'UID' || str_contains(strtoupper($unit->name), 'UID'))
                 ];
@@ -166,6 +192,12 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
                         $uidTotal['r4'] += $r4;
                         $uidTotal['r5'] += $r5;
                         $uidTotal['total'] += $totalRealisasi;
+                        $uidTotal['k1'] += $k1;
+                        $uidTotal['k2'] += $k2;
+                        $uidTotal['k3'] += $k3;
+                        $uidTotal['k4'] += $k4;
+                        $uidTotal['k5'] += $k5;
+                        $uidTotal['total_komitmen'] += $totalKomitmen;
                         $hasUp3s = true;
                     }
                 }
@@ -195,7 +227,9 @@ class MonthlyReportExport implements FromView, ShouldAutoSize, WithStyles
                         'unit' => 'UID Jawa Barat',
                         'target' => $uidTotal['target'],
                         'r1' => $uidTotal['r1'], 'r2' => $uidTotal['r2'], 'r3' => $uidTotal['r3'], 'r4' => $uidTotal['r4'], 'r5' => $uidTotal['r5'],
+                        'k1' => $uidTotal['k1'], 'k2' => $uidTotal['k2'], 'k3' => $uidTotal['k3'], 'k4' => $uidTotal['k4'], 'k5' => $uidTotal['k5'],
                         'total' => $uidTotal['total'],
+                        'total_komitmen' => $uidTotal['total_komitmen'],
                         'capaian' => round($uidCapaian, 2),
                         'is_uid' => true
                     ]);
