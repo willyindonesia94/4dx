@@ -6,7 +6,7 @@
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                        <x-application-logo class="block w-auto" style="margin-top: 0.5rem;" />
                     </a>
                 </div>
 
@@ -433,7 +433,7 @@
          class="fixed inset-y-0 left-0 w-64 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out sm:hidden overflow-y-auto border-t-4  flex flex-col">
         
         <div class="flex items-center justify-between p-4 border-b border-gray-100">
-            <x-application-logo class="block h-8 w-auto" />
+            <x-application-logo class="block w-auto" />
             <button @click="open = false" class="text-gray-400 hover:text-gray-600 focus:outline-none">
                 <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

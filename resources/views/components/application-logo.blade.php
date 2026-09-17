@@ -1,1 +1,3 @@
-<img viewBox="0 0 316 316" {{ $attributes }} src="https://upload.wikimedia.org/wikipedia/commons/2/20/Logo_PLN.svg" alt="Logo PLN" />
+<div {{ $attributes->merge(['class' => 'text-2xl font-bold tracking-tight text-blue-800']) }}>
+    <span class="text-yellow-500">4DX</span> PLN UID JABAR
+</div>
