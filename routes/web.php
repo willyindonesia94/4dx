@@ -44,6 +44,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('master-periodes', \App\Http\Controllers\MasterPeriodeController::class)->except(['show', 'create', 'store', 'destroy']);
     Route::get('/cascading/wig', [\App\Http\Controllers\CascadingController::class, 'wigIndex'])->name('cascading.wig.index');
     Route::get('/cascading/lm', [\App\Http\Controllers\CascadingController::class, 'lmIndex'])->name('cascading.lm.index');
+    Route::get('/cascading/lm/{lm_id}/breakdowns/{type}', [\App\Http\Controllers\CascadingController::class, 'getBreakdownsPartial'])->name('cascading.lm.breakdowns');
     Route::get('/cascading/wig/template', [\App\Http\Controllers\CascadingController::class, 'wigTemplate'])->name('cascading.wig.template');
     Route::post('/cascading/wig/import', [\App\Http\Controllers\CascadingController::class, 'wigImport'])->name('cascading.wig.import');
     Route::get('/cascading/lm/template', [\App\Http\Controllers\CascadingController::class, 'lmTemplate'])->name('cascading.lm.template');

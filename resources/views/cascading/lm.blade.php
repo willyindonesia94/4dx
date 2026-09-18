@@ -304,7 +304,38 @@
                                                 $shouldOpenUp3 = $hasUp3Highlight || ($expandedLm == $lm->id && $expandedUnitType === 'up3');
                                                 $shouldOpenUlp = $hasUlpHighlight || ($expandedLm == $lm->id && $expandedUnitType === 'ulp');
                                             @endphp
-                                            <li class="px-6 py-4 border-l-4 border-blue-400" x-data="{ openUid: {{ $shouldOpenUid ? 'true' : 'false' }}, openUp3: {{ $shouldOpenUp3 ? 'true' : 'false' }}, openUlp: {{ $shouldOpenUlp ? 'true' : 'false' }} }">
+                                            <li class="px-6 py-4 border-l-4 border-blue-400" x-data="{ 
+                                                openUid: {{ $shouldOpenUid ? 'true' : 'false' }}, 
+                                                openUp3: {{ $shouldOpenUp3 ? 'true' : 'false' }}, 
+                                                openUlp: {{ $shouldOpenUlp ? 'true' : 'false' }},
+                                                loadingUid: false, htmlUid: '',
+                                                loadingUp3: false, htmlUp3: '',
+                                                loadingUlp: false, htmlUlp: '',
+                                                loadBreakdown(type, url = null) {
+                                                    if (type === 'uid' && this.htmlUid !== '' && !url) return;
+                                                    if (type === 'up3' && this.htmlUp3 !== '' && !url) return;
+                                                    if (type === 'ulp' && this.htmlUlp !== '' && !url) return;
+                                                    
+                                                    let targetUrl = url || `/cascading/lm/{{ $lm->id }}/breakdowns/${type}?tahun={{ request('tahun', date('Y')) }}`;
+                                                    
+                                                    if (type === 'uid') this.loadingUid = true;
+                                                    if (type === 'up3') this.loadingUp3 = true;
+                                                    if (type === 'ulp') this.loadingUlp = true;
+
+                                                    fetch(targetUrl)
+                                                        .then(res => res.text())
+                                                        .then(html => {
+                                                            if (type === 'uid') { this.htmlUid = html; this.loadingUid = false; }
+                                                            if (type === 'up3') { this.htmlUp3 = html; this.loadingUp3 = false; }
+                                                            if (type === 'ulp') { this.htmlUlp = html; this.loadingUlp = false; }
+                                                        });
+                                                }
+                                            }"
+                                            x-init="
+                                                if(openUid) loadBreakdown('uid');
+                                                if(openUp3) loadBreakdown('up3');
+                                                if(openUlp) loadBreakdown('ulp');
+                                            ">
                                                 <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center pl-4">
                                                     <div>
                                                         <h4 class="text-md font-semibold text-gray-800">{{ $lm->judul_lm }}</h4>
@@ -315,53 +346,19 @@
                                                         </span>
                                                     </div>
                                                 </div>
-                                                
-                                                @php
-                                                    $myUp3TargetText = '';
-                                                    if (!empty($isUp3) && !empty($user->unit_id)) {
-                                                        $myUp3Targets = $up3LmBreakdowns->where('unit_id', $user->unit_id);
-                                                        if ($myUp3Targets->count() > 0) {
-                                                            $monthlyTargets = $myUp3Targets->filter(function($t) {
-                                                                return \Carbon\Carbon::parse($t->periode_start)->diffInDays(\Carbon\Carbon::parse($t->periode_end)) >= 20;
-                                                            });
-                                                            if ($monthlyTargets->isEmpty()) {
-                                                                $monthlyTargets = $myUp3Targets;
-                                                            }
-                                                            
-                                                            $unitName = $monthlyTargets->first()->unit->name ?? 'UP3';
-                                                            $targetItems = $monthlyTargets->sortBy('periode_start')->map(function($t) use ($formatLmValue) {
-                                                                return \Carbon\Carbon::parse($t->periode_start)->locale('id')->translatedFormat('M Y') . ': ' . $formatLmValue($t->angka_target, $t->satuan->name ?? '');
-                                                            })->unique()->implode('  •  ');
-                                                            
-                                                            $myUp3TargetText = $unitName . ' => ' . $targetItems;
-                                                        } else {
-                                                            $myUp3TargetText = 'Belum ada target LM bulanan yang diturunkan ke UP3 Anda pada LM ini';
-                                                        }
-                                                    } else {
-                                                        if ($up3LmBreakdowns->count() > 0) {
-                                                            $monthlyTargets = $up3LmBreakdowns->filter(function($t) {
-                                                                return \Carbon\Carbon::parse($t->periode_start)->diffInDays(\Carbon\Carbon::parse($t->periode_end)) >= 20;
-                                                            });
-                                                            if ($monthlyTargets->isEmpty()) {
-                                                                $monthlyTargets = $up3LmBreakdowns;
-                                                            }
-                                                            $myUp3TargetText = $monthlyTargets->sortBy('periode_start')->map(function($t) use ($formatLmValue) {
-                                                                return ($t->unit->name ?? 'UP3') . ' (' . \Carbon\Carbon::parse($t->periode_start)->locale('id')->translatedFormat('M Y') . '): ' . $formatLmValue($t->angka_target, $t->satuan->name ?? '');
-                                                            })->unique()->implode('  •  ');
-                                                        } else {
-                                                            $myUp3TargetText = 'Belum ada target LM pada level UP3';
-                                                        }
-                                                    }
-                                                @endphp
 
                                                 <div class="mt-4 ml-4 space-y-3">
                                                     @if(empty($isUp3))
                                                     <!-- UID Section -->
-                                                    <div class="bg-indigo-50 rounded-lg border border-indigo-100 overflow-hidden">
-                                                        <div @click="openUid = !openUid" class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-3 hover:bg-indigo-100 transition-colors cursor-pointer focus:outline-none gap-2">
+                                                    <div class="bg-indigo-50 rounded-lg border border-indigo-100 overflow-hidden"
+                                                         @click="if($event.target.tagName === 'A' && $event.target.closest('.pagination')) { 
+                                                             $event.preventDefault(); 
+                                                             loadBreakdown('uid', $event.target.href); 
+                                                         }">
+                                                        <div @click="openUid = !openUid; if(openUid) loadBreakdown('uid');" class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-3 hover:bg-indigo-100 transition-colors cursor-pointer focus:outline-none gap-2">
                                                             <div class="flex items-center">
                                                                 <span class="text-xs font-bold text-indigo-800 uppercase tracking-wider">Breakdown UID</span>
-                                                                <span class="ml-3 bg-white text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{{ $uidLmBreakdowns->count() }} Target Unit</span>
+                                                                <span class="ml-3 bg-white text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{{ $lm->uid_breakdowns_count ?? 0 }} Target Unit</span>
                                                             </div>
                                                             <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
                                                                 @if(!empty($canBreakdownToUid) || (isset($canApproveLm) && $canApproveLm))
@@ -371,131 +368,33 @@
                                                             </div>
                                                         </div>
                                                         <div x-show="openUid" x-collapse>
-                                                            @if($uidLmBreakdowns->count() > 0)
-                                                            <div class="overflow-x-auto border-t border-indigo-100">
-                                                                <table class="min-w-full text-xs text-left">
-                                                                    <thead class="text-indigo-900 border-b border-indigo-100 bg-indigo-50/50">
-                                                                        <tr>
-                                                                            <th class="px-4 py-2 font-medium w-10 text-center">Pilih</th>
-                                                                            <th class="px-4 py-2 font-medium">Unit</th>
-                                                                            <th class="px-4 py-2 font-medium">Bidang</th>
-                                                                            <th class="px-4 py-2 font-medium text-right">Target</th>
-                                                                            <th class="px-4 py-2 font-medium">Periode</th>
-                                                                            @if(!empty($canBreakdownToUid) || (isset($canApproveLm) && $canApproveLm))
-                                                                            <th class="px-4 py-2 font-medium text-center">Aksi</th>
-                                                                            @endif
-                                                                        </tr>
-                                                                    </thead>
-                                                                        @php
-                                                                            $groupedUid = $uidLmBreakdowns->sortBy('periode_start')->groupBy(function($item) {
-                                                                                if ($item->bulan && $item->tahun) {
-                                                                                    return strtoupper($item->bulan_indo) . ' ' . $item->tahun;
-                                                                                }
-                                                                                return strtoupper(\Carbon\Carbon::parse($item->periode_start)->locale('id')->translatedFormat('F Y'));
-                                                                            });
-                                                                        @endphp
-                                                                        @foreach($groupedUid as $month => $items)
-                                                                        @php
-                                                                            $hasMonthHighlight = (request('status') === 'draft' && $items->contains('is_approved', false)) || (request('highlight_unit') && $items->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; }));
-                                                                        @endphp
-                                                                        <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'false' }} }" class="divide-y divide-indigo-50 bg-white border-b border-indigo-100/50">
-                                                                            <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
-                                                                                <td colspan="{{ (!empty($canBreakdownToUid) || (isset($canApproveLm) && $canApproveLm)) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
-                                                                                    <div class="flex justify-between items-center">
-                                                                                        <div class="flex items-center gap-3">
-                                                                                            <input type="checkbox" @click.stop="selectAll({{ $items->pluck('id')->toJson() }})" :checked="[...{{ $items->pluck('id')->toJson() }}].every(id => selectedBreakdowns.includes(String(id)))" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
-                                                                                            <span>Target {{ $month }}</span>
-                                                                                        </div>
-                                                                                        <div class="flex items-center gap-4">
-                                                                                            @if(isset($canApproveLm) && $canApproveLm)
-                                                                                            <button 
-                                                                                                @click.stop="approveMonth({{ $items->pluck('id')->toJson() }}, '{{ $month }}')"
-                                                                                                x-show="{{ $items->pluck('id')->toJson() }}.some(id => selectedBreakdowns.includes(String(id)))"
-                                                                                                x-cloak
-                                                                                                class="text-emerald-500 hover:text-emerald-700 text-[11px] font-bold flex items-center gap-1 transition-colors">
-                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                                                                                Setujui (<span x-text="{{ $items->pluck('id')->toJson() }}.filter(id => selectedBreakdowns.includes(String(id))).length"></span>)
-                                                                                            </button>
-                                                                                            @endif
-                                                                                            <button 
-                                                                                                @click.stop="deleteMonth({{ $items->pluck('id')->toJson() }}, '{{ $month }}')"
-                                                                                                x-show="{{ $items->pluck('id')->toJson() }}.some(id => selectedBreakdowns.includes(String(id)))"
-                                                                                                x-cloak
-                                                                                                class="text-red-500 hover:text-red-700 text-[11px] font-bold flex items-center gap-1 transition-colors">
-                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                                                                Hapus (<span x-text="{{ $items->pluck('id')->toJson() }}.filter(id => selectedBreakdowns.includes(String(id))).length"></span>)
-                                                                                            </button>
-                                                                                            <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': openMonth}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </td>
-                                                                            </tr>
-                                                                            @foreach($items->sortBy(function($b) { 
-    $isMonthly = \Carbon\Carbon::parse($b->periode_start)->diffInDays(\Carbon\Carbon::parse($b->periode_end)) >= 20 ? 0 : 1;
-    return ($b->unit->name ?? '') . '_' . $isMonthly . '_' . $b->periode_start; 
-}) as $breakdown)
-                                                                            @php $isRowHighlighted = request('highlight_unit') == $breakdown->unit_id && !$breakdown->is_approved; @endphp
-                                                                            <tr x-show="openMonth" 
-                                                                                class="transition-all duration-1000 {{ $isRowHighlighted ? 'bg-yellow-50 outline outline-2 outline-yellow-400 z-10 relative' : '' }}"
-                                                                                @if($isRowHighlighted) x-init="setTimeout(() => { $el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 500);" @endif
-                                                                            >
-                                                                                <td class="px-4 py-2 text-center" @click.stop>
-                                                                                    <input type="checkbox" value="{{ $breakdown->id }}" x-model="selectedBreakdowns" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
-                                                                                </td>
-                                                                                <td class="px-4 py-2 font-semibold text-gray-700">
-                                                                                    {{ $breakdown->unit->name ?? '-' }}
-                                                                                    @if(!$breakdown->is_approved)
-                                                                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Draft</span>
-                                                                                    @endif
-                                                                                </td>
-                                                                                <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
-                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ $formatLmValue($breakdown->angka_target, $lm->satuan->name ?? '') }}</td>
-                                                                                <td class="px-4 py-2 text-gray-500">
-                                                                                    @if (\Carbon\Carbon::parse($breakdown->periode_start)->diffInDays(\Carbon\Carbon::parse($breakdown->periode_end)) >= 20)
-                                                                                        <span class="font-bold text-indigo-700">Target Total Bulanan</span>
-                                                                                    @else
-                                                                                        <span class="font-semibold text-gray-700">{{ $breakdown->minggu_label }}</span>
-                                                                                        <span class="text-xs text-gray-400 block">{{ \Carbon\Carbon::parse($breakdown->periode_start)->locale('id')->translatedFormat('d M Y') }} - {{ \Carbon\Carbon::parse($breakdown->periode_end)->locale('id')->translatedFormat('d M Y') }}</span>
-                                                                                    @endif
-                                                                                </td>
-                                                                                @if(!empty($canBreakdownToUid) || (isset($canApproveLm) && $canApproveLm))
-                                                                                <td class="px-4 py-2 text-center whitespace-nowrap">
-                                                                                    <div class="flex justify-center items-center gap-3">
-                                                                                        @if(!$breakdown->is_approved && isset($canApproveLm) && $canApproveLm)
-                                                                                        <form action="{{ route('cascading.breakdown.approve', $breakdown->id) }}" method="POST" class="inline m-0">
-                                                                                            @csrf
-                                                                                            <button type="submit" class="text-emerald-500 hover:text-emerald-700 font-bold transition-colors text-xs">Setujui</button>
-                                                                                        </form>
-                                                                                        @endif
-                                                                                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ addslashes($lm->judul_lm) }}", "uid", "{{ addslashes($lm->satuan->name ?? '') }}")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
-                                                                                        @if($canEditDelete)
-                                                                                        <form id="deleteForm-{{ $breakdown->id }}" action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0">
-                                                                                            @csrf
-                                                                                            @method('DELETE')
-                                                                                            <button type="button" @click="openConfirm([], 'Konfirmasi Hapus Data', 'Apakah Anda yakin ingin menghapus target ini secara permanen?', 'delete', 'deleteForm-{{ $breakdown->id }}')" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
-                                                                                        </form>
-                                                                                        @endif
-                                                                                    </div>
-                                                                                </td>
-                                                                                @endif
-                                                                            </tr>
-                                                                            @endforeach
-                                                                        </tbody>
-                                                                        @endforeach
-                                                                </table>
+                                                            <div x-show="loadingUid" class="p-8 text-center text-sm text-indigo-600">
+                                                                <svg class="animate-spin h-5 w-5 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                </svg>
+                                                                Memuat target...
                                                             </div>
-                                                            @else
-                                                            <div class="px-4 py-3 text-xs text-indigo-500 italic bg-white border-t border-indigo-100">Belum ada target UID</div>
-                                                            @endif
+                                                            <div x-show="!loadingUid" x-html="htmlUid"></div>
                                                         </div>
                                                     </div>
+                                                    @endif
 
                                                     <!-- UP3 Section -->
-                                                    <div class="bg-emerald-50 rounded-lg border border-emerald-100 overflow-hidden">
-                                                        <div @click="openUp3 = !openUp3" class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-3 hover:bg-emerald-100 transition-colors cursor-pointer focus:outline-none gap-2">
-                                                            <div class="flex items-center">
-                                                                <span class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Breakdown UP3</span>
-                                                                <span class="ml-3 bg-white text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{{ $up3LmBreakdowns->count() }} Target Unit</span>
+                                                    <div class="bg-emerald-50 rounded-lg border border-emerald-100 overflow-hidden"
+                                                         @click="if($event.target.tagName === 'A' && $event.target.closest('.pagination')) { 
+                                                             $event.preventDefault(); 
+                                                             loadBreakdown('up3', $event.target.href); 
+                                                         }">
+                                                        <div @click="openUp3 = !openUp3; if(openUp3) loadBreakdown('up3');" class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-3 hover:bg-emerald-100 transition-colors cursor-pointer focus:outline-none gap-2">
+                                                            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
+                                                                <div class="flex items-center">
+                                                                    <span class="text-xs font-bold text-emerald-800 uppercase tracking-wider">Breakdown UP3</span>
+                                                                    <span class="ml-3 bg-white text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{{ $lm->up3_breakdowns_count ?? 0 }} Target Unit</span>
+                                                                </div>
+                                                                @if(!empty($isUp3) && !empty($user->unit_id))
+                                                                <span class="sm:ml-4 text-[10px] text-emerald-600 italic">Target Induk: {{ $lm->myUp3TargetText ?? 'Belum ada target LM pada level UP3' }}</span>
+                                                                @endif
                                                             </div>
                                                             <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
                                                                 @if(!empty($canBreakdownToUp3) || (isset($canApproveLm) && $canApproveLm))
@@ -505,239 +404,51 @@
                                                             </div>
                                                         </div>
                                                         <div x-show="openUp3" x-collapse>
-                                                            @if($up3LmBreakdowns->count() > 0)
-                                                            <div class="overflow-x-auto border-t border-emerald-100">
-                                                                <table class="min-w-full text-xs text-left">
-                                                                    <thead class="text-emerald-900 border-b border-emerald-100 bg-emerald-50/50">
-                                                                        <tr>
-                                                                            <th class="px-4 py-2 font-medium w-10 text-center">Pilih</th>
-                                                                            <th class="px-4 py-2 font-medium">Unit</th>
-                                                                            <th class="px-4 py-2 font-medium">Bidang</th>
-                                                                            <th class="px-4 py-2 font-medium text-right">Target</th>
-                                                                            <th class="px-4 py-2 font-medium">Periode</th>
-                                                                            @if(!empty($canBreakdownToUp3) || (isset($canApproveLm) && $canApproveLm))
-                                                                            <th class="px-4 py-2 font-medium text-center">Aksi</th>
-                                                                            @endif
-                                                                        </tr>
-                                                                    </thead>
-                                                                        @php
-                                                                            $groupedUp3 = $up3LmBreakdowns->sortBy('periode_start')->groupBy(function($item) {
-                                                                                if ($item->bulan && $item->tahun) {
-                                                                                    return strtoupper($item->bulan_indo) . ' ' . $item->tahun;
-                                                                                }
-                                                                                return strtoupper(\Carbon\Carbon::parse($item->periode_start)->locale('id')->translatedFormat('F Y'));
-                                                                            });
-                                                                        @endphp
-                                                                        @foreach($groupedUp3 as $month => $items)
-                                                                        @php
-                                                                            $hasMonthHighlight = (request('status') === 'draft' && $items->contains('is_approved', false)) || (request('highlight_unit') && $items->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; }));
-                                                                        @endphp
-                                                                        <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'false' }} }" class="divide-y divide-emerald-50 bg-white border-b border-emerald-100/50">
-                                                                            <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
-                                                                                <td colspan="{{ (!empty($canBreakdownToUp3) || (isset($canApproveLm) && $canApproveLm)) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
-                                                                                    <div class="flex justify-between items-center">
-                                                                                        <div class="flex items-center gap-3">
-                                                                                            <input type="checkbox" @click.stop="selectAll({{ $items->pluck('id')->toJson() }})" :checked="[...{{ $items->pluck('id')->toJson() }}].every(id => selectedBreakdowns.includes(String(id)))" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
-                                                                                            <span>Target {{ $month }}</span>
-                                                                                        </div>
-                                                                                        <div class="flex items-center gap-4">
-                                                                                            @if(isset($canApproveLm) && $canApproveLm)
-                                                                                            <button 
-                                                                                                @click.stop="approveMonth({{ $items->pluck('id')->toJson() }}, '{{ $month }}')"
-                                                                                                x-show="{{ $items->pluck('id')->toJson() }}.some(id => selectedBreakdowns.includes(String(id)))"
-                                                                                                x-cloak
-                                                                                                class="text-emerald-500 hover:text-emerald-700 text-[11px] font-bold flex items-center gap-1 transition-colors">
-                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                                                                                Setujui (<span x-text="{{ $items->pluck('id')->toJson() }}.filter(id => selectedBreakdowns.includes(String(id))).length"></span>)
-                                                                                            </button>
-                                                                                            @endif
-                                                                                            <button 
-                                                                                                @click.stop="deleteMonth({{ $items->pluck('id')->toJson() }}, '{{ $month }}')"
-                                                                                                x-show="{{ $items->pluck('id')->toJson() }}.some(id => selectedBreakdowns.includes(String(id)))"
-                                                                                                x-cloak
-                                                                                                class="text-red-500 hover:text-red-700 text-[11px] font-bold flex items-center gap-1 transition-colors">
-                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                                                                Hapus (<span x-text="{{ $items->pluck('id')->toJson() }}.filter(id => selectedBreakdowns.includes(String(id))).length"></span>)
-                                                                                            </button>
-                                                                                            <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': openMonth}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </td>
-                                                                            </tr>
-                                                                            @foreach($items->sortBy(function($b) { 
-    $isMonthly = \Carbon\Carbon::parse($b->periode_start)->diffInDays(\Carbon\Carbon::parse($b->periode_end)) >= 20 ? 0 : 1;
-    return ($b->unit->name ?? '') . '_' . $isMonthly . '_' . $b->periode_start; 
-}) as $breakdown)
-                                                                            <tr x-show="openMonth">
-                                                                                <td class="px-4 py-2 text-center" @click.stop>
-                                                                                    <input type="checkbox" value="{{ $breakdown->id }}" x-model="selectedBreakdowns" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer">
-                                                                                </td>
-                                                                                <td class="px-4 py-2 font-semibold text-gray-700">
-                                                                                    {{ $breakdown->unit->name ?? '-' }}
-                                                                                    @if(!$breakdown->is_approved)
-                                                                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Draft</span>
-                                                                                    @endif
-                                                                                </td>
-                                                                                <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
-                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ $formatLmValue($breakdown->angka_target, $lm->satuan->name ?? '') }}</td>
-                                                                                <td class="px-4 py-2 text-gray-500">{{ \Carbon\Carbon::parse($breakdown->periode_start)->locale('id')->translatedFormat('d M Y') }} - {{ \Carbon\Carbon::parse($breakdown->periode_end)->locale('id')->translatedFormat('d M Y') }}</td>
-                                                                                @if(!empty($canBreakdownToUp3) || (isset($canApproveLm) && $canApproveLm))
-                                                                                <td class="px-4 py-2 text-center whitespace-nowrap">
-                                                                                    <div class="flex justify-center items-center gap-3">
-                                                                                        @if(!$breakdown->is_approved && isset($canApproveLm) && $canApproveLm)
-                                                                                        <form action="{{ route('cascading.breakdown.approve', $breakdown->id) }}" method="POST" class="inline m-0">
-                                                                                            @csrf
-                                                                                            <button type="submit" class="text-emerald-500 hover:text-emerald-700 font-bold transition-colors text-xs">Setujui</button>
-                                                                                        </form>
-                                                                                        @endif
-                                                                                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ addslashes($lm->judul_lm) }}", "up3", "{{ addslashes($lm->satuan->name ?? '') }}")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
-                                                                                        @if($canEditDelete)
-                                                                                        <form id="deleteForm-{{ $breakdown->id }}" action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0">
-                                                                                            @csrf
-                                                                                            @method('DELETE')
-                                                                                            <button type="button" @click="openConfirm([], 'Konfirmasi Hapus Data', 'Apakah Anda yakin ingin menghapus target ini secara permanen?', 'delete', 'deleteForm-{{ $breakdown->id }}')" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
-                                                                                        </form>
-                                                                                        @endif
-                                                                                    </div>
-                                                                                </td>
-                                                                                @endif
-                                                                            </tr>
-                                                                            @endforeach
-                                                                        </tbody>
-                                                                        @endforeach
-                                                                </table>
+                                                            <div x-show="loadingUp3" class="p-8 text-center text-sm text-emerald-600">
+                                                                <svg class="animate-spin h-5 w-5 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                </svg>
+                                                                Memuat target...
                                                             </div>
-                                                            @else
-                                                            <div class="px-4 py-3 text-xs text-emerald-500 italic bg-white border-t border-emerald-100">Belum ada target UP3</div>
-                                                            @endif
+                                                            <div x-show="!loadingUp3" x-html="htmlUp3"></div>
                                                         </div>
                                                     </div>
-                                                    @endif
 
                                                     <!-- ULP Section -->
-                                                    <div class="bg-amber-50 rounded-lg border border-amber-100 overflow-hidden">
-                                                        <div @click="openUlp = !openUlp" class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-3 hover:bg-amber-100 transition-colors cursor-pointer focus:outline-none gap-2">
-                                                            <div class="flex items-center">
-                                                                <span class="text-xs font-bold text-amber-800 uppercase tracking-wider">Breakdown ULP</span>
-                                                                <span class="ml-3 bg-white text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{{ $ulpLmBreakdowns->count() }} Target Unit</span>
+                                                    <div class="bg-amber-50 rounded-lg border border-amber-100 overflow-hidden"
+                                                         @click="if($event.target.tagName === 'A' && $event.target.closest('.pagination')) { 
+                                                             $event.preventDefault(); 
+                                                             loadBreakdown('ulp', $event.target.href); 
+                                                         }">
+                                                        <div @click="openUlp = !openUlp; if(openUlp) loadBreakdown('ulp');" class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-3 hover:bg-amber-100 transition-colors cursor-pointer focus:outline-none gap-2">
+                                                            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
+                                                                <div class="flex items-center">
+                                                                    <span class="text-xs font-bold text-amber-800 uppercase tracking-wider">Breakdown ULP</span>
+                                                                    <span class="ml-3 bg-white text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{{ $lm->ulp_breakdowns_count ?? 0 }} Target Unit</span>
+                                                                </div>
+                                                                @if(empty($isUp3))
+                                                                <span class="sm:ml-4 text-[10px] text-amber-600 italic">Target UP3 Induk: {{ $lm->myUp3TargetText ?? 'Belum ada target LM pada level UP3' }}</span>
+                                                                @else
+                                                                <span class="sm:ml-4 text-[10px] text-amber-600 italic">Target Anda: {{ $lm->myUp3TargetText ?? 'Belum ada target LM bulanan yang diturunkan ke UP3 Anda pada LM ini' }}</span>
+                                                                @endif
                                                             </div>
                                                             <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
                                                                 @if(!empty($canBreakdownToUlp) || (isset($canApproveLm) && $canApproveLm))
-                                                                <button @click.stop="openAddModal({{ $lm->id }}, '{{ addslashes($lm->judul_lm) }}', 'ulp', '{{ $lm->satuan_id ?? '' }}', '{{ addslashes($lm->satuan->name ?? '') }}', '{{ addslashes($myUp3TargetText) }}')" class="text-[10px] bg-amber-600 hover:bg-amber-700 text-white font-bold py-1 px-2 rounded transition-colors shadow-sm">+ Breakdown ULP</button>
+                                                                <button @click.stop="openAddModal({{ $lm->id }}, '{{ addslashes($lm->judul_lm) }}', 'ulp', '{{ $lm->satuan_id ?? '' }}', '{{ addslashes($lm->satuan->name ?? '') }}', '{{ addslashes($lm->myUp3TargetText ?? '') }}')" class="text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold py-1 px-2 rounded transition-colors shadow-sm">+ Breakdown ULP</button>
                                                                 @endif
                                                                 <svg class="w-4 h-4 text-amber-500 transform transition-transform" :class="{'rotate-180': openUlp}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                                             </div>
                                                         </div>
                                                         <div x-show="openUlp" x-collapse>
-                                                            @if($ulpLmBreakdowns->count() > 0)
-                                                            <div class="overflow-x-auto border-t border-amber-100">
-                                                                <table class="min-w-full text-xs text-left">
-                                                                    <thead class="text-amber-900 border-b border-amber-100 bg-amber-50/50">
-                                                                        <tr>
-                                                                            <th class="px-4 py-2 font-medium w-10 text-center">Pilih</th>
-                                                                            <th class="px-4 py-2 font-medium">Unit</th>
-                                                                            <th class="px-4 py-2 font-medium">Bidang</th>
-                                                                            <th class="px-4 py-2 font-medium text-right">Target</th>
-                                                                            <th class="px-4 py-2 font-medium">Periode</th>
-                                                                            @if(!empty($canBreakdownToUlp) || (isset($canApproveLm) && $canApproveLm))
-                                                                            <th class="px-4 py-2 font-medium text-center">Aksi</th>
-                                                                            @endif
-                                                                        </tr>
-                                                                    </thead>
-                                                                        @php
-                                                                            $groupedUlp = $ulpLmBreakdowns->sortBy('periode_start')->groupBy(function($item) {
-                                                                                if ($item->bulan && $item->tahun) {
-                                                                                    return strtoupper($item->bulan_indo) . ' ' . $item->tahun;
-                                                                                }
-                                                                                return strtoupper(\Carbon\Carbon::parse($item->periode_start)->locale('id')->translatedFormat('F Y'));
-                                                                            });
-                                                                        @endphp
-                                                                        @foreach($groupedUlp as $month => $items)
-                                                                        @php
-                                                                            $hasMonthHighlight = (request('status') === 'draft' && $items->contains('is_approved', false)) || (request('highlight_unit') && $items->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; }));
-                                                                        @endphp
-                                                                        <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'false' }} }" class="divide-y divide-amber-50 bg-white border-b border-amber-100/50">
-                                                                            <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
-                                                                                <td colspan="{{ (!empty($canBreakdownToUlp) || (isset($canApproveLm) && $canApproveLm)) ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
-                                                                                    <div class="flex justify-between items-center">
-                                                                                        <div class="flex items-center gap-3">
-                                                                                            <input type="checkbox" @click.stop="selectAll({{ $items->pluck('id')->toJson() }})" :checked="[...{{ $items->pluck('id')->toJson() }}].every(id => selectedBreakdowns.includes(String(id)))" class="rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer">
-                                                                                            <span>Target {{ $month }}</span>
-                                                                                        </div>
-                                                                                        <div class="flex items-center gap-4">
-                                                                                            @if(isset($canApproveLm) && $canApproveLm)
-                                                                                            <button 
-                                                                                                @click.stop="approveMonth({{ $items->pluck('id')->toJson() }}, '{{ $month }}')"
-                                                                                                x-show="{{ $items->pluck('id')->toJson() }}.some(id => selectedBreakdowns.includes(String(id)))"
-                                                                                                x-cloak
-                                                                                                class="text-emerald-500 hover:text-emerald-700 text-[11px] font-bold flex items-center gap-1 transition-colors">
-                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                                                                                                Setujui (<span x-text="{{ $items->pluck('id')->toJson() }}.filter(id => selectedBreakdowns.includes(String(id))).length"></span>)
-                                                                                            </button>
-                                                                                            @endif
-                                                                                            <button 
-                                                                                                @click.stop="deleteMonth({{ $items->pluck('id')->toJson() }}, '{{ $month }}')"
-                                                                                                x-show="{{ $items->pluck('id')->toJson() }}.some(id => selectedBreakdowns.includes(String(id)))"
-                                                                                                x-cloak
-                                                                                                class="text-red-500 hover:text-red-700 text-[11px] font-bold flex items-center gap-1 transition-colors">
-                                                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                                                                                Hapus (<span x-text="{{ $items->pluck('id')->toJson() }}.filter(id => selectedBreakdowns.includes(String(id))).length"></span>)
-                                                                                            </button>
-                                                                                            <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': openMonth}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                </td>
-                                                                            </tr>
-                                                                            @foreach($items->sortBy(function($b) { 
-    $isMonthly = \Carbon\Carbon::parse($b->periode_start)->diffInDays(\Carbon\Carbon::parse($b->periode_end)) >= 20 ? 0 : 1;
-    return ($b->unit->name ?? '') . '_' . $isMonthly . '_' . $b->periode_start; 
-}) as $breakdown)
-                                                                            @php $isRowHighlighted = request('highlight_unit') == $breakdown->unit_id && !$breakdown->is_approved; @endphp
-                                                                            <tr x-show="openMonth"
-                                                                                class="transition-all duration-1000 {{ $isRowHighlighted ? 'bg-yellow-50 outline outline-2 outline-yellow-400 z-10 relative' : '' }}"
-                                                                                @if($isRowHighlighted) x-init="setTimeout(() => { $el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 500);" @endif
-                                                                            >
-                                                                                <td class="px-4 py-2 text-center" @click.stop>
-                                                                                    <input type="checkbox" value="{{ $breakdown->id }}" x-model="selectedBreakdowns" class="rounded border-gray-300 text-amber-600 focus:ring-amber-500 cursor-pointer">
-                                                                                </td>
-                                                                                <td class="px-4 py-2 font-semibold text-gray-700">
-                                                                                    {{ $breakdown->unit->name ?? '-' }}
-                                                                                    @if(!$breakdown->is_approved)
-                                                                                        <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">Draft</span>
-                                                                                    @endif
-                                                                                </td>
-                                                                                <td class="px-4 py-2 text-gray-600">{{ $breakdown->bidang ?? '-' }}</td>
-                                                                                <td class="px-4 py-2 text-right font-bold text-gray-800">{{ $formatLmValue($breakdown->angka_target, $lm->satuan->name ?? '') }}</td>
-                                                                                <td class="px-4 py-2 text-gray-500">{{ \Carbon\Carbon::parse($breakdown->periode_start)->locale('id')->translatedFormat('d M Y') }} - {{ \Carbon\Carbon::parse($breakdown->periode_end)->locale('id')->translatedFormat('d M Y') }}</td>
-                                                                                @if(!empty($canBreakdownToUlp) || (isset($canApproveLm) && $canApproveLm))
-                                                                                <td class="px-4 py-2 text-center whitespace-nowrap">
-                                                                                    <div class="flex justify-center items-center gap-3">
-                                                                                        @if(!$breakdown->is_approved && isset($canApproveLm) && $canApproveLm)
-                                                                                        <form action="{{ route('cascading.breakdown.approve', $breakdown->id) }}" method="POST" class="inline m-0">
-                                                                                            @csrf
-                                                                                            <button type="submit" class="text-emerald-500 hover:text-emerald-700 font-bold transition-colors text-xs">Setujui</button>
-                                                                                        </form>
-                                                                                        @endif
-                                                                                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ addslashes($lm->judul_lm) }}", "ulp", "{{ addslashes($lm->satuan->name ?? '') }}", "{{ addslashes($myUp3TargetText) }}")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
-                                                                                        @if($canEditDelete)
-                                                                                        <form id="deleteForm-{{ $breakdown->id }}" action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0">
-                                                                                            @csrf
-                                                                                            @method('DELETE')
-                                                                                            <button type="button" @click="openConfirm([], 'Konfirmasi Hapus Data', 'Apakah Anda yakin ingin menghapus target ini secara permanen?', 'delete', 'deleteForm-{{ $breakdown->id }}')" class="text-red-500 hover:text-red-700 font-bold transition-colors text-xs">Hapus</button>
-                                                                                        </form>
-                                                                                        @endif
-                                                                                    </div>
-                                                                                </td>
-                                                                                @endif
-                                                                            </tr>
-                                                                            @endforeach
-                                                                        </tbody>
-                                                                        @endforeach
-                                                                </table>
+                                                            <div x-show="loadingUlp" class="p-8 text-center text-sm text-amber-600">
+                                                                <svg class="animate-spin h-5 w-5 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                                </svg>
+                                                                Memuat target...
                                                             </div>
-                                                            @else
-                                                            <div class="px-4 py-3 text-xs text-amber-500 italic bg-white border-t border-amber-100">Belum ada target ULP</div>
-                                                            @endif
+                                                            <div x-show="!loadingUlp" x-html="htmlUlp"></div>
                                                         </div>
                                                     </div>
                                                 </div>

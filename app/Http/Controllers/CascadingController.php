@@ -90,30 +90,47 @@ class CascadingController extends Controller
         $up3IdFilter = request('up3_id');
         
         $wigsQuery = MasterWig::where('is_approved', true)
-            ->with(['masterLms' => function($q) {
-                $q->where('is_approved', true);
-            }, 'masterLms.breakdowns' => function($q) use ($tahun, $isUp3, $user, $up3IdFilter) {
-                $q->with('unit', 'satuan')
-                  ->join('master_units', 'breakdown_lms.unit_id', '=', 'master_units.id')
-                  ->where('breakdown_lms.tahun', $tahun);
-                  
-                if (!empty($isUp3) && !empty($user->unit_id)) {
-                    $q->where(function($subq) use ($user) {
-                        $subq->where('master_units.type', '!=', 'ULP')
-                             ->orWhere('master_units.parent_id', $user->unit_id)
-                             ->orWhere('master_units.id', $user->unit_id);
-                    });
-                } else if ($up3IdFilter) {
-                    $q->where(function($subq) use ($up3IdFilter) {
-                        $subq->where('master_units.type', '!=', 'ULP')
-                             ->orWhere('master_units.parent_id', $up3IdFilter);
-                    });
-                }
-                // Jika tidak ada filter UP3 dan bukan user UP3, biarkan memuat semua data (termasuk ULP) agar terlihat oleh Admin.
-
-                $q->orderByRaw("CASE WHEN UPPER(TRIM(master_units.type)) IN ('UP2D', 'UP2K') THEN 2 ELSE 1 END")
-                  ->orderBy('master_units.name', 'asc')
-                  ->select('breakdown_lms.*');
+            ->with(['masterLms' => function($q) use ($tahun, $isUp3, $user, $up3IdFilter) {
+                $q->where('is_approved', true)
+                  ->withCount([
+                      'breakdowns as uid_breakdowns_count' => function($query) use ($tahun) {
+                          $query->where('tahun', $tahun)->whereHas('unit', function($subq) {
+                              $subq->where('type', 'UID');
+                          });
+                      },
+                      'breakdowns as up3_breakdowns_count' => function($query) use ($tahun, $isUp3, $user, $up3IdFilter) {
+                          $query->where('tahun', $tahun)->whereHas('unit', function($subq) use ($isUp3, $user, $up3IdFilter) {
+                              $subq->whereIn('type', ['UP3', 'UP2D', 'UP2K']);
+                              if (!empty($isUp3) && !empty($user->unit_id)) {
+                                  $subq->where(function($q) use ($user) {
+                                      $q->where('id', $user->unit_id)
+                                        ->orWhere('parent_id', $user->unit_id);
+                                  });
+                              } else if ($up3IdFilter) {
+                                  $subq->where(function($q) use ($up3IdFilter) {
+                                      $q->where('id', $up3IdFilter)
+                                        ->orWhere('parent_id', $up3IdFilter);
+                                  });
+                              }
+                          });
+                      },
+                      'breakdowns as ulp_breakdowns_count' => function($query) use ($tahun, $isUp3, $user, $up3IdFilter) {
+                          $query->where('tahun', $tahun)->whereHas('unit', function($subq) use ($isUp3, $user, $up3IdFilter) {
+                              $subq->where('type', 'ULP');
+                              if (!empty($isUp3) && !empty($user->unit_id)) {
+                                  $subq->where(function($q) use ($user) {
+                                      $q->where('id', $user->unit_id)
+                                        ->orWhere('parent_id', $user->unit_id);
+                                  });
+                              } else if ($up3IdFilter) {
+                                  $subq->where(function($q) use ($up3IdFilter) {
+                                      $q->where('id', $up3IdFilter)
+                                        ->orWhere('parent_id', $up3IdFilter);
+                                  });
+                              }
+                          });
+                      }
+                  ]);
             }, 'masterLms.satuan']);
 
         if (!$skipMatrixFilter && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
@@ -125,13 +142,55 @@ class CascadingController extends Controller
             });
         }
 
-        $wigs = $wigsQuery->paginate(5)->withQueryString();
-        $wigs->getCollection()->transform(function($wig) {
-            $wig->setRelation('masterLms', $wig->masterLms->sortBy(function($lm) {
-                preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
-                return (int)($m[1] ?? 999);
-            })->values());
-            return $wig;
+        $wigs = $wigsQuery->get()
+            ->each(function($wig) {
+                $wig->setRelation('masterLms', $wig->masterLms->sortBy(function($lm) {
+                    preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
+                    return (int)($m[1] ?? 999);
+                })->values());
+            });
+
+        // Preload myUp3Targets string for ULP Modal
+        $allMyUp3Targets = collect();
+        if (!empty($isUp3) && !empty($user->unit_id)) {
+            $allMyUp3Targets = BreakdownLm::with('unit', 'satuan')
+                ->where('tahun', $tahun)
+                ->where('unit_id', $user->unit_id)
+                ->get()
+                ->groupBy('lm_id');
+        }
+
+        $formatLmValue = function($value, $satuan) {
+            if ($value === null || $value === '') return '-';
+            if (trim($satuan) === '%') {
+                $formatted = number_format((float)$value, 2, ",", ".");
+                $formatted = rtrim(rtrim($formatted, '0'), ',');
+                return $formatted . ' %';
+            }
+            return number_format((float)$value, 2, ",", ".") . ' ' . $satuan;
+        };
+
+        $wigs->each(function($wig) use ($allMyUp3Targets, $formatLmValue, $isUp3) {
+            $wig->masterLms->each(function($lm) use ($allMyUp3Targets, $formatLmValue, $isUp3) {
+                $lm->myUp3TargetText = 'Belum ada target LM bulanan yang diturunkan ke UP3 Anda pada LM ini';
+                if (!empty($isUp3) && $allMyUp3Targets->has($lm->id)) {
+                    $myUp3Targets = $allMyUp3Targets->get($lm->id);
+                    $monthlyTargets = $myUp3Targets->filter(function($t) {
+                        return \Carbon\Carbon::parse($t->periode_start)->diffInDays(\Carbon\Carbon::parse($t->periode_end)) >= 20;
+                    });
+                    if ($monthlyTargets->isEmpty()) {
+                        $monthlyTargets = $myUp3Targets;
+                    }
+                    if ($monthlyTargets->isNotEmpty()) {
+                        $unitName = $monthlyTargets->first()->unit->name ?? 'UP3';
+                        $targetItems = $monthlyTargets->sortBy('periode_start')->map(function($t) use ($formatLmValue) {
+                            return \Carbon\Carbon::parse($t->periode_start)->locale('id')->translatedFormat('M Y') . ': ' . $formatLmValue($t->angka_target, $t->satuan->name ?? '');
+                        })->unique()->implode('  •  ');
+                        
+                        $lm->myUp3TargetText = $unitName . ' => ' . $targetItems;
+                    }
+                }
+            });
         });
         
         $satuans = MasterSatuan::all();
@@ -155,7 +214,67 @@ class CascadingController extends Controller
         return view('cascading.lm', compact(
             'wigs', 'satuans', 'availableUnits', 
             'canBreakdownToUid', 'canBreakdownToUp3', 'canBreakdownToUlp',
-            'isSuperAdmin', 'isUid', 'isUp3', 'user', 'canApproveLm'
+            'isSuperAdmin', 'isUid', 'isUp3', 'user', 'canApproveLm', 'tahun'
+        ));
+    }
+
+    public function getBreakdownsPartial(Request $request, $lm_id, $type)
+    {
+        $user = Auth::user();
+        $isSuperAdmin = $user && $user->hasRole('Super Admin');
+        $isPerencanaanUid = $user && $user->hasRole('Perencanaan UID');
+        $isMsb = $user && $user->hasRole('MSB UID');
+        $isAsmanBidangUp3 = $user && $user->hasRole('Asman Bidang UP3');
+        $isAsmanPerencanaanUp3 = $user && $user->hasRole('Asman Perencanaan UP3');
+        $isK3L = strtoupper(trim((string)($user->matrix_group_id ?? ''))) === 'K3L';
+        $isUp3 = !$isSuperAdmin && !$isK3L && (in_array(strtoupper(trim((string)$user->unit->type ?? '')), ['UP3', 'UP2D', 'UP2K']) || $user->hasAnyRole(['Asman Perencanaan UP3', 'Asman Bidang UP3', 'Manager UP3', 'UP2D', 'UP2K']));
+        
+        $canApproveLm = $isSuperAdmin || $isMsb || $isAsmanBidangUp3 || $isK3L;
+        $canEditDelete = $user && ($user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3']) || ($isMsb && $isK3L));
+
+        $canBreakdownToUid = $isSuperAdmin || $isPerencanaanUid;
+        $canBreakdownToUp3 = $isSuperAdmin || $isPerencanaanUid;
+        $canBreakdownToUlp = $isSuperAdmin || $isAsmanPerencanaanUp3;
+
+        $tahun = $request->input('tahun', date('Y'));
+        $up3IdFilter = $request->input('up3_id');
+
+        $lm = \App\Models\MasterLm::with('satuan')->findOrFail($lm_id);
+
+        $query = \App\Models\BreakdownLm::with('unit')
+            ->where('lm_id', $lm_id)
+            ->where('tahun', $tahun);
+            
+        $query->whereHas('unit', function($q) use ($type, $isUp3, $user, $up3IdFilter) {
+            if ($type === 'uid') {
+                $q->where('type', 'UID');
+            } elseif ($type === 'up3') {
+                $q->whereIn('type', ['UP3', 'UP2D', 'UP2K']);
+            } elseif ($type === 'ulp') {
+                $q->where('type', 'ULP');
+            }
+
+            if ($type === 'up3' || $type === 'ulp') {
+                if (!empty($isUp3) && !empty($user->unit_id)) {
+                    $q->where(function($subq) use ($user) {
+                        $subq->where('id', $user->unit_id)
+                             ->orWhere('parent_id', $user->unit_id);
+                    });
+                } else if ($up3IdFilter) {
+                    $q->where(function($subq) use ($up3IdFilter) {
+                        $subq->where('id', $up3IdFilter)
+                             ->orWhere('parent_id', $up3IdFilter);
+                    });
+                }
+            }
+        });
+
+        // Use standard pagination with appending query string
+        $breakdowns = $query->orderBy('periode_start')->paginate(15)->withQueryString();
+
+        return view('cascading.partials.breakdowns_table', compact(
+            'breakdowns', 'type', 'lm', 'canApproveLm', 'canEditDelete', 
+            'canBreakdownToUid', 'canBreakdownToUp3', 'canBreakdownToUlp'
         ));
     }
 
