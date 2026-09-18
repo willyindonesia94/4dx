@@ -35,8 +35,9 @@ class SesiWigKomitmenController extends Controller
                 if ($breakdownLm) {
                     $defaultKomitmen = $breakdownLm->angka_target;
                 }
-            }
-        }
+                } // This closes if ($targetStart)
+            } // This closes if ($sesiWig)
+        } // This closes if (!$komitmen)
 
         return response()->json([
             'status' => 'success',
