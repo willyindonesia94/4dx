@@ -280,30 +280,11 @@
                                         <ul class="divide-y divide-gray-100">
                                             @foreach($lmsInRole as $lm)
                                             @php
-                                                $uidLmBreakdowns = $lm->breakdowns ? $lm->breakdowns->filter(function($b) { return $b->unit && strtoupper(trim($b->unit->type)) === 'UID'; }) : collect();
-                                                $up3LmBreakdowns = $lm->breakdowns ? $lm->breakdowns->filter(function($b) { return $b->unit && in_array(strtoupper(trim($b->unit->type)), ['UP3', 'UP2D', 'UP2K']); }) : collect();
-                                                $ulpLmBreakdowns = $lm->breakdowns ? $lm->breakdowns->filter(function($b) use ($isUp3, $user) { 
-                                                    if (!$b->unit || strtoupper(trim($b->unit->type)) !== 'ULP') return false;
-                                                    if (!empty($isUp3) && !empty($user->unit_id)) {
-                                                        return (int)$b->unit->parent_id === (int)$user->unit_id;
-                                                    }
-                                                    return true;
-                                                }) : collect();
-                                                
-                                                if (request('status') === 'draft') {
-                                                    $hasUidHighlight = $uidLmBreakdowns->contains('is_approved', false);
-                                                    $hasUp3Highlight = $up3LmBreakdowns->contains('is_approved', false);
-                                                    $hasUlpHighlight = $ulpLmBreakdowns->contains('is_approved', false);
-                                                } else {
-                                                    $hasUidHighlight = request('highlight_unit') && $uidLmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
-                                                    $hasUp3Highlight = request('highlight_unit') && $up3LmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
-                                                    $hasUlpHighlight = request('highlight_unit') && $ulpLmBreakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; });
-                                                }
                                                 $expandedLm = session('expanded_lm', null);
                                                 $expandedUnitType = session('expanded_unit_type', null);
-                                                $shouldOpenUid = $hasUidHighlight || ($expandedLm == $lm->id && $expandedUnitType === 'uid');
-                                                $shouldOpenUp3 = $hasUp3Highlight || ($expandedLm == $lm->id && $expandedUnitType === 'up3');
-                                                $shouldOpenUlp = $hasUlpHighlight || ($expandedLm == $lm->id && $expandedUnitType === 'ulp');
+                                                $shouldOpenUid = ($expandedLm == $lm->id && $expandedUnitType === 'uid');
+                                                $shouldOpenUp3 = ($expandedLm == $lm->id && $expandedUnitType === 'up3');
+                                                $shouldOpenUlp = ($expandedLm == $lm->id && $expandedUnitType === 'ulp');
                                             @endphp
                                             <li class="px-6 py-4 border-l-4 border-blue-400" x-data="{ 
                                                 openUid: {{ $shouldOpenUid ? 'true' : 'false' }}, 
