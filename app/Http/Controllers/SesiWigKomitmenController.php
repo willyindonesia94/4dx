@@ -100,4 +100,45 @@ class SesiWigKomitmenController extends Controller
             'data' => $komitmen
         ]);
     }
+
+    public function destroy(Request $request, $sesi_wig_id, $lm_id, $unit_id)
+    {
+        $sesi = SesiWig::findOrFail($sesi_wig_id);
+        
+        $user = auth()->user();
+        $isSuperAdmin = $user && ($user->hasRole('Super Admin') || strtolower($user->role_name) === 'super admin');
+        
+        if (!$isSuperAdmin) {
+            $masterPeriode = \App\Models\MasterPeriode::where('tahun', $sesi->tahun)->where('bulan', $sesi->bulan)->first();
+            $startDate = null;
+            if ($masterPeriode) {
+                $col = 'start_m' . $sesi->minggu_ke;
+                $startDate = $masterPeriode->$col;
+            }
+            if (!$startDate) {
+                $startDate = \Carbon\Carbon::create($sesi->tahun, $sesi->bulan, 1)->addDays(($sesi->minggu_ke - 1) * 7)->format('Y-m-d');
+            }
+            $targetStart = \Carbon\Carbon::parse($startDate);
+            $openDate = $targetStart->copy()->subDays(6)->startOfDay();
+            $deadline = $targetStart->copy()->endOfDay();
+
+            if (now()->isAfter($deadline) || now()->isBefore($openDate)) {
+                return response()->json(['success' => false, 'message' => 'Hanya Super Admin yang dapat menghapus komitmen di sesi yang sudah berlalu.'], 403);
+            }
+        }
+        
+        $komitmen = SesiWigKomitmen::where('sesi_wig_id', $sesi_wig_id)
+            ->where('lm_id', $lm_id)
+            ->where('unit_id', $unit_id)
+            ->first();
+
+        if ($komitmen) {
+            $komitmen->delete();
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Komitmen berhasil dihapus!'
+        ]);
+    }
 }

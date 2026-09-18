@@ -80,10 +80,12 @@ Route::middleware('auth')->group(function () {
     Route::put('sesi-wigs/{sesi_wig}/notes', [\App\Http\Controllers\SesiWigController::class, 'updateNotes'])->name('sesi-wigs.update-notes');
     Route::post('sesi-wigs/{sesi_wig}/set-presenter', [\App\Http\Controllers\SesiWigController::class, 'setPresenter'])->name('sesi-wigs.set-presenter');
     Route::post('sesi-wigs/{sesi_wig}/komitmen', [\App\Http\Controllers\SesiWigController::class, 'saveKomitmen'])->name('sesi-wigs.save-komitmen');
+    Route::post('sesi-wigs/{sesi_wig}/komitmen/delete', [\App\Http\Controllers\SesiWigController::class, 'deleteKomitmen'])->name('sesi-wigs.delete-komitmen');
     
     // API Routes for Form Komitmen LM (Per Unit & LM)
     Route::get('sesi-wigs/{sesi_wig}/komitmen/{lm_id}/{unit_id}', [\App\Http\Controllers\SesiWigKomitmenController::class, 'show'])->name('sesi-wigs.komitmen.show');
     Route::post('sesi-wigs/{sesi_wig}/komitmen/{lm_id}/{unit_id}', [\App\Http\Controllers\SesiWigKomitmenController::class, 'store'])->name('sesi-wigs.komitmen.store');
+    Route::delete('sesi-wigs/{sesi_wig}/komitmen/{lm_id}/{unit_id}', [\App\Http\Controllers\SesiWigKomitmenController::class, 'destroy'])->name('sesi-wigs.komitmen.delete');
 
     Route::resource('sesi-wigs', \App\Http\Controllers\SesiWigController::class);
     

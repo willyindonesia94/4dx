@@ -774,11 +774,16 @@ class DashboardController extends Controller
                             if ($r > 0) { $sumReal += $r; $countUlpReal++; }
                         }
                         
-                        if (!isset($matrixTargets[$lm->id][$up3->id][$sw->id]) || $matrixTargets[$lm->id][$up3->id][$sw->id] == 0) {
-                            $matrixTargets[$lm->id][$up3->id][$sw->id] = $isNonSummable && $countUlpTarget > 0 ? ($sumTarget / $countUlpTarget) : $sumTarget;
-                        }
-                        if (!isset($matrixRealisasi[$lm->id][$up3->id][$sw->id]) || $matrixRealisasi[$lm->id][$up3->id][$sw->id] == 0) {
-                            $matrixRealisasi[$lm->id][$up3->id][$sw->id] = $isNonSummable && $countUlpReal > 0 ? ($sumReal / $countUlpReal) : $sumReal;
+                        if ($isNonSummable) {
+                            $matrixTargets[$lm->id][$up3->id][$sw->id] = $countUlpTarget > 0 ? ($sumTarget / $countUlpTarget) : $sumTarget;
+                            $matrixRealisasi[$lm->id][$up3->id][$sw->id] = $countUlpReal > 0 ? ($sumReal / $countUlpReal) : $sumReal;
+                        } else {
+                            if (!isset($matrixTargets[$lm->id][$up3->id][$sw->id]) || $matrixTargets[$lm->id][$up3->id][$sw->id] == 0) {
+                                $matrixTargets[$lm->id][$up3->id][$sw->id] = $sumTarget;
+                            }
+                            if (!isset($matrixRealisasi[$lm->id][$up3->id][$sw->id]) || $matrixRealisasi[$lm->id][$up3->id][$sw->id] == 0) {
+                                $matrixRealisasi[$lm->id][$up3->id][$sw->id] = $sumReal;
+                            }
                         }
                     }
                 }
@@ -793,11 +798,16 @@ class DashboardController extends Controller
                     if ($r > 0) { $sumRealUid += $r; $countUp3Real++; }
                 }
                 
-                if (!isset($matrixTargets[$lm->id][1][$sw->id]) || $matrixTargets[$lm->id][1][$sw->id] == 0) {
-                    $matrixTargets[$lm->id][1][$sw->id] = $isNonSummable && $countUp3Target > 0 ? ($sumTargetUid / $countUp3Target) : $sumTargetUid;
-                }
-                if (!isset($matrixRealisasi[$lm->id][1][$sw->id]) || $matrixRealisasi[$lm->id][1][$sw->id] == 0) {
-                    $matrixRealisasi[$lm->id][1][$sw->id] = $isNonSummable && $countUp3Real > 0 ? ($sumRealUid / $countUp3Real) : $sumRealUid;
+                if ($isNonSummable) {
+                    $matrixTargets[$lm->id][1][$sw->id] = $countUp3Target > 0 ? ($sumTargetUid / $countUp3Target) : $sumTargetUid;
+                    $matrixRealisasi[$lm->id][1][$sw->id] = $countUp3Real > 0 ? ($sumRealUid / $countUp3Real) : $sumRealUid;
+                } else {
+                    if (!isset($matrixTargets[$lm->id][1][$sw->id]) || $matrixTargets[$lm->id][1][$sw->id] == 0) {
+                        $matrixTargets[$lm->id][1][$sw->id] = $sumTargetUid;
+                    }
+                    if (!isset($matrixRealisasi[$lm->id][1][$sw->id]) || $matrixRealisasi[$lm->id][1][$sw->id] == 0) {
+                        $matrixRealisasi[$lm->id][1][$sw->id] = $sumRealUid;
+                    }
                 }
             }
         }

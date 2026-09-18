@@ -555,19 +555,31 @@ class SesiWigController extends Controller
                             if ($k > 0) { $sumKom += $k; $countUlpKom++; }
                         }
                         
-                        if (!isset($matrixTargets[$lm->id][$up3->id][$sw->id]) || $matrixTargets[$lm->id][$up3->id][$sw->id] == 0) {
-                            $matrixTargets[$lm->id][$up3->id][$sw->id] = $isNonSummable && $countUlpTarget > 0 ? ($sumTarget / $countUlpTarget) : $sumTarget;
-                        }
-                        if (!isset($matrixRealisasi[$lm->id][$up3->id][$sw->id]) || $matrixRealisasi[$lm->id][$up3->id][$sw->id] == 0) {
-                            $matrixRealisasi[$lm->id][$up3->id][$sw->id] = $isNonSummable && $countUlpReal > 0 ? ($sumReal / $countUlpReal) : $sumReal;
-                        }
-                        if (!isset($matrixKomitmen[$lm->id][$up3->id][$sw->id]) || empty($matrixKomitmen[$lm->id][$up3->id][$sw->id]['komitmen'])) {
+                        if ($isNonSummable) {
+                            $matrixTargets[$lm->id][$up3->id][$sw->id] = $countUlpTarget > 0 ? ($sumTarget / $countUlpTarget) : $sumTarget;
+                            $matrixRealisasi[$lm->id][$up3->id][$sw->id] = $countUlpReal > 0 ? ($sumReal / $countUlpReal) : $sumReal;
                             if ($sumKom > 0) {
                                 $matrixKomitmen[$lm->id][$up3->id][$sw->id] = [
-                                    'komitmen' => $isNonSummable && $countUlpKom > 0 ? ($sumKom / $countUlpKom) : $sumKom,
+                                    'komitmen' => $countUlpKom > 0 ? ($sumKom / $countUlpKom) : $sumKom,
                                     'carry_over' => 0,
                                     'has_form' => false
                                 ];
+                            }
+                        } else {
+                            if (!isset($matrixTargets[$lm->id][$up3->id][$sw->id]) || $matrixTargets[$lm->id][$up3->id][$sw->id] == 0) {
+                                $matrixTargets[$lm->id][$up3->id][$sw->id] = $sumTarget;
+                            }
+                            if (!isset($matrixRealisasi[$lm->id][$up3->id][$sw->id]) || $matrixRealisasi[$lm->id][$up3->id][$sw->id] == 0) {
+                                $matrixRealisasi[$lm->id][$up3->id][$sw->id] = $sumReal;
+                            }
+                            if (!isset($matrixKomitmen[$lm->id][$up3->id][$sw->id]) || empty($matrixKomitmen[$lm->id][$up3->id][$sw->id]['komitmen'])) {
+                                if ($sumKom > 0) {
+                                    $matrixKomitmen[$lm->id][$up3->id][$sw->id] = [
+                                        'komitmen' => $sumKom,
+                                        'carry_over' => 0,
+                                        'has_form' => false
+                                    ];
+                                }
                             }
                         }
                     }
@@ -587,19 +599,31 @@ class SesiWigController extends Controller
                     if ($k > 0) { $sumKomUid += $k; $countUp3Kom++; }
                 }
                 
-                if (!isset($matrixTargets[$lm->id][1][$sw->id]) || $matrixTargets[$lm->id][1][$sw->id] == 0) {
-                    $matrixTargets[$lm->id][1][$sw->id] = $isNonSummable && $countUp3Target > 0 ? ($sumTargetUid / $countUp3Target) : $sumTargetUid;
-                }
-                if (!isset($matrixRealisasi[$lm->id][1][$sw->id]) || $matrixRealisasi[$lm->id][1][$sw->id] == 0) {
-                    $matrixRealisasi[$lm->id][1][$sw->id] = $isNonSummable && $countUp3Real > 0 ? ($sumRealUid / $countUp3Real) : $sumRealUid;
-                }
-                if (!isset($matrixKomitmen[$lm->id][1][$sw->id]) || empty($matrixKomitmen[$lm->id][1][$sw->id]['komitmen'])) {
+                if ($isNonSummable) {
+                    $matrixTargets[$lm->id][1][$sw->id] = $countUp3Target > 0 ? ($sumTargetUid / $countUp3Target) : $sumTargetUid;
+                    $matrixRealisasi[$lm->id][1][$sw->id] = $countUp3Real > 0 ? ($sumRealUid / $countUp3Real) : $sumRealUid;
                     if ($sumKomUid > 0) {
                         $matrixKomitmen[$lm->id][1][$sw->id] = [
-                            'komitmen' => $isNonSummable && $countUp3Kom > 0 ? ($sumKomUid / $countUp3Kom) : $sumKomUid,
+                            'komitmen' => $countUp3Kom > 0 ? ($sumKomUid / $countUp3Kom) : $sumKomUid,
                             'carry_over' => 0,
                             'has_form' => false
                         ];
+                    }
+                } else {
+                    if (!isset($matrixTargets[$lm->id][1][$sw->id]) || $matrixTargets[$lm->id][1][$sw->id] == 0) {
+                        $matrixTargets[$lm->id][1][$sw->id] = $sumTargetUid;
+                    }
+                    if (!isset($matrixRealisasi[$lm->id][1][$sw->id]) || $matrixRealisasi[$lm->id][1][$sw->id] == 0) {
+                        $matrixRealisasi[$lm->id][1][$sw->id] = $sumRealUid;
+                    }
+                    if (!isset($matrixKomitmen[$lm->id][1][$sw->id]) || empty($matrixKomitmen[$lm->id][1][$sw->id]['komitmen'])) {
+                        if ($sumKomUid > 0) {
+                            $matrixKomitmen[$lm->id][1][$sw->id] = [
+                                'komitmen' => $sumKomUid,
+                                'carry_over' => 0,
+                                'has_form' => false
+                            ];
+                        }
                     }
                 }
             }
@@ -709,6 +733,25 @@ class SesiWigController extends Controller
                 'carry_over' => $request->carry_over !== '' ? $request->carry_over : null,
             ]
         );
+
+        return response()->json(['success' => true]);
+    }
+
+    public function deleteKomitmen(Request $request, SesiWig $sesi_wig)
+    {
+        $request->validate([
+            'lm_id' => 'required|exists:master_lms,id',
+            'unit_id' => 'required|exists:master_units,id',
+        ]);
+
+        $komitmen = SesiWigKomitmen::where('sesi_wig_id', $sesi_wig->id)
+            ->where('lm_id', $request->lm_id)
+            ->where('unit_id', $request->unit_id)
+            ->first();
+
+        if ($komitmen) {
+            $komitmen->delete();
+        }
 
         return response()->json(['success' => true]);
     }

@@ -828,10 +828,7 @@ class CascadingController extends Controller
             ->get();
 
         foreach ($lms as $lm) {
-            $isPersen = false;
-            if ($lm->satuan && (str_contains(strtolower($lm->satuan->name), '%') || str_contains(strtolower($lm->satuan->name), 'persen'))) {
-                $isPersen = true;
-            }
+            $isNonSummable = in_array($lm->satuan_id, [1, 2, 14]);
 
             foreach ($periodes as $periode) {
                 $periodeStart = $periode->periode_start;
@@ -849,7 +846,7 @@ class CascadingController extends Controller
                         ->pluck('angka_target');
 
                     if ($childTargets->count() > 0) {
-                        $up3Target = $isPersen ? $childTargets->avg() : $childTargets->sum();
+                        $up3Target = $isNonSummable ? $childTargets->avg() : $childTargets->sum();
 
                         \App\Models\BreakdownLm::updateOrCreate(
                             [
@@ -880,7 +877,7 @@ class CascadingController extends Controller
                         ->pluck('angka_target');
 
                     if ($up3Targets->count() > 0) {
-                        $uidTarget = $isPersen ? $up3Targets->avg() : $up3Targets->sum();
+                        $uidTarget = $isNonSummable ? $up3Targets->avg() : $up3Targets->sum();
 
                         \App\Models\BreakdownLm::updateOrCreate(
                             [
