@@ -270,8 +270,8 @@ class CascadingController extends Controller
             }
         });
 
-        // Use standard pagination with appending query string
-        $breakdowns = $query->orderBy('periode_start')->paginate(15)->withQueryString();
+        // Fetch all data for client-side per-month pagination
+        $breakdowns = $query->orderBy('periode_start')->get();
 
         return view('cascading.partials.breakdowns_table', compact(
             'breakdowns', 'type', 'lm', 'canApproveLm', 'canEditDelete', 

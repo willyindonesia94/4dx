@@ -24,7 +24,7 @@
             </tr>
         </thead>
         @php
-            $groupedBreakdowns = collect($breakdowns->items())->sortBy('periode_start')->groupBy(function($item) {
+            $groupedBreakdowns = collect($breakdowns)->sortBy('periode_start')->groupBy(function($item) {
                 if ($item->bulan && $item->tahun) {
                     return strtoupper($item->bulan_indo) . ' ' . $item->tahun;
                 }
@@ -46,8 +46,13 @@
             $hasMonthHighlight = (request('status') === 'draft' && $items->contains('is_approved', false)) || (request('highlight_unit') && $items->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; }));
             $accentColor = $type === 'uid' ? 'indigo' : ($type === 'up3' ? 'emerald' : 'amber');
             $rowColor = $type === 'uid' ? 'divide-indigo-50 border-indigo-100/50' : ($type === 'up3' ? 'divide-emerald-50 border-emerald-100/50' : 'divide-amber-50 border-amber-100/50');
+            // Urutkan item terlebih dahulu agar mudah dilooping dengan index yang benar
+            $sortedItems = $items->sortBy(function($b) { 
+                $isMonthly = \Carbon\Carbon::parse($b->periode_start)->diffInDays(\Carbon\Carbon::parse($b->periode_end)) >= 20 ? 0 : 1;
+                return ($b->unit->name ?? '') . '_' . $isMonthly . '_' . $b->periode_start; 
+            })->values();
         @endphp
-        <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'true' }} }" class="divide-y bg-white border-b {{ $rowColor }}">
+        <tbody x-data="{ openMonth: {{ $hasMonthHighlight ? 'true' : 'false' }}, page: 1, perPage: 15 }" class="divide-y bg-white border-b {{ $rowColor }}">
             <tr class="bg-slate-50 border-y border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" @click="openMonth = !openMonth">
                 <td colspan="{{ $canAction ? '6' : '5' }}" class="px-4 py-2.5 font-bold text-slate-700 text-xs uppercase tracking-wider">
                     <div class="flex justify-between items-center">
@@ -79,14 +84,11 @@
                     </div>
                 </td>
             </tr>
-            @foreach($items->sortBy(function($b) { 
-                $isMonthly = \Carbon\Carbon::parse($b->periode_start)->diffInDays(\Carbon\Carbon::parse($b->periode_end)) >= 20 ? 0 : 1;
-                return ($b->unit->name ?? '') . '_' . $isMonthly . '_' . $b->periode_start; 
-            }) as $breakdown)
+            @foreach($sortedItems as $index => $breakdown)
             @php $isRowHighlighted = request('highlight_unit') == $breakdown->unit_id && !$breakdown->is_approved; @endphp
-            <tr x-show="openMonth" 
+            <tr x-show="openMonth && ({{ $index }} >= (page - 1) * perPage && {{ $index }} < page * perPage)" 
                 class="transition-all duration-1000 {{ $isRowHighlighted ? 'bg-yellow-50 outline outline-2 outline-yellow-400 z-10 relative' : '' }}"
-                @if($isRowHighlighted) x-init="setTimeout(() => { $el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 500);" @endif
+                @if($isRowHighlighted) x-init="setTimeout(() => { openMonth = true; page = Math.floor({{ $index }} / perPage) + 1; setTimeout(() => { $el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 100); }, 500);" @endif
             >
                 <td class="px-4 py-2 text-center" @click.stop>
                     <input type="checkbox" value="{{ $breakdown->id }}" x-model="selectedBreakdowns" class="rounded border-gray-300 text-{{ $accentColor }}-600 focus:ring-{{ $accentColor }}-500 cursor-pointer">
@@ -129,14 +131,24 @@
                 @endif
             </tr>
             @endforeach
+            <!-- Pagination Controls (Per Month) -->
+            <tr x-show="openMonth && {{ $sortedItems->count() }} > perPage" class="bg-gray-50/30">
+                <td colspan="{{ $canAction ? '6' : '5' }}" class="px-4 py-2 text-center">
+                    <div class="flex items-center justify-between text-xs text-gray-500">
+                        <span>Showing <span x-text="(page - 1) * perPage + 1"></span> to <span x-text="Math.min(page * perPage, {{ $sortedItems->count() }})"></span> of {{ $sortedItems->count() }} results</span>
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click="if(page > 1) page--" class="px-2 py-1 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 disabled:opacity-50 transition-colors text-slate-700" :disabled="page == 1">&laquo; Prev</button>
+                            <span class="font-medium text-slate-700">Page <span x-text="page"></span> of <span x-text="Math.ceil({{ $sortedItems->count() }} / perPage)"></span></span>
+                            <button type="button" @click="if(page < Math.ceil({{ $sortedItems->count() }} / perPage)) page++" class="px-2 py-1 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 disabled:opacity-50 transition-colors text-slate-700" :disabled="page == Math.ceil({{ $sortedItems->count() }} / perPage)">Next &raquo;</button>
+                        </div>
+                    </div>
+                </td>
+            </tr>
         </tbody>
         @endforeach
     </table>
 </div>
 
-<div class="px-4 py-3 border-t border-gray-100 bg-gray-50/50 pagination">
-    {{ $breakdowns->links() }}
-</div>
 @else
 <div class="px-4 py-3 text-xs text-gray-500 italic bg-white border-t border-gray-100">Belum ada target {{ strtoupper($type) }}</div>
 @endif
