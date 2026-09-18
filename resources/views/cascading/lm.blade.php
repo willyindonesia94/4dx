@@ -447,9 +447,11 @@
                         @endforeach
                     </div>
                     
-                    <!-- Pagination Links -->
+                    <!-- Pagination for WIG is disabled per user request -->
                     <div class="mt-6">
-                        {{ $wigs->links() }}
+                        @if(method_exists($wigs, 'links'))
+                            {{ $wigs->links() }}
+                        @endif
                     </div>
                 </div>
             </div>

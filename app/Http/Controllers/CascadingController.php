@@ -130,8 +130,9 @@ class CascadingController extends Controller
                               }
                           });
                       }
-                  ]);
-            }, 'masterLms.satuan']);
+                  ])
+                  ->with('satuan'); // Safely eager load nested relation without array conflict
+            }]);
 
         if (!$skipMatrixFilter && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
