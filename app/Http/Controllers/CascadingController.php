@@ -125,13 +125,14 @@ class CascadingController extends Controller
             });
         }
 
-        $wigs = $wigsQuery->get()
-            ->each(function($wig) {
-                $wig->setRelation('masterLms', $wig->masterLms->sortBy(function($lm) {
-                    preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
-                    return (int)($m[1] ?? 999);
-                })->values());
-            });
+        $wigs = $wigsQuery->paginate(5)->withQueryString();
+        $wigs->getCollection()->transform(function($wig) {
+            $wig->setRelation('masterLms', $wig->masterLms->sortBy(function($lm) {
+                preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
+                return (int)($m[1] ?? 999);
+            })->values());
+            return $wig;
+        });
         
         $satuans = MasterSatuan::all();
         

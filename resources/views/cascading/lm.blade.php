@@ -753,6 +753,11 @@
                         </div>
                         @endforeach
                     </div>
+                    
+                    <!-- Pagination Links -->
+                    <div class="mt-6">
+                        {{ $wigs->links() }}
+                    </div>
                 </div>
             </div>
         </div>
