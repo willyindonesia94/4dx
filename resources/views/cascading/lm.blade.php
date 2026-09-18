@@ -22,23 +22,24 @@
         $canEditDelete = $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'Asman Perencanaan UP3']) || $isMsbK3L;
         
         $highlightWigId = session('active_wig', 'null');
-        if(request('highlight_unit')) {
-            foreach($wigs as $w) {
-                foreach($w->masterLms as $lm) {
-                    if($lm->breakdowns && $lm->breakdowns->contains(function($b) { return request('highlight_unit') == $b->unit_id && !$b->is_approved; })) {
-                        $highlightWigId = $w->id;
-                        break 2;
+        if(request('highlight_unit') || request('status') === 'draft') {
+            try {
+                $tahun = request('tahun', date('Y'));
+                $unapprovedBreakdown = \App\Models\BreakdownLm::where('tahun', $tahun)
+                    ->where('is_approved', false)
+                    ->when(request('highlight_unit'), function($q) {
+                        $q->where('unit_id', request('highlight_unit'));
+                    })
+                    ->first();
+                    
+                if ($unapprovedBreakdown) {
+                    $highlightLm = \App\Models\MasterLm::find($unapprovedBreakdown->lm_id);
+                    if ($highlightLm && $highlightLm->wig_id) {
+                        $highlightWigId = $highlightLm->wig_id;
                     }
                 }
-            }
-        } elseif(request('status') === 'draft') {
-            foreach($wigs as $w) {
-                foreach($w->masterLms as $lm) {
-                    if($lm->breakdowns && $lm->breakdowns->contains('is_approved', false)) {
-                        $highlightWigId = $w->id;
-                        break 2;
-                    }
-                }
+            } catch (\Exception $e) {
+                // Ignore if any model relation fails, default to 'null'
             }
         }
     @endphp
