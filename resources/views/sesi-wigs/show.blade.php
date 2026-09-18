@@ -498,7 +498,32 @@ $formatLmValue = function($value, $satuan) {
             </div>
 
             <!-- LM Table -->
-            <div class="mb-6" x-data="{ selectedWig: {{ $wigs->where('masterLms', '!=', '[]')->first()->id ?? 'null' }} }">
+            <div class="mb-6" x-data="{ 
+                selectedWig: sessionStorage.getItem('lastOpenedWig') ? parseInt(sessionStorage.getItem('lastOpenedWig')) : null,
+                init() {
+                    const rowId = sessionStorage.getItem('lastScrolledRow');
+                    const up3Id = sessionStorage.getItem('lastExpandedUp3');
+                    if (rowId) {
+                        setTimeout(() => {
+                            if (up3Id) {
+                                // If ULP was edited, make sure its parent UP3 is expanded
+                                const toggleEvent = new CustomEvent('force-expand-up3', { detail: { id: up3Id } });
+                                window.dispatchEvent(toggleEvent);
+                            }
+                            
+                            const el = document.getElementById(rowId);
+                            if (el) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                el.classList.add('bg-yellow-100', 'transition-colors', 'duration-1000');
+                                setTimeout(() => el.classList.remove('bg-yellow-100'), 2000);
+                            }
+                            sessionStorage.removeItem('lastScrolledRow');
+                            sessionStorage.removeItem('lastExpandedUp3');
+                            sessionStorage.removeItem('lastOpenedWig');
+                        }, 500);
+                    }
+                }
+            }">
                 <div class="flex flex-col md:flex-row justify-between items-center mb-4 px-2">
                     <h3 class="text-xl font-bold text-gray-800">Capaian Lead Measure s.d Tanggal {{ \Carbon\Carbon::parse($sesi_wig->tanggal_pelaksanaan)->format('d/m/Y') }}</h3>
                 </div>
@@ -683,7 +708,7 @@ $formatLmValue = function($value, $satuan) {
                                                         $isExpanded = true;
                                                     }
                                                 @endphp
-                                                <tr class="hover:bg-slate-200 transition-colors bg-slate-100 cursor-pointer up3-row" onclick="toggleUlps('{{$lm->id}}-{{$up3->id}}')">
+                                                <tr id="row-lm-{{$lm->id}}-unit-{{$up3->id}}" class="hover:bg-slate-200 transition-colors bg-slate-100 cursor-pointer up3-row" onclick="toggleUlps('{{$lm->id}}-{{$up3->id}}')">
                                                     <td class="px-4 py-2 border border-gray-300 font-bold text-indigo-900 whitespace-nowrap sticky left-0 bg-slate-100 z-10">
                                                         <div class="flex items-center justify-between">
                                                             <span>{{ $up3->name }}</span>
@@ -779,7 +804,7 @@ $formatLmValue = function($value, $satuan) {
                                                             <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
                                                                 @if($canEditUp3Komitmen || $hasKom)
                                                                     <button type="button" 
-                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3Target }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUp3Komitmen ? 'false' : 'true' }} } }))"
+                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3Target }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', wigId: {{ $wig->id }}, up3Id: {{ $up3->id }}, date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUp3Komitmen ? 'false' : 'true' }} } }))"
                                                                         class="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
                                                                         title="{{ $hasKom ? ($canEditUp3Komitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUp3Komitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
                                                                         @if($canEditUp3Komitmen)
@@ -801,7 +826,7 @@ $formatLmValue = function($value, $satuan) {
                                                     @endforeach
                                                 </tr>
                                                 @foreach($ulps as $u)
-                                                    <tr class="hover:bg-slate-50 transition-colors ulp-row-{{$lm->id}}-{{$up3->id}} {{ $isExpanded ? '' : 'hidden' }}">
+                                                    <tr id="row-lm-{{$lm->id}}-unit-{{$u->id}}" class="hover:bg-slate-50 transition-colors ulp-row-{{$lm->id}}-{{$up3->id}} {{ $isExpanded ? '' : 'hidden' }}">
                                                         <td class="px-4 py-2 border border-gray-300 font-medium text-gray-800 whitespace-nowrap sticky left-0 bg-white z-10 pl-8">
                                                             {{ $u->name }}
                                                         </td>
@@ -896,7 +921,7 @@ $formatLmValue = function($value, $satuan) {
                                                                 <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
                                                                 @if($canEditUlpKomitmen || $hasKom)
                                                                     <button type="button" 
-                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $target }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUlpKomitmen ? 'false' : 'true' }} } }))"
+                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $target }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', wigId: {{ $wig->id }}, up3Id: {{ $up3->id }}, date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUlpKomitmen ? 'false' : 'true' }} } }))"
                                                                         class="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
                                                                         title="{{ $hasKom ? ($canEditUlpKomitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUlpKomitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
                                                                         @if($canEditUlpKomitmen)
@@ -1093,6 +1118,14 @@ $formatLmValue = function($value, $satuan) {
                 }
             }
         }
+        
+        window.addEventListener('force-expand-up3', (e) => {
+            const id = e.detail.id;
+            const rows = document.querySelectorAll('.ulp-row-' + id);
+            const icon = document.getElementById('icon-' + id);
+            rows.forEach(r => r.classList.remove('hidden'));
+            if (icon) icon.classList.add('rotate-180');
+        });
         
         // Menghapus fungsi toggleWig karena sudah menggunakan Alpine.js x-data
         
@@ -1529,6 +1562,15 @@ $formatLmValue = function($value, $satuan) {
                     this.form.komitmen = '';
                     this.form.hambatans = [];
                     this.form.aksi_konkrits = [];
+                    
+                    // Set session storage to scroll back after refresh
+                    if (this.params.wigId) {
+                        sessionStorage.setItem('lastOpenedWig', this.params.wigId);
+                        sessionStorage.setItem('lastScrolledRow', 'row-lm-' + this.params.lm + '-unit-' + this.params.unit);
+                        if (this.params.up3Id) {
+                            sessionStorage.setItem('lastExpandedUp3', this.params.lm + '-' + this.params.up3Id);
+                        }
+                    }
                     
                     // Fetch existing data
                     fetch(`/sesi-wigs/${this.params.sesi}/komitmen/${this.params.lm}/${this.params.unit}?t=${new Date().getTime()}`, { cache: 'no-store' })
