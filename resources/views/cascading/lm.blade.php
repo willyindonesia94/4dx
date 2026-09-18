@@ -333,10 +333,7 @@
                                                     @if(empty($isUp3))
                                                     <!-- UID Section -->
                                                     <div class="bg-indigo-50 rounded-lg border border-indigo-100 overflow-hidden"
-                                                         @click="if($event.target.tagName === 'A' && $event.target.closest('.pagination')) { 
-                                                             $event.preventDefault(); 
-                                                             loadBreakdown('uid', $event.target.href); 
-                                                         }">
+                                                         @click="let a = $event.target.closest('a'); if(a) { $event.preventDefault(); loadBreakdown('uid', a.href); }">
                                                         <div @click="openUid = !openUid; if(openUid) loadBreakdown('uid');" class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-3 hover:bg-indigo-100 transition-colors cursor-pointer focus:outline-none gap-2">
                                                             <div class="flex items-center">
                                                                 <span class="text-xs font-bold text-indigo-800 uppercase tracking-wider">Breakdown UID</span>
@@ -364,10 +361,7 @@
 
                                                     <!-- UP3 Section -->
                                                     <div class="bg-emerald-50 rounded-lg border border-emerald-100 overflow-hidden"
-                                                         @click="if($event.target.tagName === 'A' && $event.target.closest('.pagination')) { 
-                                                             $event.preventDefault(); 
-                                                             loadBreakdown('up3', $event.target.href); 
-                                                         }">
+                                                         @click="let a = $event.target.closest('a'); if(a) { $event.preventDefault(); loadBreakdown('up3', a.href); }">
                                                         <div @click="openUp3 = !openUp3; if(openUp3) loadBreakdown('up3');" class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-3 hover:bg-emerald-100 transition-colors cursor-pointer focus:outline-none gap-2">
                                                             <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
                                                                 <div class="flex items-center">
@@ -399,10 +393,7 @@
 
                                                     <!-- ULP Section -->
                                                     <div class="bg-amber-50 rounded-lg border border-amber-100 overflow-hidden"
-                                                         @click="if($event.target.tagName === 'A' && $event.target.closest('.pagination')) { 
-                                                             $event.preventDefault(); 
-                                                             loadBreakdown('ulp', $event.target.href); 
-                                                         }">
+                                                         @click="let a = $event.target.closest('a'); if(a) { $event.preventDefault(); loadBreakdown('ulp', a.href); }">
                                                         <div @click="openUlp = !openUlp; if(openUlp) loadBreakdown('ulp');" class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-3 hover:bg-amber-100 transition-colors cursor-pointer focus:outline-none gap-2">
                                                             <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
                                                                 <div class="flex items-center">
