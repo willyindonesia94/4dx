@@ -166,12 +166,23 @@ class RealisasiLmFormatBidangImport implements ToCollection
                     $angka = $angka * 100;
                 }
 
-                // Tanggal: tanggal awal minggu di bulan yang dipilih
-                $tgl = $this->mingguTanggal[$minggu] ?? 1;
-                // Pastikan tidak melebihi jumlah hari di bulan tersebut
-                $maxDay = cal_days_in_month(CAL_GREGORIAN, $this->bulanImport, $this->tahunImport);
-                if ($tgl > $maxDay) $tgl = $maxDay;
-                $tanggal = sprintf('%04d-%02d-%02d', $this->tahunImport, $this->bulanImport, $tgl);
+                // Tanggal: Gunakan tanggal awal minggu dari MasterPeriode jika ada
+                $periode = \App\Models\MasterPeriode::where('tahun', $this->tahunImport)
+                                                    ->where('bulan', $this->bulanImport)
+                                                    ->first();
+                $tanggal = null;
+                if ($periode) {
+                    $startCol = 'start_m' . $minggu;
+                    $tanggal = $periode->$startCol;
+                }
+                
+                // Fallback jika tidak ada MasterPeriode
+                if (!$tanggal) {
+                    $tgl = $this->mingguTanggal[$minggu] ?? 1;
+                    $maxDay = cal_days_in_month(CAL_GREGORIAN, $this->bulanImport, $this->tahunImport);
+                    if ($tgl > $maxDay) $tgl = $maxDay;
+                    $tanggal = sprintf('%04d-%02d-%02d', $this->tahunImport, $this->bulanImport, $tgl);
+                }
 
                 // Cari user default (admin/superadmin) atau gunakan ID 1
                 $userId = auth()->id() ?? 1;
