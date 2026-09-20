@@ -349,7 +349,12 @@ class CascadingController extends Controller
         $endWeek = isset($weeks['target_m5']) && $weeks['target_m5'] ? 'target_m5' : 'target_m4';
         $data['periode_end'] = $weeks[$endWeek]['end'] ?? $carbonEnd->format('Y-m-d');
         $data['is_approved'] = $is_approved;
-        BreakdownLm::create($data);
+        BreakdownLm::updateOrCreate([
+            'lm_id' => $data['lm_id'],
+            'unit_id' => $data['unit_id'],
+            'periode_start' => $data['periode_start'],
+            'periode_end' => $data['periode_end'],
+        ], $data);
         
         $weeklyKeys = ['target_m1', 'target_m2', 'target_m3', 'target_m4', 'target_m5'];
         $hasWeekly = false;
@@ -360,14 +365,15 @@ class CascadingController extends Controller
         if ($hasWeekly) {
             foreach ($weeks as $key => $dates) {
                 if ($dates && $request->filled($key) && $dates['start'] <= $dates['end']) {
-                    BreakdownLm::create([
+                    BreakdownLm::updateOrCreate([
                         'lm_id' => $request->lm_id,
                         'unit_id' => $request->unit_id,
+                        'periode_start' => $dates['start'],
+                        'periode_end' => $dates['end'],
+                    ], [
                         'bidang' => $request->bidang,
                         'satuan_id' => $request->satuan_id,
                         'angka_target' => $request->input($key),
-                        'periode_start' => $dates['start'],
-                        'periode_end' => $dates['end'],
                         'bulan' => $request->bulan,
                         'tahun' => $request->tahun,
                         'is_approved' => $is_approved,
