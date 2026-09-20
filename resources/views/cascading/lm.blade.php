@@ -300,6 +300,7 @@
                                                     if (type === 'ulp' && this.htmlUlp !== '' && !url) return;
                                                     
                                                     let targetUrl = url || `/cascading/lm/{{ $lm->id }}/breakdowns/${type}?tahun={{ request('tahun', date('Y')) }}`;
+                                                    targetUrl += (targetUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
                                                     
                                                     if (type === 'uid') this.loadingUid = true;
                                                     if (type === 'up3') this.loadingUp3 = true;
