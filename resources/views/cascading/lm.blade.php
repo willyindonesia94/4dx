@@ -312,6 +312,20 @@
                                                             if (type === 'uid') { this.htmlUid = html; this.loadingUid = false; }
                                                             if (type === 'up3') { this.htmlUp3 = html; this.loadingUp3 = false; }
                                                             if (type === 'ulp') { this.htmlUlp = html; this.loadingUlp = false; }
+                                                            
+                                                            if ('{{ $expandedLm }}' == '{{ $lm->id }}' && '{{ $expandedUnitType }}' === type) {
+                                                                let currentEl = this.$el;
+                                                                if(currentEl) {
+                                                                    setTimeout(() => {
+                                                                        currentEl.scrollIntoView({behavior: 'smooth', block: 'start'});
+                                                                        let originalClasses = currentEl.className;
+                                                                        currentEl.className = originalClasses + ' bg-yellow-50 transition-colors duration-1000';
+                                                                        setTimeout(() => {
+                                                                            currentEl.className = originalClasses;
+                                                                        }, 3000);
+                                                                    }, 100);
+                                                                }
+                                                            }
                                                         });
                                                 }
                                             }"
