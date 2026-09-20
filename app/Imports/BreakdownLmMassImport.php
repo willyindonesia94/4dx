@@ -281,6 +281,9 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
                     }
                 }
                 
+                $uidAccumulations = [];
+                $uidUnit = \App\Models\MasterUnit::where('type', 'UID')->first();
+
                 foreach ($up3Accumulations as $data) {
                     $finalTarget = $data['angka_target'];
                     if (in_array((int)$data['satuan_id'], [1, 2, 14]) && $data['count'] > 0) {
@@ -298,6 +301,46 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
                         'bulan' => $data['bulan'],
                         'tahun' => $data['tahun'],
                     ]);
+
+                    if ($uidUnit) {
+                        $key = $data['lm_id'] . '_' . $data['periode_start'] . '_' . $data['periode_end'];
+                        if (!isset($uidAccumulations[$key])) {
+                            $uidAccumulations[$key] = [
+                                'lm_id' => $data['lm_id'],
+                                'unit_id' => $uidUnit->id,
+                                'periode_start' => $data['periode_start'],
+                                'periode_end' => $data['periode_end'],
+                                'angka_target' => 0,
+                                'satuan_id' => $data['satuan_id'],
+                                'bulan' => $data['bulan'],
+                                'tahun' => $data['tahun'],
+                                'count' => 0,
+                            ];
+                        }
+                        $uidAccumulations[$key]['angka_target'] += $finalTarget;
+                        $uidAccumulations[$key]['count'] += 1;
+                    }
+                }
+
+                if ($uidUnit) {
+                    foreach ($uidAccumulations as $uidData) {
+                        $finalUidTarget = $uidData['angka_target'];
+                        if (in_array((int)$uidData['satuan_id'], [1, 2, 14]) && $uidData['count'] > 0) {
+                            $finalUidTarget = round($finalUidTarget / $uidData['count'], 2);
+                        }
+                        
+                        \App\Models\BreakdownLm::updateOrCreate([
+                            'lm_id' => $uidData['lm_id'],
+                            'unit_id' => $uidData['unit_id'],
+                            'periode_start' => $uidData['periode_start'],
+                            'periode_end' => $uidData['periode_end'],
+                        ], [
+                            'angka_target' => $finalUidTarget,
+                            'satuan_id' => $uidData['satuan_id'],
+                            'bulan' => $uidData['bulan'],
+                            'tahun' => $uidData['tahun'],
+                        ]);
+                    }
                 }
             }
 
