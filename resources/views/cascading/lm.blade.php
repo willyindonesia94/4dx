@@ -162,7 +162,10 @@
         },
         autoCalcWeekly() {
             if (this.isAutoFill && this.formAngkaTarget > 0 && !this.editMode) {
-                let val = (parseFloat(this.formAngkaTarget) / 5).toFixed(2);
+                let isNonSummable = [1, 2, 14].includes(parseInt(this.formSatuanId)) || String(this.formSatuanName).trim() === '%';
+                let val = isNonSummable 
+                            ? parseFloat(this.formAngkaTarget).toFixed(2)
+                            : (parseFloat(this.formAngkaTarget) / 5).toFixed(2);
                 this.targetM1 = val; this.targetM2 = val; this.targetM3 = val; this.targetM4 = val; this.targetM5 = val;
             }
         },
@@ -610,7 +613,7 @@
                                     <div class="mt-2 p-4 bg-slate-50 border border-slate-200 rounded-lg">
                                         <div class="flex justify-between items-center mb-3">
                                             <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Distribusi Target Mingguan</h4>
-                                            <span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-semibold" x-show="isAutoFill">Auto Dibagi 5</span>
+                                            <span class="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-semibold" x-show="isAutoFill" x-text="([1, 2, 14].includes(parseInt(formSatuanId)) || String(formSatuanName).trim() === '%') ? 'Auto Disamakan' : 'Auto Dibagi 5'"></span>
                                             <span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-semibold" x-show="!isAutoFill">Manual Edit</span>
                                         </div>
                                         <p class="text-[10px] text-slate-500 mb-3 leading-tight">Target mingguan ini akan disimpan terpisah mengikuti tanggal rentang mingguan dari bulan yang dipilih di atas.</p>
