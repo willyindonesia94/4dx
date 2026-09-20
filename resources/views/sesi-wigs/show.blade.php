@@ -635,20 +635,6 @@ $formatLmValue = function($value, $satuan) {
                                                             $uidKomitmen = $uidKomitmen / $komitmenFilledCount;
                                                         }
                                                         
-                                                        $uidPencapaian = 0;
-                                                        if ($uidTarget > 0) {
-                                                            if (strtolower($lm->polaritas) === 'negatif' || $lm->polaritas === '3') {
-                                                                $uidPencapaian = round(($uidTarget / max(0.0001, $uidRealisasi)) * 100, 2);
-                                                            } else {
-                                                                $uidPencapaian = round(($uidRealisasi / $uidTarget) * 100, 2);
-                                                            }
-                                                        }
-                                                        $uidBgColor = 'bg-red-500 text-white';
-                                                        if ($uidPencapaian >= 100) {
-                                                            $uidBgColor = 'bg-green-500 text-white'; // No komitmen on UID level currently
-                                                        }
-                                                        $uidCarryOver = max(0, $uidTarget - $uidRealisasi);
-                                                        
                                                         $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
                                                         $prevUidTarget = 0;
                                                         $prevUidRealisasi = 0;
@@ -676,6 +662,20 @@ $formatLmValue = function($value, $satuan) {
                                                         }
                                                         $prevUidCarryOver = max(0, $prevUidTarget - $prevUidRealisasi);
                                                         $uidTargetPlusCarryOver = $uidTarget + $prevUidCarryOver;
+
+                                                        $uidPencapaian = 0;
+                                                        if ($uidTargetPlusCarryOver > 0) {
+                                                            if (strtolower($lm->polaritas) === 'negatif' || $lm->polaritas === '3') {
+                                                                $uidPencapaian = round(($uidTargetPlusCarryOver / max(0.0001, $uidRealisasi)) * 100, 2);
+                                                            } else {
+                                                                $uidPencapaian = round(($uidRealisasi / $uidTargetPlusCarryOver) * 100, 2);
+                                                            }
+                                                        }
+                                                        $uidBgColor = 'bg-red-500 text-white';
+                                                        if ($uidPencapaian >= 100) {
+                                                            $uidBgColor = 'bg-green-500 text-white'; // No komitmen on UID level currently
+                                                        }
+                                                        $uidCarryOver = max(0, $uidTargetPlusCarryOver - $uidRealisasi);
                                                         
                                                         $uidTrendIcon = '<span class="text-gray-400">-</span>';
                                                         if ($prevSw) {
@@ -720,16 +720,6 @@ $formatLmValue = function($value, $satuan) {
                                                             // Menampilkan rekap target dan realisasi UP3
                                                             $up3Target = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                                                             $up3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
-                                                            $up3Pencapaian = round($calcCapaian($up3Target, $up3Realisasi, $lm->polaritas ?? 'positif'), 2);
-                                                            
-                                                            $up3KomData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
-                                                            $up3KomVal = $up3KomData !== null ? floatval($up3KomData['komitmen']) : 0;
-                                                            
-                                                            $up3BgColor = 'bg-red-500 text-white';
-                                                            if ($up3Pencapaian >= 100) {
-                                                                $up3BgColor = 'bg-green-500 text-white';
-                                                            }
-                                                            $up3CarryOver = max(0, $up3Target - $up3Realisasi);
                                                             
                                                             $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
                                                             $prevUp3Target = 0;
@@ -740,6 +730,18 @@ $formatLmValue = function($value, $satuan) {
                                                             }
                                                             $prevUp3CarryOver = max(0, $prevUp3Target - $prevUp3Realisasi);
                                                             $up3TargetPlusCarryOver = $up3Target + $prevUp3CarryOver;
+
+                                                            $up3Pencapaian = round($calcCapaian($up3TargetPlusCarryOver, $up3Realisasi, $lm->polaritas ?? 'positif'), 2);
+                                                            
+                                                            $up3KomData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
+                                                            $up3KomVal = $up3KomData !== null ? floatval($up3KomData['komitmen']) : 0;
+                                                            
+                                                            $up3BgColor = 'bg-red-500 text-white';
+                                                            if ($up3Pencapaian >= 100) {
+                                                                $up3BgColor = 'bg-green-500 text-white';
+                                                            }
+                                                            $up3CarryOver = max(0, $up3TargetPlusCarryOver - $up3Realisasi);
+                                                            
                                                             $prevUp3Realisasi = 0;
                                                             $up3TrendIcon = '<span class="text-gray-400">-</span>';
                                                             if ($prevSw) {
@@ -834,7 +836,18 @@ $formatLmValue = function($value, $satuan) {
                                                             @php
                                                                 $target = $matrixTargets[$lm->id][$u->id][$sw->id] ?? 0;
                                                                 $realisasi = $matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0;
-                                                                $pencapaian = round($calcCapaian($target, $realisasi, $lm->polaritas ?? 'positif'), 2);
+                                                                
+                                                                $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
+                                                                $prevUlpTarget = 0;
+                                                                $prevUlpRealisasi = 0;
+                                                                if ($prevSw) {
+                                                                    $prevUlpTarget = $matrixTargets[$lm->id][$u->id][$prevSw->id] ?? 0;
+                                                                    $prevUlpRealisasi = $matrixRealisasi[$lm->id][$u->id][$prevSw->id] ?? 0;
+                                                                }
+                                                                $prevUlpCarryOver = max(0, $prevUlpTarget - $prevUlpRealisasi);
+                                                                $ulpTargetPlusCarryOver = $target + $prevUlpCarryOver;
+
+                                                                $pencapaian = round($calcCapaian($ulpTargetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
                                                                 $komitmenData = $matrixKomitmen[$lm->id][$u->id][$sw->id] ?? null;
                                                                 $komitmenVal = $komitmenData ? $komitmenData['komitmen'] : '';
                                                                 $carryOverVal = $komitmenData ? $komitmenData['carry_over'] : '';
@@ -861,7 +874,6 @@ $formatLmValue = function($value, $satuan) {
                                                                     }
                                                                 }
                                                                 
-                                                                $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
                                                                 $prevRealisasi = 0;
                                                                 $trendIcon = '<span class="text-gray-400">-</span>';
                                                                 if ($prevSw) {
@@ -875,17 +887,7 @@ $formatLmValue = function($value, $satuan) {
                                                                     }
                                                                 }
                                                                 
-                                                                $ulpCarryOver = max(0, $target - $realisasi);
-                                                                
-                                                                $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
-                                                                $prevUlpTarget = 0;
-                                                                $prevUlpRealisasi = 0;
-                                                                if ($prevSw) {
-                                                                    $prevUlpTarget = $matrixTargets[$lm->id][$u->id][$prevSw->id] ?? 0;
-                                                                    $prevUlpRealisasi = $matrixRealisasi[$lm->id][$u->id][$prevSw->id] ?? 0;
-                                                                }
-                                                                $prevUlpCarryOver = max(0, $prevUlpTarget - $prevUlpRealisasi);
-                                                                $ulpTargetPlusCarryOver = $target + $prevUlpCarryOver;
+                                                                $ulpCarryOver = max(0, $ulpTargetPlusCarryOver - $realisasi);
                                                             @endphp
                                                             <td class="px-2 py-2 border border-gray-300 text-right">{{ $formatLmValue($target, $lm->satuan->name ?? '') }}</td>
                                                                 <td class="px-2 py-2 border border-gray-300 text-right text-purple-900 bg-purple-50">{{ $formatLmValue($ulpTargetPlusCarryOver, $lm->satuan->name ?? '') }}</td>
