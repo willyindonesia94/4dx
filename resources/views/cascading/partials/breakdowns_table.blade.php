@@ -118,7 +118,7 @@
                             <button type="submit" class="text-emerald-500 hover:text-emerald-700 font-bold transition-colors text-xs">Setujui</button>
                         </form>
                         @endif
-                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ addslashes($lm->judul_lm) }}", "{{ $type }}", "{{ addslashes($lm->satuan->name ?? '') }}")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
+                        <button type="button" @click='openEditModal({{ $breakdown->toJson() }}, "{{ addslashes($lm->judul_lm) }}", "{{ $type }}", "{{ addslashes($lm->satuan->name ?? '') }}", "", "{{ $breakdown->minggu_label }}")' class="text-blue-500 hover:text-blue-700 font-bold transition-colors text-xs">Edit</button>
                         @if($canEditDelete)
                         <form id="deleteForm-{{ $breakdown->id }}" action="{{ route('cascading.breakdown.destroy', $breakdown->id) }}" method="POST" class="inline m-0">
                             @csrf

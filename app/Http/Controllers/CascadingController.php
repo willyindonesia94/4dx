@@ -463,15 +463,31 @@ class CascadingController extends Controller
         }
 
         if ($request->filled('bulan') && $request->filled('tahun')) {
-            $isMonthly = \Carbon\Carbon::parse($breakdown->periode_start)->diffInDays(\Carbon\Carbon::parse($breakdown->periode_end)) >= 20;
-            if ($isMonthly) {
-                $weeks = \App\Models\MasterPeriode::getWeekDates($request->tahun, $request->bulan);
-                $breakdown->periode_start = $weeks['target_m1']['start'] ?? \Carbon\Carbon::create($request->tahun, $request->bulan, 1)->format('Y-m-d');
+            $weeks = \App\Models\MasterPeriode::getWeekDates($request->tahun, $request->bulan);
+            
+            if ($request->filled('minggu_label') && $request->minggu_label !== 'Target Total Bulanan') {
+                $mingguLabel = $request->minggu_label;
+                $map = [
+                    'Minggu 1' => 'target_m1',
+                    'Minggu 2' => 'target_m2',
+                    'Minggu 3' => 'target_m3',
+                    'Minggu 4' => 'target_m4',
+                    'Minggu 5' => 'target_m5',
+                ];
+                $key = $map[$mingguLabel] ?? null;
+                if ($key && isset($weeks[$key]) && $weeks[$key]) {
+                    $breakdown->periode_start = $weeks[$key]['start'];
+                    $breakdown->periode_end = $weeks[$key]['end'];
+                }
+            } else {
+                $carbonStart = \Carbon\Carbon::create($request->tahun, $request->bulan, 1);
+                $breakdown->periode_start = $weeks['target_m1']['start'] ?? $carbonStart->format('Y-m-d');
                 $endWeek = isset($weeks['target_m5']) && $weeks['target_m5'] ? 'target_m5' : 'target_m4';
-                $breakdown->periode_end = $weeks[$endWeek]['end'] ?? \Carbon\Carbon::create($request->tahun, $request->bulan, 1)->endOfMonth()->format('Y-m-d');
-                $breakdown->bulan = $request->bulan;
-                $breakdown->tahun = $request->tahun;
+                $breakdown->periode_end = $weeks[$endWeek]['end'] ?? $carbonStart->endOfMonth()->format('Y-m-d');
             }
+            
+            $breakdown->bulan = $request->bulan;
+            $breakdown->tahun = $request->tahun;
         }
 
         $breakdown->unit_id = $request->unit_id;
