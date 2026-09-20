@@ -585,12 +585,12 @@ $formatLmValue = function($value, $satuan) {
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
-                                            <!-- Baris UID Jabar (Total Keseluruhan) -->
                                             @if(!$isUlpLevel)
                                             <tr class="bg-indigo-50 border-b-2 border-indigo-200">
                                                 <td class="px-4 py-2 border border-gray-300 font-black text-indigo-900 whitespace-nowrap sticky left-0 bg-indigo-50 z-10 uppercase">
                                                     UID JABAR
                                                 </td>
+                                                @php $runningUidCarryOver = 0; @endphp
                                                 @foreach($sesi_wigs_matrix as $sw)
                                                     @php
                                                         // Pull UID target and realisasi from unit_id = 1 instead of summing UP3
@@ -635,33 +635,7 @@ $formatLmValue = function($value, $satuan) {
                                                             $uidKomitmen = $uidKomitmen / $komitmenFilledCount;
                                                         }
                                                         
-                                                        $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
-                                                        $prevUidTarget = 0;
-                                                        $prevUidRealisasi = 0;
-                                                        if ($prevSw) {
-                                                            $prevUidTarget = $matrixTargets[$lm->id][1][$prevSw->id] ?? 0;
-                                                            $prevUidRealisasi = $matrixRealisasi[$lm->id][1][$prevSw->id] ?? 0;
-                                                            
-                                                            if ($prevUidTarget == 0) {
-                                                                foreach($filteredUp3sByWig[$wig->id] as $up3Unit) {
-                                                                    $prevUidTarget += $matrixTargets[$lm->id][$up3Unit->id][$prevSw->id] ?? 0;
-                                                                }
-                                                                if ($isPercent && $up3Count > 0) {
-                                                                    $prevUidTarget = $prevUidTarget / $up3Count;
-                                                                }
-                                                            }
-                                                            
-                                                            if ($prevUidRealisasi == 0) {
-                                                                foreach($filteredUp3sByWig[$wig->id] as $up3Unit) {
-                                                                    $prevUidRealisasi += $matrixRealisasi[$lm->id][$up3Unit->id][$prevSw->id] ?? 0;
-                                                                }
-                                                                if ($isPercent && $up3Count > 0) {
-                                                                    $prevUidRealisasi = $prevUidRealisasi / $up3Count;
-                                                                }
-                                                            }
-                                                        }
-                                                        $prevUidCarryOver = max(0, $prevUidTarget - $prevUidRealisasi);
-                                                        $uidTargetPlusCarryOver = $uidTarget + $prevUidCarryOver;
+                                                        $uidTargetPlusCarryOver = $uidTarget + $runningUidCarryOver;
 
                                                         $uidPencapaian = 0;
                                                         if ($uidTargetPlusCarryOver > 0) {
@@ -675,10 +649,23 @@ $formatLmValue = function($value, $satuan) {
                                                         if ($uidPencapaian >= 100) {
                                                             $uidBgColor = 'bg-green-500 text-white'; // No komitmen on UID level currently
                                                         }
-                                                        $uidCarryOver = max(0, $uidTargetPlusCarryOver - $uidRealisasi);
                                                         
+                                                        $runningUidCarryOver = max(0, $uidTargetPlusCarryOver - $uidRealisasi);
+                                                        
+                                                        $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
+                                                        $prevUidRealisasi = 0;
                                                         $uidTrendIcon = '<span class="text-gray-400">-</span>';
                                                         if ($prevSw) {
+                                                            $prevUidRealisasi = $matrixRealisasi[$lm->id][1][$prevSw->id] ?? 0;
+                                                            if ($prevUidRealisasi == 0) {
+                                                                foreach($filteredUp3sByWig[$wig->id] as $up3Unit) {
+                                                                    $prevUidRealisasi += $matrixRealisasi[$lm->id][$up3Unit->id][$prevSw->id] ?? 0;
+                                                                }
+                                                                if ($isPercent && $up3Count > 0) {
+                                                                    $prevUidRealisasi = $prevUidRealisasi / $up3Count;
+                                                                }
+                                                            }
+                                                            
                                                             if ($uidRealisasi > $prevUidRealisasi) {
                                                                 $uidTrendIcon = '<svg class="w-5 h-5 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>';
                                                             } else if ($uidRealisasi < $prevUidRealisasi) {
@@ -694,7 +681,7 @@ $formatLmValue = function($value, $satuan) {
                                                     <td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ $formatLmValue($uidRealisasi, $lm->satuan->name ?? '') }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $uidBgColor }}">{{ $uidPencapaian }}%</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{{ $uidCarryOver > 0 ? $formatLmValue($uidCarryOver, $lm->satuan->name ?? '') : '0' }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{{ $runningUidCarryOver > 0 ? $formatLmValue($runningUidCarryOver, $lm->satuan->name ?? '') : '0' }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{!! $uidTrendIcon !!}</td>
                                                 @endforeach
                                             </tr>
@@ -715,21 +702,14 @@ $formatLmValue = function($value, $satuan) {
                                                             <svg id="icon-{{$lm->id}}-{{$up3->id}}" class="w-4 h-4 text-gray-500 transform transition-transform {{ $isExpanded ? 'rotate-180' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                                         </div>
                                                     </td>
+                                                    @php $runningUp3CarryOver = 0; @endphp
                                                     @foreach($sesi_wigs_matrix as $sw)
                                                         @php
                                                             // Menampilkan rekap target dan realisasi UP3
                                                             $up3Target = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                                                             $up3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
                                                             
-                                                            $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
-                                                            $prevUp3Target = 0;
-                                                            $prevUp3Realisasi = 0;
-                                                            if ($prevSw) {
-                                                                $prevUp3Target = $matrixTargets[$lm->id][$up3->id][$prevSw->id] ?? 0;
-                                                                $prevUp3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$prevSw->id] ?? 0;
-                                                            }
-                                                            $prevUp3CarryOver = max(0, $prevUp3Target - $prevUp3Realisasi);
-                                                            $up3TargetPlusCarryOver = $up3Target + $prevUp3CarryOver;
+                                                            $up3TargetPlusCarryOver = $up3Target + $runningUp3CarryOver;
 
                                                             $up3Pencapaian = round($calcCapaian($up3TargetPlusCarryOver, $up3Realisasi, $lm->polaritas ?? 'positif'), 2);
                                                             
@@ -740,8 +720,10 @@ $formatLmValue = function($value, $satuan) {
                                                             if ($up3Pencapaian >= 100) {
                                                                 $up3BgColor = 'bg-green-500 text-white';
                                                             }
-                                                            $up3CarryOver = max(0, $up3TargetPlusCarryOver - $up3Realisasi);
                                                             
+                                                            $runningUp3CarryOver = max(0, $up3TargetPlusCarryOver - $up3Realisasi);
+                                                            
+                                                            $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
                                                             $prevUp3Realisasi = 0;
                                                             $up3TrendIcon = '<span class="text-gray-400">-</span>';
                                                             if ($prevSw) {
@@ -755,79 +737,72 @@ $formatLmValue = function($value, $satuan) {
                                                                 }
                                                             }
                                                         @endphp
-                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ $formatLmValue($up3Target, $lm->satuan->name ?? '') }}</td>
-                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold text-purple-900 bg-purple-50">{{ $formatLmValue($up3TargetPlusCarryOver, $lm->satuan->name ?? '') }}</td>
-                                                                @php 
-                                                                    $komData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
-                                                                    $hasKom = $komData !== null;
-                                                                    $komitmenVal = $hasKom ? $komData['komitmen'] : '';
+                                                        <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ $formatLmValue($up3Target, $lm->satuan->name ?? '') }}</td>
+                                                        <td class="px-2 py-2 border border-gray-300 text-right font-black text-purple-900 bg-purple-50">{{ $formatLmValue($up3TargetPlusCarryOver, $lm->satuan->name ?? '') }}</td>
+                                                        @php 
+                                                            $hasKom = $up3KomData !== null;
+                                                            
+                                                            $komBg = 'bg-slate-50';
+                                                            $komText = 'text-gray-700';
+                                                            
+                                                            // Hitung target carry over minggu depan untuk perbandingan warna komitmen
+                                                            $targetCarryOverMingguDepan = max(0, $up3TargetPlusCarryOver - $up3Realisasi);
+                                                            
+                                                            if ($hasKom && $up3KomVal !== '' && $up3KomVal !== null) {
+                                                                if ((float)$up3KomVal < (float)$targetCarryOverMingguDepan) {
+                                                                    $komBg = 'bg-red-500';
+                                                                    $komText = 'text-white';
+                                                                }
+                                                            }
 
-                                                                    $userAuth = auth()->user();
-                                                                    $canEditUp3Komitmen = false;
-                                                                    if ($userAuth) {
-                                                                        if ($userAuth->hasRole('Super Admin') || $userAuth->hasRole('Perencanaan UID') || strtolower($userAuth->role_name) === 'super admin' || strtolower($userAuth->role_name) === 'perencanaan uid') {
-                                                                            $canEditUp3Komitmen = true;
-                                                                        } else if ($userAuth->unit_id == $up3->id) {
-                                                                            if (in_array(strtolower($userAuth->role_name), ['admin unit', 'manager up3', 'manajer up3', 'asman perencanaan up3', 'asman bidang up3', 'team leader ulp'])) {
-                                                                                $canEditUp3Komitmen = true;
-                                                                            }
-                                                                        }
-                                                                        
-                                                                        // Lock editing for past sessions (unless Super Admin)
-                                                                        if ($canEditUp3Komitmen && !($userAuth->hasRole('Super Admin') || strtolower($userAuth->role_name) === 'super admin')) {
-                                                                            if ($komitmenLocks[$sw->id] ?? true) {
-                                                                                $canEditUp3Komitmen = false;
-                                                                            }
-                                                                        }
+                                                            $userAuth = auth()->user();
+                                                            $canEditUp3Komitmen = false;
+                                                            if ($userAuth) {
+                                                                if ($userAuth->hasRole('Super Admin') || $userAuth->hasRole('Perencanaan UID') || strtolower($userAuth->role_name) === 'super admin' || strtolower($userAuth->role_name) === 'perencanaan uid') {
+                                                                    $canEditUp3Komitmen = true;
+                                                                } else if ($userAuth->unit_id == $up3->id) {
+                                                                    if (in_array(strtolower($userAuth->role_name), ['admin unit', 'manager up3', 'manajer up3', 'asman perencanaan up3', 'asman bidang up3', 'team leader ulp'])) {
+                                                                        $canEditUp3Komitmen = true;
                                                                     }
-                                                                    
-                                                                    // Calculate Target + Carry Over of NEXT week for UP3
-                                                                    $nextSwObj = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke + 1)->first();
-                                                                    $nextUp3Target = 0;
-                                                                    if ($nextSwObj) {
-                                                                        $nextUp3Target = $matrixTargets[$lm->id][$up3->id][$nextSwObj->id] ?? 0;
+                                                                }
+                                                                
+                                                                // Lock editing for past sessions (unless Super Admin)
+                                                                if ($canEditUp3Komitmen && !($userAuth->hasRole('Super Admin') || strtolower($userAuth->role_name) === 'super admin')) {
+                                                                    if ($komitmenLocks[$sw->id] ?? true) {
+                                                                        $canEditUp3Komitmen = false;
                                                                     }
-                                                                    $carryOverFromThisWeek = max(0, $up3Target - $up3Realisasi);
-                                                                    $targetCarryOverMingguDepan = $nextUp3Target + $carryOverFromThisWeek;
-                                                                    
-                                                                    $komBg = 'bg-slate-50';
-                                                                    $komText = 'text-gray-700';
-                                                                    
-                                                                    if ($hasKom && $komitmenVal !== '' && $komitmenVal !== null) {
-                                                                        if ((float)$komitmenVal < (float)$targetCarryOverMingguDepan) {
-                                                                            $komBg = 'bg-red-500';
-                                                                            $komText = 'text-white';
-                                                                        }
-                                                                    }
-                                                                @endphp
-                                                            <td class="px-2 py-2 border border-gray-300 text-center {{ $komBg }}">
-                                                                <span class="text-xs font-semibold {{ $komText }}">{{ $komitmenVal !== '' && $komitmenVal !== null ? $formatLmValue($komitmenVal, $lm->satuan->name ?? '') : '-' }}</span>
-                                                                </td>
-                                                            <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
-                                                                @if($canEditUp3Komitmen || $hasKom)
-                                                                    <button type="button" 
-                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3Target }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', wigId: {{ $wig->id }}, up3Id: {{ $up3->id }}, date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUp3Komitmen ? 'false' : 'true' }} } }))"
-                                                                        class="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
-                                                                        title="{{ $hasKom ? ($canEditUp3Komitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUp3Komitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
-                                                                        @if($canEditUp3Komitmen)
-                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' : 'M12 4v16m8-8H4' }}"></path></svg>
-                                                                        @else
-                                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                                                        @endif
-                                                                    </button>
-                                                                @else
-                                                                    <span class="text-gray-400">-</span>
-                                                                @endif
-                                                            </td>
-                                                        <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ $formatLmValue($up3Realisasi, $lm->satuan->name ?? '') }}</td>
-                                                        <td class="px-2 py-2 border border-gray-300 text-right font-bold {{ $up3BgColor }}">{{ $up3Pencapaian }}%</td>
-                                                        <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 text-xs font-semibold text-gray-700">
-                                                            {{ $up3CarryOver > 0 ? $formatLmValue($up3CarryOver, $lm->satuan->name ?? '') : '0' }}
+                                                                }
+                                                            }
+                                                        @endphp
+                                                    <td class="px-2 py-2 border border-gray-300 text-center {{ $komBg }}">
+                                                        <span class="text-xs font-semibold {{ $komText }}">{{ $up3KomVal !== '' && $up3KomVal !== null ? $formatLmValue($up3KomVal, $lm->satuan->name ?? '') : '-' }}</span>
                                                         </td>
-                                                        <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{!! $up3TrendIcon !!}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
+                                                        @if($canEditUp3Komitmen || $hasKom)
+                                                            <button type="button" 
+                                                                @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3TargetPlusCarryOver }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', wigId: {{ $wig->id }}, up3Id: {{ $up3->id }}, date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUp3Komitmen ? 'false' : 'true' }} } }))"
+                                                                class="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
+                                                                title="{{ $hasKom ? ($canEditUp3Komitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUp3Komitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
+                                                                @if($canEditUp3Komitmen)
+                                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="{{ $hasKom ? 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' : 'M12 4v16m8-8H4' }}"></path></svg>
+                                                                @else
+                                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                                                @endif
+                                                            </button>
+                                                        @else
+                                                            <span class="text-gray-400">-</span>
+                                                        @endif
+                                                    </td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ $formatLmValue($up3Realisasi, $lm->satuan->name ?? '') }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right font-bold {{ $up3BgColor }}">{{ $up3Pencapaian }}%</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 text-xs font-semibold text-gray-700">
+                                                        {{ $runningUp3CarryOver > 0 ? $formatLmValue($runningUp3CarryOver, $lm->satuan->name ?? '') : '0' }}
+                                                    </td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{!! $up3TrendIcon !!}</td>
                                                     @endforeach
                                                 </tr>
                                                 @foreach($ulps as $u)
+                                                    @php $runningUlpCarryOver = 0; @endphp
                                                     <tr id="row-lm-{{$lm->id}}-unit-{{$u->id}}" class="hover:bg-slate-50 transition-colors ulp-row-{{$lm->id}}-{{$up3->id}} {{ $isExpanded ? '' : 'hidden' }}">
                                                         <td class="px-4 py-2 border border-gray-300 font-medium text-gray-800 whitespace-nowrap sticky left-0 bg-white z-10 pl-8">
                                                             {{ $u->name }}
@@ -837,15 +812,7 @@ $formatLmValue = function($value, $satuan) {
                                                                 $target = $matrixTargets[$lm->id][$u->id][$sw->id] ?? 0;
                                                                 $realisasi = $matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0;
                                                                 
-                                                                $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
-                                                                $prevUlpTarget = 0;
-                                                                $prevUlpRealisasi = 0;
-                                                                if ($prevSw) {
-                                                                    $prevUlpTarget = $matrixTargets[$lm->id][$u->id][$prevSw->id] ?? 0;
-                                                                    $prevUlpRealisasi = $matrixRealisasi[$lm->id][$u->id][$prevSw->id] ?? 0;
-                                                                }
-                                                                $prevUlpCarryOver = max(0, $prevUlpTarget - $prevUlpRealisasi);
-                                                                $ulpTargetPlusCarryOver = $target + $prevUlpCarryOver;
+                                                                $ulpTargetPlusCarryOver = $target + $runningUlpCarryOver;
 
                                                                 $pencapaian = round($calcCapaian($ulpTargetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
                                                                 $komitmenData = $matrixKomitmen[$lm->id][$u->id][$sw->id] ?? null;
@@ -874,6 +841,10 @@ $formatLmValue = function($value, $satuan) {
                                                                     }
                                                                 }
                                                                 
+                                                                $runningUlpCarryOver = max(0, $ulpTargetPlusCarryOver - $realisasi);
+                                                                $ulpCarryOver = $runningUlpCarryOver;
+                                                                
+                                                                $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
                                                                 $prevRealisasi = 0;
                                                                 $trendIcon = '<span class="text-gray-400">-</span>';
                                                                 if ($prevSw) {
@@ -887,7 +858,6 @@ $formatLmValue = function($value, $satuan) {
                                                                     }
                                                                 }
                                                                 
-                                                                $ulpCarryOver = max(0, $ulpTargetPlusCarryOver - $realisasi);
                                                             @endphp
                                                             <td class="px-2 py-2 border border-gray-300 text-right">{{ $formatLmValue($target, $lm->satuan->name ?? '') }}</td>
                                                                 <td class="px-2 py-2 border border-gray-300 text-right text-purple-900 bg-purple-50">{{ $formatLmValue($ulpTargetPlusCarryOver, $lm->satuan->name ?? '') }}</td>
