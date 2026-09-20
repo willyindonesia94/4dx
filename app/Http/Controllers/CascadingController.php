@@ -342,7 +342,7 @@ class CascadingController extends Controller
         $carbonEnd = $carbonStart->copy()->endOfMonth();
         $weeks = \App\Models\MasterPeriode::getWeekDates($request->tahun, $request->bulan);
 
-        $data = $request->except(['_token', 'bulan', 'tahun', 'target_m1', 'target_m2', 'target_m3', 'target_m4', 'target_m5']);
+        $data = $request->except(['_token', 'bulan', 'tahun', 'target_m1', 'target_m2', 'target_m3', 'target_m4', 'target_m5', 'minggu_label']);
         $data['bulan'] = $request->bulan;
         $data['tahun'] = $request->tahun;
         $data['periode_start'] = $weeks['target_m1']['start'] ?? $carbonStart->format('Y-m-d');
