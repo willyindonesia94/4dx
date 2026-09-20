@@ -273,20 +273,27 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
                                 'satuan_id' => $b->satuan_id,
                                 'bulan' => $b->bulan,
                                 'tahun' => $b->tahun,
+                                'count' => 0,
                             ];
                         }
                         $up3Accumulations[$key]['angka_target'] += $b->angka_target;
+                        $up3Accumulations[$key]['count'] += 1;
                     }
                 }
                 
                 foreach ($up3Accumulations as $data) {
+                    $finalTarget = $data['angka_target'];
+                    if (in_array((int)$data['satuan_id'], [1, 2, 14]) && $data['count'] > 0) {
+                        $finalTarget = round($finalTarget / $data['count'], 2);
+                    }
+                    
                     \App\Models\BreakdownLm::updateOrCreate([
                         'lm_id' => $data['lm_id'],
                         'unit_id' => $data['unit_id'],
                         'periode_start' => $data['periode_start'],
                         'periode_end' => $data['periode_end'],
                     ], [
-                        'angka_target' => $data['angka_target'],
+                        'angka_target' => $finalTarget,
                         'satuan_id' => $data['satuan_id'],
                         'bulan' => $data['bulan'],
                         'tahun' => $data['tahun'],
