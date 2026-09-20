@@ -162,7 +162,7 @@
         },
         autoCalcWeekly() {
             if (this.isAutoFill && this.formAngkaTarget > 0 && !this.editMode) {
-                let isNonSummable = [1, 2, 14].includes(parseInt(this.formSatuanId)) || String(this.formSatuanName).trim() === '%';
+                let isNonSummable = [1, 2, 14].includes(parseInt(this.formSatuanId)) || String(this.formSatuanName).trim() === "%";
                 let val = isNonSummable 
                             ? parseFloat(this.formAngkaTarget).toFixed(2)
                             : (parseFloat(this.formAngkaTarget) / 5).toFixed(2);
