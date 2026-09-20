@@ -535,11 +535,11 @@
                                     </div>
                                 </div>
 
-                                <template x-if="editMode">
+                                <div x-show="editMode">
                                     <div class="grid grid-cols-3 gap-4 mb-4">
                                         <div class="space-y-1">
                                             <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Target Waktu</label>
-                                            <select name="minggu_label" x-model="formMingguLabel" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700 font-medium">
+                                            <select name="minggu_label" x-model="formMingguLabel" :required="editMode" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700 font-medium">
                                                 <option value="Minggu 1">Minggu 1</option>
                                                 <option value="Minggu 2">Minggu 2</option>
                                                 <option value="Minggu 3">Minggu 3</option>
@@ -550,7 +550,7 @@
                                         </div>
                                         <div class="space-y-1">
                                             <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Bulan</label>
-                                            <select name="bulan" x-model="formBulan" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700 font-medium">
+                                            <select name="bulan" x-model="formBulan" :required="editMode" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700 font-medium">
                                                 <option value="" disabled>-- Pilih Bulan --</option>
                                                 @php $months = [1=>'Januari', 2=>'Februari', 3=>'Maret', 4=>'April', 5=>'Mei', 6=>'Juni', 7=>'Juli', 8=>'Agustus', 9=>'September', 10=>'Oktober', 11=>'November', 12=>'Desember']; @endphp
                                                 @foreach($months as $num => $name)
@@ -560,7 +560,7 @@
                                         </div>
                                         <div class="space-y-1">
                                             <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tahun</label>
-                                            <select name="tahun" x-model="formTahun" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700 font-medium">
+                                            <select name="tahun" x-model="formTahun" :required="editMode" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700 font-medium">
                                                 <option value="" disabled>-- Pilih Tahun --</option>
                                                 @for($y = date('Y') - 1; $y <= date('Y') + 3; $y++)
                                                     <option value="{{ $y }}">{{ $y }}</option>
@@ -568,14 +568,13 @@
                                             </select>
                                         </div>
                                     </div>
-                                </template>
-                                <template x-if="!editMode">
+                                </div>
+                                <div x-show="!editMode">
                                     <div class="grid grid-cols-2 gap-4 mb-4">
                                         <div class="space-y-1">
                                             <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Bulan</label>
-                                            <select name="bulan" x-model="formBulan" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700 font-medium">
+                                            <select name="bulan" x-model="formBulan" :required="!editMode" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700 font-medium">
                                                 <option value="" disabled>-- Pilih Bulan --</option>
-                                                @php $months = [1=>'Januari', 2=>'Februari', 3=>'Maret', 4=>'April', 5=>'Mei', 6=>'Juni', 7=>'Juli', 8=>'Agustus', 9=>'September', 10=>'Oktober', 11=>'November', 12=>'Desember']; @endphp
                                                 @foreach($months as $num => $name)
                                                     <option value="{{ $num }}">{{ $name }}</option>
                                                 @endforeach
@@ -583,14 +582,15 @@
                                         </div>
                                         <div class="space-y-1">
                                             <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Tahun</label>
-                                            <select name="tahun" x-model="formTahun" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700 font-medium">
+                                            <select name="tahun" x-model="formTahun" :required="!editMode" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700 font-medium">
                                                 <option value="" disabled>-- Pilih Tahun --</option>
                                                 @for($y = date('Y') - 1; $y <= date('Y') + 3; $y++)
                                                     <option value="{{ $y }}">{{ $y }}</option>
                                                 @endfor
                                             </select>
                                         </div>
-                                </template>
+                                    </div>
+                                </div>
                                 <template x-if="!editMode">
                                     <div class="mt-2 p-4 bg-slate-50 border border-slate-200 rounded-lg">
                                         <div class="flex justify-between items-center mb-3">
