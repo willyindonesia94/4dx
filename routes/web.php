@@ -122,6 +122,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/users/template', [\App\Http\Controllers\UserController::class, 'template'])->name('users.template');
     Route::post('/users/preview-import', [\App\Http\Controllers\UserController::class, 'previewImport'])->name('users.preview_import');
     Route::post('/users/import', [\App\Http\Controllers\UserController::class, 'import'])->name('users.import');
+    Route::post('/users/{user}/toggle-active', [\App\Http\Controllers\UserController::class, 'toggleActive'])->name('users.toggle_active')->middleware(['role:Super Admin|Perencanaan UID']);
     Route::resource('users', \App\Http\Controllers\UserController::class)
         ->middleware(['role:Super Admin|Perencanaan UID']);
         

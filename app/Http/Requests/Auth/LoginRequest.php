@@ -50,6 +50,16 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        if (! Auth::user()->is_active) {
+            Auth::logout();
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+
+            throw ValidationException::withMessages([
+                'username' => 'Akun anda aksesnya sementara ditutup silahkan hubungi Bagian Perencanaan UID',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

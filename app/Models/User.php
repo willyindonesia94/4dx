@@ -44,7 +44,8 @@ class User extends Authenticatable
         'profile_photo',
         'role_name',
         'unit_id',
-        'matrix_group_id'
+        'matrix_group_id',
+        'is_active'
     ];
 
     public function hasRole($roles, string $guard = null): bool

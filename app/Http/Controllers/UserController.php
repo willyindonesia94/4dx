@@ -137,6 +137,22 @@ class UserController extends Controller
         return redirect()->route('users.index', $params)->with('success', 'Pengguna berhasil dihapus.');
     }
 
+    public function toggleActive(User $user)
+    {
+        if ($user->id === auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Anda tidak dapat menonaktifkan akun Anda sendiri.'], 403);
+        }
+
+        $user->is_active = !$user->is_active;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'is_active' => $user->is_active,
+            'message' => 'Status pengguna berhasil diubah.'
+        ]);
+    }
+
     public function previewImport(Request $request)
     {
         $request->validate([

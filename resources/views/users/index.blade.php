@@ -61,6 +61,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role Aplikasi</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Kerja</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matrix Group (Bidang)</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                             </tr>
                         </thead>
@@ -81,6 +82,12 @@
                                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
                                         {{ $user->matrix_group_id }}
                                     </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" class="sr-only peer" {{ $user->is_active ? 'checked' : '' }} onchange="toggleUserStatus(this, {{ $user->id }})" {{ $user->id === auth()->id() ? 'disabled' : '' }}>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 {{ $user->id === auth()->id() ? 'opacity-50 cursor-not-allowed' : '' }}"></div>
+                                    </label>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
                                     <a href="{{ route('users.edit', ['user' => $user->id] + ($selectedLevel ? ['level' => $selectedLevel] : [])) }}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
@@ -311,6 +318,40 @@
                             }
                         }
                     }
+                }
+
+                function toggleUserStatus(checkbox, userId) {
+                    const label = checkbox.parentElement.querySelector('.status-label');
+                    const isChecked = checkbox.checked;
+                    const originalText = label.innerText;
+                    label.innerText = 'Menyimpan...';
+                    checkbox.disabled = true;
+
+                    fetch(`/users/${userId}/toggle-active`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({})
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        checkbox.disabled = false;
+                        if (data.success) {
+                            label.innerText = data.is_active ? 'Aktif' : 'Nonaktif';
+                        } else {
+                            checkbox.checked = !isChecked;
+                            label.innerText = originalText;
+                            alert(data.message || 'Gagal mengubah status');
+                        }
+                    })
+                    .catch(error => {
+                        checkbox.disabled = false;
+                        checkbox.checked = !isChecked;
+                        label.innerText = originalText;
+                        alert('Terjadi kesalahan jaringan.');
+                    });
                 }
             </script>
         </div>
