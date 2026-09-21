@@ -637,19 +637,43 @@ class SesiWigController extends Controller
         $sid = $sesi_wig->id;
         foreach ($up3s as $up3) {
             foreach ($lms as $lm) {
-                $target = $matrixTargets[$lm->id][$up3->id][$sid] ?? 0;
-                $realisasi = $matrixRealisasi[$lm->id][$up3->id][$sid] ?? 0;
-                if ($target <= 0 && $realisasi <= 0 && strtolower(trim($lm->polaritas ?? 'positif')) !== 'negatif') continue;
-                $pct = round($calcCapaian($target, $realisasi, $lm->polaritas ?? 'positif'), 2);
+                $runningCarryOver = 0;
+                $targetPlusCarryOver = 0;
+                $realisasi = 0;
+                foreach($sesi_wigs_month as $sw) {
+                    $t = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
+                    $r = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
+                    $targetPlusCarryOver = $t + $runningCarryOver;
+                    $runningCarryOver = max(0, $targetPlusCarryOver - $r);
+                    if ($sw->id == $sid) {
+                        $realisasi = $r;
+                        break;
+                    }
+                }
+                
+                if ($targetPlusCarryOver <= 0 && $realisasi <= 0 && strtolower(trim($lm->polaritas ?? 'positif')) !== 'negatif') continue;
+                $pct = round($calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
                 $lmMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => $pct];
             }
         }
         foreach ($allUlps as $ulp) {
             foreach ($lms as $lm) {
-                $target = $matrixTargets[$lm->id][$ulp->id][$sid] ?? 0;
-                $realisasi = $matrixRealisasi[$lm->id][$ulp->id][$sid] ?? 0;
-                if ($target <= 0 && $realisasi <= 0 && strtolower(trim($lm->polaritas ?? 'positif')) !== 'negatif') continue;
-                $pct = round($calcCapaian($target, $realisasi, $lm->polaritas ?? 'positif'), 2);
+                $runningCarryOver = 0;
+                $targetPlusCarryOver = 0;
+                $realisasi = 0;
+                foreach($sesi_wigs_month as $sw) {
+                    $t = $matrixTargets[$lm->id][$ulp->id][$sw->id] ?? 0;
+                    $r = $matrixRealisasi[$lm->id][$ulp->id][$sw->id] ?? 0;
+                    $targetPlusCarryOver = $t + $runningCarryOver;
+                    $runningCarryOver = max(0, $targetPlusCarryOver - $r);
+                    if ($sw->id == $sid) {
+                        $realisasi = $r;
+                        break;
+                    }
+                }
+
+                if ($targetPlusCarryOver <= 0 && $realisasi <= 0 && strtolower(trim($lm->polaritas ?? 'positif')) !== 'negatif') continue;
+                $pct = round($calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
                 $lmMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => $pct];
             }
         }
