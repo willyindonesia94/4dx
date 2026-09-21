@@ -139,7 +139,10 @@
                     const container = document.getElementById(containerId);
                     if (container) container.style.opacity = '0.5';
                     
-                    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    fetch(url, { 
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-cache' },
+                        cache: 'no-store'
+                    })
                         .then(res => res.text())
                         .then(html => {
                             const doc = new DOMParser().parseFromString(html, 'text/html');
