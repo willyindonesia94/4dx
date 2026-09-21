@@ -142,6 +142,10 @@ class UserController extends Controller
         if ($user->id === auth()->id()) {
             return response()->json(['success' => false, 'message' => 'Anda tidak dapat menonaktifkan akun Anda sendiri.'], 403);
         }
+        
+        if ($user->hasRole('Super Admin')) {
+            return response()->json(['success' => false, 'message' => 'Akun Super Admin bersifat permanen dan tidak dapat dinonaktifkan.'], 403);
+        }
 
         $user->is_active = !$user->is_active;
         $user->save();
