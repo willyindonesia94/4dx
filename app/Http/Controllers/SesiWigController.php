@@ -651,7 +651,6 @@ class SesiWigController extends Controller
                     }
                 }
                 
-                if ($targetPlusCarryOver <= 0 && $realisasi <= 0 && strtolower(trim($lm->polaritas ?? 'positif')) !== 'negatif') continue;
                 $pct = round($calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
                 $lmMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => $pct];
             }
@@ -672,7 +671,6 @@ class SesiWigController extends Controller
                     }
                 }
 
-                if ($targetPlusCarryOver <= 0 && $realisasi <= 0 && strtolower(trim($lm->polaritas ?? 'positif')) !== 'negatif') continue;
                 $pct = round($calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
                 $lmMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => $pct];
             }
