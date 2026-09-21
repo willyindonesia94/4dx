@@ -85,7 +85,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" class="sr-only peer" {{ $user->is_active ? 'checked' : '' }} onchange="toggleUserStatus(this, {{ $user->id }})" {{ $user->id === auth()->id() ? 'disabled' : '' }}>
+                                        <input type="checkbox" class="sr-only peer" {{ $user->is_active ? 'checked' : '' }} onchange="toggleUserStatus(this, '{{ route('users.toggle_active', $user->id) }}')" {{ $user->id === auth()->id() ? 'disabled' : '' }}>
                                         <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 {{ $user->id === auth()->id() ? 'opacity-50 cursor-not-allowed' : '' }}"></div>
                                     </label>
                                 </td>
@@ -320,14 +320,14 @@
                     }
                 }
 
-                function toggleUserStatus(checkbox, userId) {
+                function toggleUserStatus(checkbox, url) {
                     const label = checkbox.parentElement.querySelector('.status-label');
                     const isChecked = checkbox.checked;
                     const originalText = label.innerText;
                     label.innerText = 'Menyimpan...';
                     checkbox.disabled = true;
 
-                    fetch(`/users/${userId}/toggle-active`, {
+                    fetch(url, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -335,7 +335,12 @@
                         },
                         body: JSON.stringify({})
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network error');
+                        }
+                        return response.json();
+                    })
                     .then(data => {
                         checkbox.disabled = false;
                         if (data.success) {
@@ -350,7 +355,7 @@
                         checkbox.disabled = false;
                         checkbox.checked = !isChecked;
                         label.innerText = originalText;
-                        alert('Terjadi kesalahan jaringan.');
+                        alert('Terjadi kesalahan jaringan atau koneksi terputus. Pastikan file kode sudah diperbarui di server.');
                     });
                 }
             </script>
