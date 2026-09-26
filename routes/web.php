@@ -118,6 +118,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/laporan-bulanan/export-lengkap', [\App\Http\Controllers\LaporanBulananController::class, 'exportLengkap'])->name('laporan.exportLengkap');
     Route::get('/laporan-bulanan/preview', [\App\Http\Controllers\LaporanBulananController::class, 'previewReport'])->name('laporan.preview');
 
+    // Laporan Komitmen Mingguan
+    Route::get('/laporan-komitmen', [\App\Http\Controllers\LaporanKomitmenController::class, 'index'])->name('laporan-komitmen.index');
+    Route::get('/laporan-komitmen/preview', [\App\Http\Controllers\LaporanKomitmenController::class, 'preview'])->name('laporan-komitmen.preview');
+    Route::post('/laporan-komitmen/export', [\App\Http\Controllers\LaporanKomitmenController::class, 'exportPdf'])->name('laporan-komitmen.export');
+    Route::post('/laporan-komitmen/export-word', [\App\Http\Controllers\LaporanKomitmenController::class, 'exportWord'])->name('laporan-komitmen.export-word');
+
+
     // User Management (Superadmin Only)
     Route::get('/users/template', [\App\Http\Controllers\UserController::class, 'template'])->name('users.template');
     Route::post('/users/preview-import', [\App\Http\Controllers\UserController::class, 'previewImport'])->name('users.preview_import');
@@ -214,3 +221,8 @@ Route::get('/run-test', function () {
 Route::get('/check-wig4', function () {
     return \App\Models\MasterWig::find(4)->polaritas ?? 'null';
 });
+
+Route::get('/clear-cache-all', function () { \Illuminate\Support\Facades\Artisan::call('optimize:clear'); return 'Cache cleared successfully. Please refresh the error page.'; });
+
+
+

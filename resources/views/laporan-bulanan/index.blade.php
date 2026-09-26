@@ -78,6 +78,18 @@
             </div>
             @endif
 
+            <!-- Navigation Tabs -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6">
+                <nav class="flex space-x-4">
+                    <a href="{{ route('laporan.index') }}" class="bg-blue-50 text-blue-700 px-3 py-2 font-medium text-sm rounded-md transition-colors">
+                        Laporan Bulanan & Historis
+                    </a>
+                    <a href="{{ route('laporan-komitmen.index') }}" class="text-slate-500 hover:text-slate-700 px-3 py-2 font-medium text-sm rounded-md transition-colors">
+                        Laporan Komitmen (Mingguan)
+                    </a>
+                </nav>
+            </div>
+
             <!-- FILTER SECTION -->
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="bg-slate-50 px-6 py-4 border-b border-slate-200">
