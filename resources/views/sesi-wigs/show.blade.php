@@ -8,7 +8,9 @@ foreach($sesi_wigs_matrix as $sw) {
     if (!$sDate) { $sDate = \Carbon\Carbon::create($sw->tahun, $sw->bulan, 1)->addDays(($sw->minggu_ke - 1) * 7)->format('Y-m-d'); }
     $tStart = \Carbon\Carbon::parse($sDate);
     $oDate = $tStart->copy()->subDays(6)->startOfDay();
-    $dLine = $tStart->copy()->endOfDay();
+    // Diperpanjang agar bisa diisi tiap hari sampai akhir minggu (Minggu jam 23:59 / 12 malam)
+    $dLine = $tStart->copy()->addDays(6)->endOfDay();
+        
     $komitmenLocks[$sw->id] = now()->isAfter($dLine) || now()->isBefore($oDate);
 }
 
