@@ -177,17 +177,25 @@ class SesiWigController extends Controller
         $targetStartDate = Carbon::parse($sesi_wig->tanggal_pelaksanaan)->startOfMonth()->format('Y-m-d');
         $targetEndDate = Carbon::parse($sesi_wig->tanggal_pelaksanaan)->endOfMonth()->format('Y-m-d');
 
-        $masterPeriode = \App\Models\MasterPeriode::where('tahun', $sesi_wig->tahun)->where('bulan', $sesi_wig->bulan)->first();
-        if ($masterPeriode) {
+        $weeksData = \App\Models\MasterPeriode::getWeekDates($sesi_wig->tahun, $sesi_wig->bulan);
+        
+        $lastEnd = $weeksData['target_m1']['end'] ?? null;
+        if (!empty($weeksData['target_m5']['end'])) $lastEnd = $weeksData['target_m5']['end'];
+        elseif (!empty($weeksData['target_m4']['end'])) $lastEnd = $weeksData['target_m4']['end'];
+        elseif (!empty($weeksData['target_m3']['end'])) $lastEnd = $weeksData['target_m3']['end'];
+        elseif (!empty($weeksData['target_m2']['end'])) $lastEnd = $weeksData['target_m2']['end'];
+
+        if (!empty($weeksData['target_m1']['start']) && $lastEnd) {
             $monthlyCalendar = [
-                'start' => $masterPeriode->start_m1, 
-                'end' => $masterPeriode->end_m5 ?: ($masterPeriode->end_m4 ?: $masterPeriode->end_m1)
+                'start' => $weeksData['target_m1']['start'], 
+                'end' => $lastEnd
             ];
-            if ($masterPeriode->start_m1 && $masterPeriode->end_m1) $weeklyCalendars[1] = ['start' => $masterPeriode->start_m1, 'end' => $masterPeriode->end_m1];
-            if ($masterPeriode->start_m2 && $masterPeriode->end_m2) $weeklyCalendars[2] = ['start' => $masterPeriode->start_m2, 'end' => $masterPeriode->end_m2];
-            if ($masterPeriode->start_m3 && $masterPeriode->end_m3) $weeklyCalendars[3] = ['start' => $masterPeriode->start_m3, 'end' => $masterPeriode->end_m3];
-            if ($masterPeriode->start_m4 && $masterPeriode->end_m4) $weeklyCalendars[4] = ['start' => $masterPeriode->start_m4, 'end' => $masterPeriode->end_m4];
-            if ($masterPeriode->start_m5 && $masterPeriode->end_m5) $weeklyCalendars[5] = ['start' => $masterPeriode->start_m5, 'end' => $masterPeriode->end_m5];
+        }
+        
+        for ($i=1; $i<=5; $i++) {
+            if (!empty($weeksData["target_m{$i}"])) {
+                $weeklyCalendars[$i] = $weeksData["target_m{$i}"];
+            }
         }
 
         if (strtolower(trim($sesi_wig->tipe_sesi)) === 'mingguan') {

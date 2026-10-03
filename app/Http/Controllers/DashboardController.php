@@ -689,14 +689,12 @@ class DashboardController extends Controller
                 });
             }
 
-            $masterPeriode = \App\Models\MasterPeriode::where('tahun', $tahun)->where('bulan', $bulan)->first();
+            $weeksData = \App\Models\MasterPeriode::getWeekDates($tahun, $bulan);
             $weeklyCalendars = [];
-            if ($masterPeriode) {
-                if ($masterPeriode->start_m1 && $masterPeriode->end_m1) $weeklyCalendars[1] = ['start' => $masterPeriode->start_m1, 'end' => $masterPeriode->end_m1];
-                if ($masterPeriode->start_m2 && $masterPeriode->end_m2) $weeklyCalendars[2] = ['start' => $masterPeriode->start_m2, 'end' => $masterPeriode->end_m2];
-                if ($masterPeriode->start_m3 && $masterPeriode->end_m3) $weeklyCalendars[3] = ['start' => $masterPeriode->start_m3, 'end' => $masterPeriode->end_m3];
-                if ($masterPeriode->start_m4 && $masterPeriode->end_m4) $weeklyCalendars[4] = ['start' => $masterPeriode->start_m4, 'end' => $masterPeriode->end_m4];
-                if ($masterPeriode->start_m5 && $masterPeriode->end_m5) $weeklyCalendars[5] = ['start' => $masterPeriode->start_m5, 'end' => $masterPeriode->end_m5];
+            for ($i=1; $i<=5; $i++) {
+                if (!empty($weeksData["target_m{$i}"])) {
+                    $weeklyCalendars[$i] = $weeksData["target_m{$i}"];
+                }
             }
 
             foreach ($sesi_wigs_matrix as $sw) {
