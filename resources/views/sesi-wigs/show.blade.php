@@ -554,7 +554,6 @@ $formatLmValue = function($value, $satuan) {
                                             <tr>
                                                 <th rowspan="2" class="px-4 py-3 border border-gray-300 text-left font-bold text-gray-800 sticky left-0 bg-gray-100 z-10">UNIT</th>
                                                 @foreach($sesi_wigs_matrix as $sw)
-                                                    <th colspan="8" class="px-4 py-2 border border-gray-300 text-center font-bold text-gray-800 bg-indigo-50">
                                                         @php
                                                             $headerLabel = strtoupper($sw->tipe_sesi);
                                                             if (strtolower(trim($sw->tipe_sesi)) === 'mingguan') {
