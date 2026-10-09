@@ -62,12 +62,9 @@ class MasterBidang extends Model
         }
         if (!$node) return $results;
 
-        // Dapatkan semua ancestor (induk). Batasan UID_BIDANG dihapus agar SRM bisa melihat WIG bidangnya sendiri.
-        $curr = $node->parent;
-        while ($curr) {
-            $results[] = $curr->name;
-            $curr = $curr->parent;
-        }
+        // Catatan: Sebelumnya ada logika untuk mengambil ancestor (induk).
+        // Logika ini dihapus agar user bawahan (misal MSB) tidak melihat WIG milik sibling-nya
+        // (misal MSB lain) yang kebetulan di-tag dengan nama parent (SRM) yang sama.
 
         // Dapatkan semua descendant (anak, cucu, dst) secara rekursif
         $getDescendants = function($parent) use (&$getDescendants, &$results) {
