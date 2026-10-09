@@ -495,7 +495,7 @@
                                                                     @php
                                                                         $uidTarget = $matrixTargets[$lm->id][1][$sw->id] ?? 0;
                                                                         $uidRealisasi = $matrixRealisasi[$lm->id][1][$sw->id] ?? 0;
-                                                                        $uidPencapaian = $uidTarget > 0 ? min(100, round(($uidRealisasi / $uidTarget) * 100, 2)) : 0;
+                                                                        $uidPencapaian = $uidTarget > 0 ? round(($uidRealisasi / $uidTarget) * 100, 2) : 0;
                                                                         $uidBgColor = $uidPencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
                                                                         $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
                                                                         $prevUidRealisasi = 0;
@@ -533,7 +533,7 @@
                                                                         @php
                                                                             $up3Target = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                                                                             $up3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
-                                                                            $up3Pencapaian = $up3Target > 0 ? min(100, round(($up3Realisasi / $up3Target) * 100, 2)) : 0;
+                                                                            $up3Pencapaian = $up3Target > 0 ? round(($up3Realisasi / $up3Target) * 100, 2) : 0;
                                                                             $up3BgColor = $up3Pencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
                                                                             
                                                                             $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
@@ -565,7 +565,7 @@
                                                                             @php
                                                                                 $target = $matrixTargets[$lm->id][$u->id][$sw->id] ?? 0;
                                                                                 $realisasi = $matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0;
-                                                                                $pencapaian = $target > 0 ? min(100, round(($realisasi / $target) * 100, 2)) : 0;
+                                                                                $pencapaian = $target > 0 ? round(($realisasi / $target) * 100, 2) : 0;
                                                                                 $bgColor = $pencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
                                                                                 
                                                                                 $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
