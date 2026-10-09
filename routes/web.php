@@ -138,6 +138,11 @@ Route::middleware('auth')->group(function () {
         ->middleware(['role:Super Admin|Perencanaan UID|General Manager UID|Manager UP3|Manager ULP|Perencanaan UP3|UP2D|UP2K|Staff ULP'])
         ->name('audit-logs.index');
 
+    // Database Backup (Super Admin Only)
+    Route::get('/database-backup', [\App\Http\Controllers\DatabaseBackupController::class, 'download'])
+        ->middleware(['role:Super Admin'])
+        ->name('database.backup');
+
     // Notifications
     Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/check', [\App\Http\Controllers\NotificationController::class, 'getUnread'])->name('notifications.check');
