@@ -798,4 +798,36 @@ class SesiWigController extends Controller
 
         return redirect()->back()->with('success', 'Presenter sesi berhasil disimpan.');
     }
+
+    public function toggleKomitmenLock(Request $request, SesiWig $sesi_wig)
+    {
+        $user = auth()->user();
+        $isUIDAdmin = $user && (
+            $user->hasAnyRole(['Super Admin', 'Perencanaan UID']) ||
+            in_array($user->role_name, ['Super Admin', 'Perencanaan UID']) ||
+            strtolower($user->role_name ?? '') === 'super admin' ||
+            strtolower($user->role_name ?? '') === 'perencanaan uid'
+        );
+
+        if (!$isUIDAdmin) {
+            abort(403, 'Akses Ditolak: Hanya Super Admin dan Perencanaan UID yang dapat mengubah status pengisian komitmen.');
+        }
+
+        $sesi_wig->is_komitmen_unlocked = !$sesi_wig->is_komitmen_unlocked;
+        $sesi_wig->save();
+
+        $msg = $sesi_wig->is_komitmen_unlocked
+            ? "Akses pengisian komitmen untuk {$sesi_wig->nama_sesi} berhasil DIAKTIFKAN (Dibuka tanpa batasan deadline)."
+            : "Akses pengisian komitmen untuk {$sesi_wig->nama_sesi} berhasil DINONAKTIFKAN (Kembali mengikuti batas H+1).";
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'is_unlocked' => $sesi_wig->is_komitmen_unlocked,
+                'message' => $msg,
+            ]);
+        }
+
+        return redirect()->back()->with('success', $msg);
+    }
 }

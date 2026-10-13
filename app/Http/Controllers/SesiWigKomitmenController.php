@@ -51,9 +51,11 @@ class SesiWigKomitmenController extends Controller
         $sesi = SesiWig::findOrFail($sesi_wig_id);
         
         $user = auth()->user();
-        $isSuperAdmin = $user && ($user->hasRole('Super Admin') || strtolower($user->role_name) === 'super admin');
+        $isSuperAdmin = $user && ($user->hasRole('Super Admin') || strtolower($user->role_name ?? '') === 'super admin');
+        $isUIDAdmin = $user && ($user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array($user->role_name, ['Super Admin', 'Perencanaan UID']) || strtolower($user->role_name ?? '') === 'super admin' || strtolower($user->role_name ?? '') === 'perencanaan uid');
+        $isUnlocked = (bool) $sesi->is_komitmen_unlocked;
         
-        if (!$isSuperAdmin) {
+        if (!$isSuperAdmin && !$isUnlocked) {
             $masterPeriode = \App\Models\MasterPeriode::where('tahun', $sesi->tahun)->where('bulan', $sesi->bulan)->first();
             $startDate = null;
             if ($masterPeriode) {
@@ -68,7 +70,7 @@ class SesiWigKomitmenController extends Controller
             $deadline = $targetStart->copy()->endOfDay(); // Monday 23:59:59 of target week
 
             if (now()->isAfter($deadline) || now()->isBefore($openDate)) {
-                return response()->json(['success' => false, 'message' => 'Batas waktu pengisian komitmen (Hari Selasa s/d Senin ' . $deadline->format('d M') . ' pukul 23:59) tidak sesuai. Saat ini Anda hanya bisa melihat komitmen (Read-Only).'], 403);
+                return response()->json(['success' => false, 'message' => 'Batas waktu pengisian komitmen (Hari Selasa s/d Senin ' . $deadline->format('d M') . ' pukul 23:59) telah berakhir atau belum dibuka. Silakan hubungi bagian Perencanaan UID untuk mengaktifkan pengisian komitmen sesi ini.'], 403);
             }
         }
         
@@ -107,9 +109,11 @@ class SesiWigKomitmenController extends Controller
         $sesi = SesiWig::findOrFail($sesi_wig_id);
         
         $user = auth()->user();
-        $isSuperAdmin = $user && ($user->hasRole('Super Admin') || strtolower($user->role_name) === 'super admin');
+        $isSuperAdmin = $user && ($user->hasRole('Super Admin') || strtolower($user->role_name ?? '') === 'super admin');
+        $isUIDAdmin = $user && ($user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array($user->role_name, ['Super Admin', 'Perencanaan UID']) || strtolower($user->role_name ?? '') === 'super admin' || strtolower($user->role_name ?? '') === 'perencanaan uid');
+        $isUnlocked = (bool) $sesi->is_komitmen_unlocked;
         
-        if (!$isSuperAdmin) {
+        if (!$isSuperAdmin && !$isUnlocked && !$isUIDAdmin) {
             $masterPeriode = \App\Models\MasterPeriode::where('tahun', $sesi->tahun)->where('bulan', $sesi->bulan)->first();
             $startDate = null;
             if ($masterPeriode) {
@@ -124,7 +128,7 @@ class SesiWigKomitmenController extends Controller
             $deadline = $targetStart->copy()->endOfDay();
 
             if (now()->isAfter($deadline) || now()->isBefore($openDate)) {
-                return response()->json(['success' => false, 'message' => 'Hanya Super Admin yang dapat menghapus komitmen di sesi yang sudah berlalu.'], 403);
+                return response()->json(['success' => false, 'message' => 'Hanya Super Admin atau Perencanaan UID yang dapat menghapus komitmen di sesi yang sudah berlalu.'], 403);
             }
         }
         

@@ -27,11 +27,13 @@ class SesiWig extends Model
         'level_terlibat',
         'komitmen',
         'evaluasi',
+        'is_komitmen_unlocked',
     ];
 
     protected $casts = [
         'level_terlibat' => 'array',
         'tanggal_pelaksanaan' => 'date',
+        'is_komitmen_unlocked' => 'boolean',
     ];
 
     public function presenters()

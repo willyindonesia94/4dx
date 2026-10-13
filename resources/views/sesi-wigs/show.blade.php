@@ -11,7 +11,8 @@ foreach($sesi_wigs_matrix as $sw) {
     // Diperpanjang agar bisa diisi tiap hari sampai akhir minggu (Minggu jam 23:59 / 12 malam)
     $dLine = $tStart->copy()->addDays(6)->endOfDay();
         
-    $komitmenLocks[$sw->id] = now()->isAfter($dLine) || now()->isBefore($oDate);
+    $isSwUnlocked = (bool)($sw->is_komitmen_unlocked ?? false);
+    $komitmenLocks[$sw->id] = !$isSwUnlocked && (now()->isAfter($dLine) || now()->isBefore($oDate));
 }
 
 $formatLmValue = function($value, $satuan) {
@@ -66,6 +67,60 @@ $formatLmValue = function($value, $satuan) {
                     </select>
                 </div>
             </div>
+
+            <!-- Kontrol Akses Input Komitmen (Perencanaan UID & Super Admin) -->
+            @php
+                $isUIDAdmin = auth()->user() && (
+                    auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID']) ||
+                    in_array(auth()->user()->role_name, ['Super Admin', 'Perencanaan UID']) ||
+                    strtolower(auth()->user()->role_name ?? '') === 'super admin' ||
+                    strtolower(auth()->user()->role_name ?? '') === 'perencanaan uid'
+                );
+                $isCurrentSesiUnlocked = (bool)($sesi_wig->is_komitmen_unlocked ?? false);
+            @endphp
+
+            @if($isUIDAdmin)
+            <div class="bg-white border {{ $isCurrentSesiUnlocked ? 'border-emerald-400 bg-emerald-50/30' : 'border-amber-300 bg-amber-50/20' }} rounded-xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm transition-colors">
+                <div class="flex items-start md:items-center gap-4">
+                    <div class="p-3 {{ $isCurrentSesiUnlocked ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600' }} rounded-xl shadow-sm shrink-0">
+                        @if($isCurrentSesiUnlocked)
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
+                        @else
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        @endif
+                    </div>
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full {{ $isCurrentSesiUnlocked ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
+                                Role Perencanaan UID
+                            </span>
+                            <h3 class="font-bold text-base {{ $isCurrentSesiUnlocked ? 'text-emerald-900' : 'text-gray-900' }}">
+                                Akses Input Komitmen: {{ $isCurrentSesiUnlocked ? 'AKTIF / TERBUKA (Tanpa Batas Waktu)' : 'TERKUNCI (Maks. H+1 / Sesuai Jadwal)' }}
+                            </h3>
+                        </div>
+                        <p class="text-xs sm:text-sm text-gray-600 mt-1">
+                            {{ $isCurrentSesiUnlocked 
+                                ? 'Status saat ini DIBUKA oleh Perencanaan UID. Unit UP3 & ULP dapat menginput dan merevisi komitmen sesi ini tanpa batasan deadline H+1.' 
+                                : 'Status saat ini MENGIKUTI BATAS WAKTU (Maksimal H+1). Unit tidak dapat mengisi jika waktu telah berakhir kecuali diaktifkan oleh Bagian Perencanaan.' }}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end">
+                    <form action="{{ route('sesi-wigs.toggle-komitmen-lock', $sesi_wig->id) }}" method="POST" class="m-0 w-full sm:w-auto">
+                        @csrf
+                        <button type="submit" class="w-full sm:w-auto px-4 py-2.5 rounded-lg font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2 {{ $isCurrentSesiUnlocked ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200' }}">
+                            @if($isCurrentSesiUnlocked)
+                                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                <span>Nonaktifkan / Kunci Kembali</span>
+                            @else
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
+                                <span>Aktifkan Pengisian Komitmen</span>
+                            @endif
+                        </button>
+                    </form>
+                </div>
+            </div>
+            @endif
 
             <!-- Session Info Banner -->
             <div class="bg-gradient-to-r from-blue-900 to-indigo-800 overflow-hidden shadow-xl sm:rounded-2xl relative border border-blue-800">
@@ -570,6 +625,9 @@ $formatLmValue = function($value, $satuan) {
                                                             }
                                                             if ($sw->id == $sesi_wig->id) {
                                                                 $headerLabel .= '<br><span class="inline-block mt-1.5 px-2 py-0.5 bg-indigo-600 text-white text-[10px] uppercase font-bold tracking-wider rounded-full shadow-sm">Sesi Aktif</span>';
+                                                            }
+                                                            if (!empty($sw->is_komitmen_unlocked)) {
+                                                                $headerLabel .= '<br><span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full border border-emerald-300 shadow-sm" title="Akses komitmen diaktifkan/dibuka oleh Perencanaan UID"><svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2z"></path></svg> Komitmen Aktif</span>';
                                                             }
                                                         @endphp
                                                         <th colspan="8" class="px-4 py-2 border border-gray-300 text-center font-bold text-gray-800 {{ $sw->id == $sesi_wig->id ? 'bg-indigo-200/80 shadow-inner' : 'bg-indigo-50' }}">
