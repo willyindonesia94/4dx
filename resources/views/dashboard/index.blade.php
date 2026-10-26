@@ -517,7 +517,7 @@
                                                                     <td class="px-1 py-1 border border-gray-300 text-center bg-slate-50">{!! $uidTrendIcon !!}</td>
                                                                 @endforeach
                                                             </tr>
-                                                            @foreach($up3s as $up3)
+                                                            @foreach($filteredUp3sByWig[$lm->wig_id] ?? $up3s as $up3)
                                                                 @php
                                                                     $up3Ulps = $ulps->where('parent_id', $up3->id);
                                                                     $isExpanded = false;

@@ -196,13 +196,15 @@ class LaporanBulananController extends Controller
             } elseif ($unitType === 'UP3') {
                 $unitsQuery->where('type', 'ULP')->where('parent_id', $user->unit_id);
             } else {
-                $unitsQuery->whereIn('type', ['UP3', 'UP2D', 'UP2K']);
+                $unitsQuery->where('type', 'UP3');
             }
         } else {
-            $unitsQuery->whereIn('type', ['UP3', 'UP2D', 'UP2K']);
+            $unitsQuery->where('type', 'UP3');
         }
         $units = $unitsQuery->orderBy('name')->get();
         $unitIds = $units->pluck('id')->toArray();
+        $baseUp3Units = \App\Models\MasterUnit::where('type', 'UP3')->orderBy('name')->get();
+        $up2dUnit = \App\Models\MasterUnit::where('type', 'UP2D')->first();
 
         $isAllBulan = $bulan === 'all';
         $bulanT = $isAllBulan ? 12 : (int)$bulan;
@@ -350,8 +352,16 @@ class LaporanBulananController extends Controller
                 'status_kalah' => 0,
             ];
 
+            $isWig4 = str_contains(strtolower($wig->judul), 'wig 4') || str_contains(strtolower($wig->judul), 'frequency rate accident') || str_contains(strtolower($wig->judul), 'peningkatan kepuasan pelanggan');
+            if ($isSuperAdmin || (!$user || !$user->unit || in_array(strtoupper(trim($user->unit->type)), ['UID']))) {
+                $wigUnits = ($isWig4 && $up2dUnit) ? $baseUp3Units->concat([$up2dUnit]) : $baseUp3Units;
+            } else {
+                $wigUnits = $units;
+            }
+            $wigData['units_list'] = $wigUnits;
+
             // Unit Data
-            foreach ($units as $unit) {
+            foreach ($wigUnits as $unit) {
                 // Unit WIG Target & Realisasi
                 $uT = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
                     ->where('wig_id', $wig->id)->where('tahun', $tahunT)->where('unit_id', $unit->id)
@@ -413,10 +423,10 @@ class LaporanBulananController extends Controller
                 $aggregatedLmTotalTarget = 0;
                 $lmMenang = 0;
                 $lmKalah = 0;
-                $unitCount = count($units);
+                $unitCount = count($wigUnits);
 
                 // Calculate LM per Unit per Week
-                foreach ($units as $unit) {
+                foreach ($wigUnits as $unit) {
                     $unitLmWeeks = [];
                     
                     $allTargets = \App\Models\BreakdownLm::where('lm_id', $lm->id)

@@ -43,6 +43,7 @@ class DashboardController extends Controller
         if ($selectedUp3) $ulpsQuery->where('parent_id', $selectedUp3);
         $ulps    = $ulpsQuery->get();
         $allUlps = MasterUnit::where('type', 'ULP')->get();
+        $up2dUnit = MasterUnit::where('type', 'UP2D')->first();
 
         // ── Quick Stats ─────────────────────────────────────────────────────────
         $totalWigs = MasterWig::where('is_approved', 1)->count();
@@ -789,7 +790,10 @@ class DashboardController extends Controller
                 // Rollup UP3 to UID
                 $sumTargetUid = 0; $sumRealUid = 0;
                 $countUp3Target = 0; $countUp3Real = 0;
-                foreach ($up3s as $up3) {
+                $wigOfLm = $wigs->where('id', $lm->wig_id)->first();
+                $isWig4 = $wigOfLm && (str_contains(strtolower($wigOfLm->judul), 'wig 4') || str_contains(strtolower($wigOfLm->judul), 'frequency rate accident'));
+                $rollupUp3s = ($isWig4 && $up2dUnit) ? $up3s->concat([$up2dUnit]) : $up3s;
+                foreach ($rollupUp3s as $up3) {
                     $t = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                     $r = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
                     if ($t > 0) { $sumTargetUid += $t; $countUp3Target++; }
@@ -886,10 +890,13 @@ class DashboardController extends Controller
                 }
             }
 
-            foreach ($up3s as $up3) {
+            $wigOfLm = $wigs->where('id', $lm->wig_id)->first();
+            $isWig4 = $wigOfLm && (str_contains(strtolower($wigOfLm->judul), 'wig 4') || str_contains(strtolower($wigOfLm->judul), 'frequency rate accident'));
+            $lmUp3s = ($isWig4 && $up2dUnit) ? $up3s->concat([$up2dUnit]) : $up3s;
+
+            foreach ($lmUp3s as $up3) {
                 $target = $matrixTargets[$lm->id][$up3->id][$sid] ?? 0;
                 $sum = $matrixRealisasi[$lm->id][$up3->id][$sid] ?? 0;
-                if ($target <= 0 && $sum <= 0 && strtolower(trim($lm->polaritas ?? 'positif')) !== 'negatif') continue;
                 $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
                 $rtMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => round($pct, 1)];
             }
@@ -897,7 +904,6 @@ class DashboardController extends Controller
             foreach ($ulps as $ulp) {
                 $target = $matrixTargets[$lm->id][$ulp->id][$sid] ?? 0;
                 $sum = $matrixRealisasi[$lm->id][$ulp->id][$sid] ?? 0;
-                if ($target <= 0 && $sum <= 0 && strtolower(trim($lm->polaritas ?? 'positif')) !== 'negatif') continue;
                 $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
                 $rtMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => round($pct, 1)];
             }
@@ -937,7 +943,8 @@ class DashboardController extends Controller
             }
             
             // UP3 Map Data
-            foreach ($up3s->filter(fn($u) => $u->latitude && $u->longitude) as $up3) {
+            $mapUp3s = ($isWig4 && $up2dUnit) ? $up3s->concat([$up2dUnit]) : $up3s;
+            foreach ($mapUp3s->filter(fn($u) => $u->latitude && $u->longitude) as $up3) {
                 $target = $matrixTargets[$lm->id][$up3->id][$sid] ?? 0;
                 $sum = $matrixRealisasi[$lm->id][$up3->id][$sid] ?? 0;
                 $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
@@ -986,7 +993,9 @@ class DashboardController extends Controller
         $uidUnitId = !empty($uidUnits) ? $uidUnits[0] : 1;
 
         foreach ($wigs as $wig) {
-            $filteredUp3sByWig[$wig->id] = $up3s;
+            $isWig4 = str_contains(strtolower($wig->judul), 'wig 4') || str_contains(strtolower($wig->judul), 'frequency rate accident');
+            $currentUp3List = ($isWig4 && $up2dUnit) ? $up3s->concat([$up2dUnit]) : $up3s;
+            $filteredUp3sByWig[$wig->id] = $currentUp3List;
             
             $prevTarget = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
                 ->where('wig_id', $wig->id)->where('tahun', $prevTahun)->where('unit_id', $uidUnitId)->sum($colPrevBln);
@@ -1023,7 +1032,7 @@ class DashboardController extends Controller
             $wig->trend_capaian = $trendData[$wig->id] ?? [];
             
             $wigUnitData[$wig->id] = [];
-            foreach ($up3s as $up3) {
+            foreach ($currentUp3List as $up3) {
                 $curT = \Illuminate\Support\Facades\DB::table('breakdown_wigs')
                     ->where('wig_id', $wig->id)->where('tahun', $tahun)->where('unit_id', $up3->id)->sum($colBln);
                 $curR = \App\Models\RealisasiWig::where('wig_id', $wig->id)
