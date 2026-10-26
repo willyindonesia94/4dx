@@ -64,12 +64,12 @@
                                                             @if($sesi->is_komitmen_unlocked)
                                                                 <span class="px-2 py-0.5 inline-flex items-center gap-1 text-[10px] font-bold rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase tracking-wider">
                                                                     <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2z"></path></svg>
-                                                                    Komitmen: Terbuka
+                                                                    Komitmen: Aktif
                                                                 </span>
                                                             @else
                                                                 <span class="px-2 py-0.5 inline-flex items-center gap-1 text-[10px] font-bold rounded-md bg-gray-100 text-gray-600 border border-gray-200 uppercase tracking-wider">
                                                                     <svg class="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"></path></svg>
-                                                                    Komitmen: Standar (H+1)
+                                                                    Komitmen: Dinonaktifkan
                                                                 </span>
                                                             @endif
                                                         </div>
@@ -80,7 +80,7 @@
                                                     @if(in_array(auth()->user()->role_name ?? '', ['Super Admin', 'superadmin', 'Perencanaan UID']) || auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID']))
                                                     <form action="{{ route('sesi-wigs.toggle-komitmen-lock', $sesi->id) }}" method="POST" class="inline m-0">
                                                         @csrf
-                                                        <button type="submit" class="px-3 py-2 rounded-md font-bold text-xs transition-colors border flex items-center justify-center gap-1.5 {{ $sesi->is_komitmen_unlocked ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200' }}" title="{{ $sesi->is_komitmen_unlocked ? 'Nonaktifkan / Kunci kembali komitmen sesi ini' : 'Aktifkan / Buka pengisian komitmen sesi ini' }}">
+                                                        <button type="submit" class="px-3 py-2 rounded-md font-bold text-xs transition-colors border flex items-center justify-center gap-1.5 {{ $sesi->is_komitmen_unlocked ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200' }}" title="{{ $sesi->is_komitmen_unlocked ? 'Nonaktifkan / Kunci komitmen sesi ini' : 'Aktifkan / Buka pengisian komitmen sesi ini' }}">
                                                             @if($sesi->is_komitmen_unlocked)
                                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"></path></svg>
                                                                 <span class="whitespace-nowrap">Kunci Komitmen</span>
