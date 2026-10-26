@@ -158,7 +158,7 @@
                         </tr>
                         @endif
                         
-                        @foreach($units as $unit)
+                        @foreach($wData['units_list'] ?? $units as $unit)
                         @php
                             $uData = $wData['units'][$unit->id] ?? null;
                             if (!$uData) continue;

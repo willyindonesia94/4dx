@@ -218,7 +218,7 @@ class SesiWigController extends Controller
         $nonSummableSatuans = [1, 2, 14];
 
         $wigUnitData = []; // Store Unit-level data for WIGs
-        $up3List = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->orderBy('name')->get();
+        $up3List = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D'])->orderBy('name')->get();
 
         $targetBulan = $wig_bulan ? (int)$wig_bulan : $endDate->month;
         $prevBulan = $targetBulan > 1 ? $targetBulan - 1 : 12;
@@ -389,28 +389,31 @@ class SesiWigController extends Controller
         }
         
         // Filter Unit sesuai tingkatan akses User (ULP/UP3/UID)
-        $ulpsQuery = MasterUnit::whereIn('type', ['ULP', 'UP2D', 'UP2K'])->orderBy('name');
-        $up3sQuery = MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K'])->orderBy('name');
-        $unitsQuery = MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K', 'ULP'])->orderBy('type')->orderBy('name');
+        $ulpsQuery = MasterUnit::where('type', 'ULP')->orderBy('name');
+        $up3sQuery = MasterUnit::where('type', 'UP3')->orderBy('name');
+        $unitsQuery = MasterUnit::whereIn('type', ['UP3', 'UP2D', 'ULP'])->orderBy('type')->orderBy('name');
+        $up2dUnit = MasterUnit::where('type', 'UP2D')->first();
 
+        $unitType = ($user && $user->unit) ? strtoupper(trim((string)$user->unit->type)) : null;
         if (!$isSuperAdmin && $user && $user->unit) {
-            $unitType = strtoupper(trim((string)$user->unit->type));
             if ($unitType === 'ULP') {
                 $ulpsQuery->where('id', $user->unit_id);
                 $up3sQuery->where('id', $user->unit->parent_id);
                 $unitsQuery->whereIn('id', [$user->unit_id, $user->unit->parent_id]);
             } elseif (in_array($unitType, ['UP3', 'UP2D', 'UP2K'])) {
                 if (in_array($unitType, ['UP2D', 'UP2K'])) {
-                    $ulpsQuery->where('id', $user->unit_id);
+                    $ulpsQuery->whereRaw('1=0');
+                    $up3sQuery = MasterUnit::where('id', $user->unit_id);
+                    $unitsQuery->where('id', $user->unit_id);
                 } else {
                     $ulpsQuery->where('parent_id', $user->unit_id);
+                    $up3sQuery->where('id', $user->unit_id);
+                    $unitsQuery->whereIn('id', function($q) use ($user) {
+                        $q->select('id')->from('master_units')
+                          ->where('id', $user->unit_id)
+                          ->orWhere('parent_id', $user->unit_id);
+                    });
                 }
-                $up3sQuery->where('id', $user->unit_id);
-                $unitsQuery->whereIn('id', function($q) use ($user) {
-                    $q->select('id')->from('master_units')
-                      ->where('id', $user->unit_id)
-                      ->orWhere('parent_id', $user->unit_id);
-                });
             }
         }
         $allUlps = $ulpsQuery->get();
@@ -419,21 +422,22 @@ class SesiWigController extends Controller
 
         $filteredUp3sByWig = [];
         foreach ($wigs as $wig) {
-            $isWig4 = str_contains(strtolower($wig->judul), 'wig 4') || str_contains(strtolower($wig->judul), 'peningkatan kepuasan pelanggan');
-            $filtered = collect($up3s)->filter(function($u) use ($isWig4) {
+            $isWig4 = str_contains(strtolower($wig->judul), 'wig 4') || str_contains(strtolower($wig->judul), 'frequency rate accident') || str_contains(strtolower($wig->judul), 'peningkatan kepuasan pelanggan');
+            if ($isSuperAdmin || !in_array($unitType ?? '', ['UP3', 'ULP', 'UP2D', 'UP2K'])) {
+                $filtered = ($isWig4 && $up2dUnit) ? $up3s->concat([$up2dUnit]) : $up3s;
+            } else {
+                $filtered = collect($up3s)->filter(function($u) use ($isWig4) {
+                    $type = strtoupper(trim($u->type ?? ''));
+                    if ($type === 'UP2D') return $isWig4;
+                    if ($type === 'UP2K') return false;
+                    return true;
+                });
+            }
+            $filteredUp3sByWig[$wig->id] = $filtered->sortBy(function($u) {
                 $type = strtoupper(trim($u->type ?? ''));
-                if (in_array($type, ['UP2D', 'UP2K'])) {
-                    return $isWig4;
-                }
-                return true;
-            })->sortBy(function($u) {
-                $type = strtoupper(trim($u->type ?? ''));
-                if (in_array($type, ['UP2D', 'UP2K'])) {
-                    return 'Z_' . $u->name;
-                }
+                if ($type === 'UP2D') return 'Z_' . $u->name;
                 return 'A_' . $u->name;
             })->values();
-            $filteredUp3sByWig[$wig->id] = $filtered;
         }
 
         $leaderboardScores = \Illuminate\Support\Facades\DB::table('realisasis')
@@ -596,7 +600,10 @@ class SesiWigController extends Controller
                 // Rollup UP3 to UID
                 $sumTargetUid = 0; $sumRealUid = 0; $sumKomUid = 0;
                 $countUp3Target = 0; $countUp3Real = 0; $countUp3Kom = 0;
-                foreach ($up3s as $up3) {
+                $wigOfLm = $wigs->where('id', $lm->wig_id)->first();
+                $isWig4 = $wigOfLm && (str_contains(strtolower($wigOfLm->judul), 'wig 4') || str_contains(strtolower($wigOfLm->judul), 'frequency rate accident') || str_contains(strtolower($wigOfLm->judul), 'peningkatan kepuasan pelanggan'));
+                $rollupUp3s = ($isWig4 && $up2dUnit) ? $up3s->concat([$up2dUnit]) : $up3s;
+                foreach ($rollupUp3s as $up3) {
                     $t = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                     $r = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
                     $komData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
@@ -643,8 +650,12 @@ class SesiWigController extends Controller
             $lmMenangKalah[$lm->id] = ['up3' => ['menang' => [], 'kalah' => []], 'ulp' => ['menang' => [], 'kalah' => []]];
         }
         $sid = $sesi_wig->id;
-        foreach ($up3s as $up3) {
-            foreach ($lms as $lm) {
+        foreach ($lms as $lm) {
+            $wigOfLm = $wigs->where('id', $lm->wig_id)->first();
+            $isWig4 = $wigOfLm && (str_contains(strtolower($wigOfLm->judul), 'wig 4') || str_contains(strtolower($wigOfLm->judul), 'frequency rate accident') || str_contains(strtolower($wigOfLm->judul), 'peningkatan kepuasan pelanggan'));
+            $lmUp3s = ($isWig4 && $up2dUnit && ($isSuperAdmin || !in_array($unitType ?? '', ['UP3', 'ULP']))) ? $up3s->concat([$up2dUnit]) : $up3s;
+
+            foreach ($lmUp3s as $up3) {
                 $runningCarryOver = 0;
                 $targetPlusCarryOver = 0;
                 $realisasi = 0;
@@ -662,9 +673,8 @@ class SesiWigController extends Controller
                 $pct = round($calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
                 $lmMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => $pct];
             }
-        }
-        foreach ($allUlps as $ulp) {
-            foreach ($lms as $lm) {
+
+            foreach ($allUlps as $ulp) {
                 $runningCarryOver = 0;
                 $targetPlusCarryOver = 0;
                 $realisasi = 0;
