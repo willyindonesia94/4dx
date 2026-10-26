@@ -2,17 +2,8 @@
 @php
 $komitmenLocks = [];
 foreach($sesi_wigs_matrix as $sw) {
-    $mp = \App\Models\MasterPeriode::where('tahun', $sw->tahun)->where('bulan', $sw->bulan)->first();
-    $sDate = null;
-    if ($mp) { $c = 'start_m' . $sw->minggu_ke; $sDate = $mp->$c; }
-    if (!$sDate) { $sDate = \Carbon\Carbon::create($sw->tahun, $sw->bulan, 1)->addDays(($sw->minggu_ke - 1) * 7)->format('Y-m-d'); }
-    $tStart = \Carbon\Carbon::parse($sDate);
-    $oDate = $tStart->copy()->subDays(6)->startOfDay();
-    // Diperpanjang agar bisa diisi tiap hari sampai akhir minggu (Minggu jam 23:59 / 12 malam)
-    $dLine = $tStart->copy()->addDays(6)->endOfDay();
-        
     $isSwUnlocked = (bool)($sw->is_komitmen_unlocked ?? false);
-    $komitmenLocks[$sw->id] = !$isSwUnlocked && (now()->isAfter($dLine) || now()->isBefore($oDate));
+    $komitmenLocks[$sw->id] = !$isSwUnlocked;
 }
 
 $formatLmValue = function($value, $satuan) {
@@ -95,13 +86,13 @@ $formatLmValue = function($value, $satuan) {
                                 Role Perencanaan UID
                             </span>
                             <h3 class="font-bold text-base {{ $isCurrentSesiUnlocked ? 'text-emerald-900' : 'text-gray-900' }}">
-                                Akses Input Komitmen: {{ $isCurrentSesiUnlocked ? 'AKTIF / TERBUKA (Tanpa Batas Waktu)' : 'TERKUNCI (Maks. H+1 / Sesuai Jadwal)' }}
+                                Akses Input Komitmen: {{ $isCurrentSesiUnlocked ? 'AKTIF / TERBUKA' : 'DINONAKTIFKAN / TERKUNCI' }}
                             </h3>
                         </div>
                         <p class="text-xs sm:text-sm text-gray-600 mt-1">
                             {{ $isCurrentSesiUnlocked 
-                                ? 'Status saat ini DIBUKA oleh Perencanaan UID. Unit UP3 & ULP dapat menginput dan merevisi komitmen sesi ini tanpa batasan deadline H+1.' 
-                                : 'Status saat ini MENGIKUTI BATAS WAKTU (Maksimal H+1). Unit tidak dapat mengisi jika waktu telah berakhir kecuali diaktifkan oleh Bagian Perencanaan.' }}
+                                ? 'Status saat ini DIAKTIFKAN oleh Perencanaan UID. Unit UP3 & ULP dapat menginput dan merevisi komitmen sesi ini.' 
+                                : 'Status saat ini DINONAKTIFKAN oleh Perencanaan UID. Unit UP3 & ULP tidak dapat menginput atau merevisi komitmen sesi ini.' }}
                         </p>
                     </div>
                 </div>
@@ -111,7 +102,7 @@ $formatLmValue = function($value, $satuan) {
                         <button type="submit" class="w-full sm:w-auto px-4 py-2.5 rounded-lg font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2 {{ $isCurrentSesiUnlocked ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200' }}">
                             @if($isCurrentSesiUnlocked)
                                 <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z"></path></svg>
-                                <span>Nonaktifkan / Kunci Kembali</span>
+                                <span>Nonaktifkan / Kunci Komitmen</span>
                             @else
                                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
                                 <span>Aktifkan Pengisian Komitmen</span>
@@ -829,8 +820,8 @@ $formatLmValue = function($value, $satuan) {
                                                                     }
                                                                 }
                                                                 
-                                                                // Lock editing for past sessions (unless Super Admin)
-                                                                if ($canEditUp3Komitmen && !($userAuth->hasRole('Super Admin') || strtolower($userAuth->role_name) === 'super admin')) {
+                                                                // Lock editing when komitmen is locked/dinonaktifkan (unless Super Admin or Perencanaan UID)
+                                                                if ($canEditUp3Komitmen && !($userAuth->hasRole('Super Admin') || $userAuth->hasRole('Perencanaan UID') || strtolower($userAuth->role_name ?? '') === 'super admin' || strtolower($userAuth->role_name ?? '') === 'perencanaan uid')) {
                                                                     if ($komitmenLocks[$sw->id] ?? true) {
                                                                         $canEditUp3Komitmen = false;
                                                                     }
@@ -896,8 +887,8 @@ $formatLmValue = function($value, $satuan) {
                                                                         $canEditUlpKomitmen = true;
                                                                     }
                                                                     
-                                                                    // Lock editing for past sessions (unless Super Admin)
-                                                                    if ($canEditUlpKomitmen && !($user->hasRole('Super Admin') || strtolower($user->role_name) === 'super admin')) {
+                                                                    // Lock editing when komitmen is locked/dinonaktifkan (unless Super Admin or Perencanaan UID)
+                                                                    if ($canEditUlpKomitmen && !($user->hasRole('Super Admin') || $user->hasRole('Perencanaan UID') || strtolower($user->role_name ?? '') === 'super admin' || strtolower($user->role_name ?? '') === 'perencanaan uid')) {
                                                                         if ($komitmenLocks[$sw->id] ?? true) {
                                                                             $canEditUlpKomitmen = false;
                                                                         }

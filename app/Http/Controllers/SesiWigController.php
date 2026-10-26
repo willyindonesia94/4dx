@@ -755,6 +755,18 @@ class SesiWigController extends Controller
 
     public function saveKomitmen(Request $request, SesiWig $sesi_wig)
     {
+        $user = auth()->user();
+        $isSuperAdmin = $user && ($user->hasRole('Super Admin') || strtolower($user->role_name ?? '') === 'super admin');
+        $isUIDAdmin = $user && ($user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array($user->role_name, ['Super Admin', 'Perencanaan UID']) || strtolower($user->role_name ?? '') === 'super admin' || strtolower($user->role_name ?? '') === 'perencanaan uid');
+        $isUnlocked = (bool) $sesi_wig->is_komitmen_unlocked;
+
+        if (!$isSuperAdmin && !$isUIDAdmin && !$isUnlocked) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pengisian komitmen untuk sesi ini sedang dinonaktifkan oleh Perencanaan UID.'
+            ], 403);
+        }
+
         $request->validate([
             'lm_id' => 'required|exists:master_lms,id',
             'unit_id' => 'required|exists:master_units,id',
@@ -779,6 +791,18 @@ class SesiWigController extends Controller
 
     public function deleteKomitmen(Request $request, SesiWig $sesi_wig)
     {
+        $user = auth()->user();
+        $isSuperAdmin = $user && ($user->hasRole('Super Admin') || strtolower($user->role_name ?? '') === 'super admin');
+        $isUIDAdmin = $user && ($user->hasAnyRole(['Super Admin', 'Perencanaan UID']) || in_array($user->role_name, ['Super Admin', 'Perencanaan UID']) || strtolower($user->role_name ?? '') === 'super admin' || strtolower($user->role_name ?? '') === 'perencanaan uid');
+        $isUnlocked = (bool) $sesi_wig->is_komitmen_unlocked;
+
+        if (!$isSuperAdmin && !$isUIDAdmin && !$isUnlocked) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pengisian komitmen untuk sesi ini sedang dinonaktifkan oleh Perencanaan UID.'
+            ], 403);
+        }
+
         $request->validate([
             'lm_id' => 'required|exists:master_lms,id',
             'unit_id' => 'required|exists:master_units,id',
@@ -827,8 +851,8 @@ class SesiWigController extends Controller
         $sesi_wig->save();
 
         $msg = $sesi_wig->is_komitmen_unlocked
-            ? "Akses pengisian komitmen untuk {$sesi_wig->nama_sesi} berhasil DIAKTIFKAN (Dibuka tanpa batasan deadline)."
-            : "Akses pengisian komitmen untuk {$sesi_wig->nama_sesi} berhasil DINONAKTIFKAN (Kembali mengikuti batas H+1).";
+            ? "Akses pengisian komitmen untuk {$sesi_wig->nama_sesi} berhasil DIAKTIFKAN."
+            : "Akses pengisian komitmen untuk {$sesi_wig->nama_sesi} berhasil DINONAKTIFKAN.";
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
