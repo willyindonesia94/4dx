@@ -38,11 +38,11 @@ class DashboardController extends Controller
             }
         }
         $divisions = $divisions->sort()->values();
-        $up3s      = MasterUnit::where('type', 'UP3')->get();
-        $ulpsQuery = MasterUnit::where('type', 'ULP');
+        $up3s      = MasterUnit::where('type', 'UP3')->orderBy('name')->get();
+        $ulpsQuery = MasterUnit::where('type', 'ULP')->orderBy('name');
         if ($selectedUp3) $ulpsQuery->where('parent_id', $selectedUp3);
         $ulps    = $ulpsQuery->get();
-        $allUlps = MasterUnit::where('type', 'ULP')->get();
+        $allUlps = MasterUnit::where('type', 'ULP')->orderBy('name')->get();
         $up2dUnit = MasterUnit::where('type', 'UP2D')->first();
 
         // ── Quick Stats ─────────────────────────────────────────────────────────
@@ -995,6 +995,11 @@ class DashboardController extends Controller
         foreach ($wigs as $wig) {
             $isWig4 = str_contains(strtolower($wig->judul), 'wig 4') || str_contains(strtolower($wig->judul), 'frequency rate accident');
             $currentUp3List = ($isWig4 && $up2dUnit) ? $up3s->concat([$up2dUnit]) : $up3s;
+            $currentUp3List = $currentUp3List->sortBy(function($u) {
+                $type = strtoupper(trim($u->type ?? ''));
+                if ($type === 'UP2D') return 'z_' . strtolower($u->name);
+                return 'a_' . strtolower($u->name);
+            })->values();
             $filteredUp3sByWig[$wig->id] = $currentUp3List;
             
             $prevTarget = \Illuminate\Support\Facades\DB::table('breakdown_wigs')

@@ -435,8 +435,8 @@ class SesiWigController extends Controller
             }
             $filteredUp3sByWig[$wig->id] = $filtered->sortBy(function($u) {
                 $type = strtoupper(trim($u->type ?? ''));
-                if ($type === 'UP2D') return 'Z_' . $u->name;
-                return 'A_' . $u->name;
+                if ($type === 'UP2D') return 'z_' . strtolower($u->name);
+                return 'a_' . strtolower($u->name);
             })->values();
         }
 

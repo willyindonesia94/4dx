@@ -358,6 +358,11 @@ class LaporanBulananController extends Controller
             } else {
                 $wigUnits = $units;
             }
+            $wigUnits = $wigUnits->sortBy(function($u) {
+                $type = strtoupper(trim($u->type ?? ''));
+                if ($type === 'UP2D') return 'z_' . strtolower($u->name);
+                return 'a_' . strtolower($u->name);
+            })->values();
             $wigData['units_list'] = $wigUnits;
 
             // Unit Data
