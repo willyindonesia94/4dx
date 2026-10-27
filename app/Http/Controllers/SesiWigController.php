@@ -140,15 +140,8 @@ class SesiWigController extends Controller
         $wigs = $wigsQuery->get();
 
         $calcCapaian = function($target, $realisasi, $polaritas) {
-            if ($target < 0) return 0;
+            if ($target <= 0) return 0;
             $isNeg = (strtolower(trim($polaritas)) === 'negatif' || trim($polaritas) === '3');
-            if ($target == 0) {
-                if ($isNeg) {
-                    return ($realisasi == 0) ? 100 : 0;
-                } else {
-                    return ($realisasi >= 0) ? 100 : 0;
-                }
-            }
             if ($isNeg) {
                 return ($realisasi == 0) ? 100 : ($target / $realisasi) * 100;
             }
@@ -385,7 +378,7 @@ class SesiWigController extends Controller
             $lm->total_target = $target;
             $lm->total_realisasi = $realisasi;
             
-            $lm->capaian = round($calcCapaian($target, $realisasi, $lm->polaritas), 2);
+            $lm->capaian = ($target > 0) ? round($calcCapaian($target, $realisasi, $lm->polaritas), 2) : null;
         }
         
         // Filter Unit sesuai tingkatan akses User (ULP/UP3/UID)
@@ -671,8 +664,10 @@ class SesiWigController extends Controller
                     }
                 }
                 
-                $pct = round($calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
-                $lmMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => $pct];
+                if ($targetPlusCarryOver > 0) {
+                    $pct = round($calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
+                    $lmMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => $pct];
+                }
             }
 
             foreach ($allUlps as $ulp) {
@@ -690,8 +685,10 @@ class SesiWigController extends Controller
                     }
                 }
 
-                $pct = round($calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
-                $lmMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => $pct];
+                if ($targetPlusCarryOver > 0) {
+                    $pct = round($calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
+                    $lmMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => $pct];
+                }
             }
         }
         foreach ($lms as $lm) {

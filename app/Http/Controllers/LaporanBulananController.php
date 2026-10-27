@@ -487,29 +487,21 @@ class LaporanBulananController extends Controller
                         }
                     }
 
-                    $unitLmPct = 0;
-                    if ($unitLmTotalT > 0 || $unitLmTotalR > 0) {
+                    $unitLmPct = null;
+                    if ($unitLmTotalT > 0) {
                         // Handle calcCapaian logic
                         $isNeg = ($lmPolaritas === 'negatif' || $lmPolaritas === '3');
-                        if ($unitLmTotalT == 0) {
-                            if ($isNeg) {
-                                $unitLmPct = ($unitLmTotalR == 0) ? 100 : 0;
-                            } else {
-                                $unitLmPct = ($unitLmTotalR >= 0) ? 100 : 0;
-                            }
+                        if ($isNeg) {
+                            $unitLmPct = ($unitLmTotalT / max(0.0001, $unitLmTotalR)) * 100;
                         } else {
-                            if ($isNeg) {
-                                $unitLmPct = ($unitLmTotalT / max(0.0001, $unitLmTotalR)) * 100;
-                            } else {
-                                $unitLmPct = ($unitLmTotalR / $unitLmTotalT) * 100;
-                            }
+                            $unitLmPct = ($unitLmTotalR / $unitLmTotalT) * 100;
                         }
-                    }
 
-                    if ($unitLmPct >= 100) {
-                        $lmMenang++;
-                    } else {
-                        $lmKalah++;
+                        if ($unitLmPct >= 100) {
+                            $lmMenang++;
+                        } else {
+                            $lmKalah++;
+                        }
                     }
 
                     $lmTotalReal += $unitLmTotalR;

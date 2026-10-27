@@ -533,8 +533,12 @@
                                                                         @php
                                                                             $up3Target = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                                                                             $up3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
-                                                                            $up3Pencapaian = $up3Target > 0 ? round(($up3Realisasi / $up3Target) * 100, 2) : 0;
-                                                                            $up3BgColor = $up3Pencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
+                                                                            $hasUp3Target = ($up3Target > 0);
+                                                                            $up3Pencapaian = $hasUp3Target ? round(($up3Realisasi / $up3Target) * 100, 2) : null;
+                                                                            $up3BgColor = '';
+                                                                            if ($hasUp3Target) {
+                                                                                $up3BgColor = $up3Pencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
+                                                                            }
                                                                             
                                                                             $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
                                                                             $prevUp3Realisasi = 0;
@@ -552,7 +556,7 @@
                                                                         @endphp
                                                                         <td class="px-1 py-1 border border-gray-300 text-right font-semibold">{{ number_format($up3Target, 2) }}</td>
                                                                         <td class="px-1 py-1 border border-gray-300 text-right font-semibold">{{ number_format($up3Realisasi, 2) }}</td>
-                                                                        <td class="px-1 py-1 border border-gray-300 text-right font-bold {{ $up3BgColor }}">{{ $up3Pencapaian }}%</td>
+                                                                        <td class="px-1 py-1 border border-gray-300 text-right {{ $hasUp3Target ? 'font-bold ' . $up3BgColor : 'text-center text-gray-400' }}">{{ $hasUp3Target ? $up3Pencapaian . '%' : '-' }}</td>
                                                                         <td class="px-1 py-1 border border-gray-300 text-center bg-slate-50">{!! $up3TrendIcon !!}</td>
                                                                     @endforeach
                                                                 </tr>
@@ -565,8 +569,12 @@
                                                                             @php
                                                                                 $target = $matrixTargets[$lm->id][$u->id][$sw->id] ?? 0;
                                                                                 $realisasi = $matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0;
-                                                                                $pencapaian = $target > 0 ? round(($realisasi / $target) * 100, 2) : 0;
-                                                                                $bgColor = $pencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
+                                                                                $hasTarget = ($target > 0);
+                                                                                $pencapaian = $hasTarget ? round(($realisasi / $target) * 100, 2) : null;
+                                                                                $bgColor = '';
+                                                                                if ($hasTarget) {
+                                                                                    $bgColor = $pencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
+                                                                                }
                                                                                 
                                                                                 $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
                                                                                 $prevRealisasi = 0;
@@ -584,7 +592,7 @@
                                                                             @endphp
                                                                             <td class="px-1 py-1 border border-gray-300 text-right">{{ number_format($target, 2) }}</td>
                                                                             <td class="px-1 py-1 border border-gray-300 text-right">{{ number_format($realisasi, 2) }}</td>
-                                                                            <td class="px-1 py-1 border border-gray-300 text-right font-bold {{ $bgColor }}">{{ $pencapaian }}%</td>
+                                                                            <td class="px-1 py-1 border border-gray-300 text-right {{ $hasTarget ? 'font-bold ' . $bgColor : 'text-center text-gray-400' }}">{{ $hasTarget ? $pencapaian . '%' : '-' }}</td>
                                                                             <td class="px-1 py-1 border border-gray-300 text-center">{!! $trendIcon !!}</td>
                                                                         @endforeach
                                                                     </tr>
