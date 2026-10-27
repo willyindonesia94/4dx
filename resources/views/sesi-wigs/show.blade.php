@@ -644,7 +644,10 @@ $formatLmValue = function($value, $satuan) {
                                                 <td class="px-4 py-2 border border-gray-300 font-black text-indigo-900 whitespace-nowrap sticky left-0 bg-indigo-50 z-10 uppercase">
                                                     UID JABAR
                                                 </td>
-                                                @php $runningUidCarryOver = 0; @endphp
+                                                @php 
+                                                    $runningUidCarryOver = 0; 
+                                                    $isPercent = (($lm->satuan_id ?? null) == 1) || (trim($lm->satuan->name ?? '') === '%');
+                                                @endphp
                                                 @foreach($sesi_wigs_matrix as $sw)
                                                     @php
                                                         // Pull UID target and realisasi from unit_id = 1 instead of summing UP3
@@ -652,7 +655,6 @@ $formatLmValue = function($value, $satuan) {
                                                         $uidRealisasi = $matrixRealisasi[$lm->id][1][$sw->id] ?? 0;
                                                         
                                                         $up3Count = count($up3s);
-                                                        $isPercent = trim($lm->satuan->name ?? '') === '%';
                                                         
                                                         // Fallback target jika kosong
                                                         if ($uidTarget == 0) {
@@ -689,7 +691,7 @@ $formatLmValue = function($value, $satuan) {
                                                             $uidKomitmen = $uidKomitmen / $komitmenFilledCount;
                                                         }
                                                         
-                                                        $uidTargetPlusCarryOver = $uidTarget + $runningUidCarryOver;
+                                                        $uidTargetPlusCarryOver = $isPercent ? $uidTarget : ($uidTarget + $runningUidCarryOver);
 
                                                         $uidPencapaian = 0;
                                                         if ($uidTargetPlusCarryOver > 0) {
@@ -756,14 +758,17 @@ $formatLmValue = function($value, $satuan) {
                                                             <svg id="icon-{{$lm->id}}-{{$up3->id}}" class="w-4 h-4 text-gray-500 transform transition-transform {{ $isExpanded ? 'rotate-180' : '' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                                         </div>
                                                     </td>
-                                                    @php $runningUp3CarryOver = 0; @endphp
+                                                    @php 
+                                                        $runningUp3CarryOver = 0; 
+                                                        $isPercent = (($lm->satuan_id ?? null) == 1) || (trim($lm->satuan->name ?? '') === '%');
+                                                    @endphp
                                                     @foreach($sesi_wigs_matrix as $sw)
                                                         @php
                                                             // Menampilkan rekap target dan realisasi UP3
                                                             $up3Target = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                                                             $up3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
                                                             
-                                                            $up3TargetPlusCarryOver = $up3Target + $runningUp3CarryOver;
+                                                            $up3TargetPlusCarryOver = $isPercent ? $up3Target : ($up3Target + $runningUp3CarryOver);
 
                                                             $up3Pencapaian = round($calcCapaian($up3TargetPlusCarryOver, $up3Realisasi, $lm->polaritas ?? 'positif'), 2);
                                                             
@@ -800,7 +805,13 @@ $formatLmValue = function($value, $satuan) {
                                                             $komText = 'text-gray-700';
                                                             
                                                             // Hitung target carry over minggu depan untuk perbandingan warna komitmen
-                                                            $targetCarryOverMingguDepan = max(0, $up3TargetPlusCarryOver - $up3Realisasi);
+                                                            $nextSwObj = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke + 1)->first();
+                                                            $nextUp3Target = 0;
+                                                            if ($nextSwObj) {
+                                                                $nextUp3Target = $matrixTargets[$lm->id][$up3->id][$nextSwObj->id] ?? 0;
+                                                            }
+                                                            $carryOverFromThisWeek = max(0, $up3TargetPlusCarryOver - $up3Realisasi);
+                                                            $targetCarryOverMingguDepan = $isPercent ? $nextUp3Target : ($nextUp3Target + $carryOverFromThisWeek);
                                                             
                                                             if ($hasKom && $up3KomVal !== '' && $up3KomVal !== null) {
                                                                 if ((float)$up3KomVal < (float)$targetCarryOverMingguDepan) {
@@ -856,7 +867,10 @@ $formatLmValue = function($value, $satuan) {
                                                     @endforeach
                                                 </tr>
                                                 @foreach($ulps as $u)
-                                                    @php $runningUlpCarryOver = 0; @endphp
+                                                    @php 
+                                                        $runningUlpCarryOver = 0; 
+                                                        $isPercent = (($lm->satuan_id ?? null) == 1) || (trim($lm->satuan->name ?? '') === '%');
+                                                    @endphp
                                                     <tr id="row-lm-{{$lm->id}}-unit-{{$u->id}}" class="hover:bg-slate-50 transition-colors ulp-row-{{$lm->id}}-{{$up3->id}} {{ $isExpanded ? '' : 'hidden' }}">
                                                         <td class="px-4 py-2 border border-gray-300 font-medium text-gray-800 whitespace-nowrap sticky left-0 bg-white z-10 pl-8">
                                                             {{ $u->name }}
@@ -866,7 +880,7 @@ $formatLmValue = function($value, $satuan) {
                                                                 $target = $matrixTargets[$lm->id][$u->id][$sw->id] ?? 0;
                                                                 $realisasi = $matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0;
                                                                 
-                                                                $ulpTargetPlusCarryOver = $target + $runningUlpCarryOver;
+                                                                $ulpTargetPlusCarryOver = $isPercent ? $target : ($target + $runningUlpCarryOver);
 
                                                                 $pencapaian = round($calcCapaian($ulpTargetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
                                                                 $komitmenData = $matrixKomitmen[$lm->id][$u->id][$sw->id] ?? null;
@@ -930,8 +944,8 @@ $formatLmValue = function($value, $satuan) {
                                                                     if ($nextSwObj) {
                                                                         $nextTarget = $matrixTargets[$lm->id][$u->id][$nextSwObj->id] ?? 0;
                                                                     }
-                                                                    $carryOverFromThisWeek = max(0, $target - $realisasi);
-                                                                    $targetCarryOverMingguDepan = $nextTarget + $carryOverFromThisWeek;
+                                                                    $carryOverFromThisWeek = max(0, $ulpTargetPlusCarryOver - $realisasi);
+                                                                    $targetCarryOverMingguDepan = $isPercent ? $nextTarget : ($nextTarget + $carryOverFromThisWeek);
                                                                     
                                                                     if ($hasKom && $komitmenVal !== '' && $komitmenVal !== null) {
                                                                         if ((float)$komitmenVal < (float)$targetCarryOverMingguDepan) {
@@ -947,7 +961,7 @@ $formatLmValue = function($value, $satuan) {
                                                                 <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
                                                                 @if($canEditUlpKomitmen || $hasKom)
                                                                     <button type="button" 
-                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $target }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', wigId: {{ $wig->id }}, up3Id: {{ $up3->id }}, date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUlpKomitmen ? 'false' : 'true' }} } }))"
+                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $ulpTargetPlusCarryOver }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', wigId: {{ $wig->id }}, up3Id: {{ $up3->id }}, date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUlpKomitmen ? 'false' : 'true' }} } }))"
                                                                         class="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
                                                                         title="{{ $hasKom ? ($canEditUlpKomitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUlpKomitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
                                                                         @if($canEditUlpKomitmen)
