@@ -651,6 +651,7 @@ class SesiWigController extends Controller
         }
         $sid = $sesi_wig->id;
         foreach ($lms as $lm) {
+            $isPercent = (($lm->satuan_id ?? null) == 1) || (trim($lm->satuan->name ?? '') === '%');
             $wigOfLm = $wigs->where('id', $lm->wig_id)->first();
             $isWig4 = $wigOfLm && (str_contains(strtolower($wigOfLm->judul), 'wig 4') || str_contains(strtolower($wigOfLm->judul), 'frequency rate accident') || str_contains(strtolower($wigOfLm->judul), 'peningkatan kepuasan pelanggan'));
             $lmUp3s = ($isWig4 && $up2dUnit && ($isSuperAdmin || !in_array($unitType ?? '', ['UP3', 'ULP']))) ? $up3s->concat([$up2dUnit]) : $up3s;
@@ -662,7 +663,7 @@ class SesiWigController extends Controller
                 foreach($sesi_wigs_month as $sw) {
                     $t = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                     $r = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
-                    $targetPlusCarryOver = $t + $runningCarryOver;
+                    $targetPlusCarryOver = $isPercent ? $t : ($t + $runningCarryOver);
                     $runningCarryOver = max(0, $targetPlusCarryOver - $r);
                     if ($sw->id == $sid) {
                         $realisasi = $r;
@@ -681,7 +682,7 @@ class SesiWigController extends Controller
                 foreach($sesi_wigs_month as $sw) {
                     $t = $matrixTargets[$lm->id][$ulp->id][$sw->id] ?? 0;
                     $r = $matrixRealisasi[$lm->id][$ulp->id][$sw->id] ?? 0;
-                    $targetPlusCarryOver = $t + $runningCarryOver;
+                    $targetPlusCarryOver = $isPercent ? $t : ($t + $runningCarryOver);
                     $runningCarryOver = max(0, $targetPlusCarryOver - $r);
                     if ($sw->id == $sid) {
                         $realisasi = $r;
