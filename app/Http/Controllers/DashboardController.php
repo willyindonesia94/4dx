@@ -830,12 +830,11 @@ class DashboardController extends Controller
         $calcCapaian = function($target, $realisasi, $polaritas) {
             $target = (float)$target;
             $realisasi = (float)$realisasi;
+            if ($target <= 0) return 0;
             $pol = strtolower(trim($polaritas ?? 'positif'));
             if ($pol === 'negatif' || $pol === '3') {
-                if ($target == 0) return $realisasi == 0 ? 100 : 0;
                 return $realisasi == 0 ? 100 : ($target / $realisasi) * 100;
             } else {
-                if ($target == 0) return $realisasi > 0 ? 100 : 0;
                 return ($realisasi / $target) * 100;
             }
         };
@@ -897,15 +896,19 @@ class DashboardController extends Controller
             foreach ($lmUp3s as $up3) {
                 $target = $matrixTargets[$lm->id][$up3->id][$sid] ?? 0;
                 $sum = $matrixRealisasi[$lm->id][$up3->id][$sid] ?? 0;
-                $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
-                $rtMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => round($pct, 1)];
+                if ($target > 0) {
+                    $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
+                    $rtMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => round($pct, 1)];
+                }
             }
 
             foreach ($ulps as $ulp) {
                 $target = $matrixTargets[$lm->id][$ulp->id][$sid] ?? 0;
                 $sum = $matrixRealisasi[$lm->id][$ulp->id][$sid] ?? 0;
-                $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
-                $rtMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => round($pct, 1)];
+                if ($target > 0) {
+                    $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
+                    $rtMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => round($pct, 1)];
+                }
             }
 
             foreach (['divisi', 'up3', 'ulp'] as $level) {

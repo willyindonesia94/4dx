@@ -512,20 +512,27 @@ $formatLmValue = function($value, $satuan) {
                                                 @foreach($wigLms as $idx => $lm)
                                                     @php
                                                         $lmPct = $lm->capaian;
-                                                        $lmColor = $lmPct >= 100 ? 'text-green-600' : 'text-red-600';
-                                                        $lmBadge = $lmPct >= 100 ? 'bg-green-500' : 'bg-red-500';
-                                                        $lmStatus = $lmPct >= 100 ? 'EXCEEDED TARGET' : 'PERFORMANCE WATCH';
+                                                        $hasLmTarget = ($lm->total_target > 0);
+                                                        $lmColor = ($lmPct !== null && $lmPct >= 100) ? 'text-green-600' : 'text-red-600';
+                                                        $lmBadge = ($lmPct !== null && $lmPct >= 100) ? 'bg-green-500' : 'bg-red-500';
+                                                        $lmStatus = ($lmPct !== null && $lmPct >= 100) ? 'EXCEEDED TARGET' : 'PERFORMANCE WATCH';
                                                         
                                                         // Fetch LM menang kalah data which was built in controller
                                                         $mkLevel = $isUlpLevel || $isUp3Level ? 'ulp' : 'up3';
                                                         $menang = count($lmMenangKalah[$lm->id][$mkLevel]['menang'] ?? []);
                                                         $kalah = count($lmMenangKalah[$lm->id][$mkLevel]['kalah'] ?? []);
                                                     @endphp
-                                                    <div class="bg-gray-50 border border-gray-300 rounded-lg flex flex-col items-center justify-center p-3 text-center border-t-4 {{ $lmPct >= 100 ? 'border-t-green-500' : 'border-t-red-500' }} shadow-sm hover:shadow-md transition-shadow">
+                                                    <div class="bg-gray-50 border border-gray-300 rounded-lg flex flex-col items-center justify-center p-3 text-center border-t-4 {{ $hasLmTarget ? (($lmPct !== null && $lmPct >= 100) ? 'border-t-green-500' : 'border-t-red-500') : 'border-t-gray-400' }} shadow-sm hover:shadow-md transition-shadow">
                                                         <div class="text-[10px] font-bold text-gray-700 leading-tight mb-2 h-[26px] overflow-hidden line-clamp-2" title="{{ $lm->judul_lm }}">LM {{ $loop->iteration }} - {{ preg_replace('/^LM\s*-?\s*\d+\s*/i', '', $lm->judul_lm) }}</div>
-                                                        <div class="text-xl font-bold {{ $lmColor }} mb-1">{{ number_format($lmPct, 2) }} %</div>
-                                                        <div class="text-[9px] font-bold text-gray-500 mb-2">Target: {{ $formatLmValue($lm->total_target, $lm->satuan->name ?? '') }} | Real: {{ $formatLmValue($lm->total_realisasi, $lm->satuan->name ?? '') }}</div>
-                                                        <div class="{{ $lmBadge }} text-white text-[9px] font-bold px-3 py-0.5 rounded-full mb-2">{{ $lmStatus }}</div>
+                                                        @if($hasLmTarget && $lmPct !== null)
+                                                            <div class="text-xl font-bold {{ $lmColor }} mb-1">{{ number_format($lmPct, 2) }} %</div>
+                                                            <div class="text-[9px] font-bold text-gray-500 mb-2">Target: {{ $formatLmValue($lm->total_target, $lm->satuan->name ?? '') }} | Real: {{ $formatLmValue($lm->total_realisasi, $lm->satuan->name ?? '') }}</div>
+                                                            <div class="{{ $lmBadge }} text-white text-[9px] font-bold px-3 py-0.5 rounded-full mb-2">{{ $lmStatus }}</div>
+                                                        @else
+                                                            <div class="text-xl font-bold text-gray-400 mb-1">-</div>
+                                                            <div class="text-[9px] font-bold text-gray-500 mb-2">Target: - | Real: {{ $formatLmValue($lm->total_realisasi, $lm->satuan->name ?? '') }}</div>
+                                                            <div class="bg-gray-400 text-white text-[9px] font-bold px-3 py-0.5 rounded-full mb-2">TIDAK ADA TARGET</div>
+                                                        @endif
                                                         <div class="text-[9px] font-bold text-gray-800">{{ strtoupper($mkLevel) }} Menang: {{ $menang }} | {{ strtoupper($mkLevel) }} Kalah: {{ $kalah }}</div>
                                                     </div>
                                                 @endforeach
@@ -693,17 +700,16 @@ $formatLmValue = function($value, $satuan) {
                                                         
                                                         $uidTargetPlusCarryOver = $isPercent ? $uidTarget : ($uidTarget + $runningUidCarryOver);
 
-                                                        $uidPencapaian = 0;
-                                                        if ($uidTargetPlusCarryOver > 0) {
+                                                        $hasUidTarget = ($uidTargetPlusCarryOver > 0);
+                                                        $uidPencapaian = null;
+                                                        $uidBgColor = '';
+                                                        if ($hasUidTarget) {
                                                             if (strtolower($lm->polaritas) === 'negatif' || $lm->polaritas === '3') {
                                                                 $uidPencapaian = round(($uidTargetPlusCarryOver / max(0.0001, $uidRealisasi)) * 100, 2);
                                                             } else {
                                                                 $uidPencapaian = round(($uidRealisasi / $uidTargetPlusCarryOver) * 100, 2);
                                                             }
-                                                        }
-                                                        $uidBgColor = 'bg-red-500 text-white';
-                                                        if ($uidPencapaian >= 100) {
-                                                            $uidBgColor = 'bg-green-500 text-white'; // No komitmen on UID level currently
+                                                            $uidBgColor = $uidPencapaian >= 100 ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
                                                         }
                                                         
                                                         $runningUidCarryOver = max(0, $uidTargetPlusCarryOver - $uidRealisasi);
@@ -736,7 +742,7 @@ $formatLmValue = function($value, $satuan) {
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $hasUidKom ? 'text-indigo-900 bg-indigo-50' : 'text-gray-400 bg-slate-50' }}">{{ $hasUidKom ? $formatLmValue($uidKomitmen, $lm->satuan->name ?? '') : '-' }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900">{{ $formatLmValue($uidRealisasi, $lm->satuan->name ?? '') }}</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $uidBgColor }}">{{ $uidPencapaian }}%</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right {{ $hasUidTarget ? 'font-black ' . $uidBgColor : 'text-center text-gray-400 font-bold' }}">{{ $hasUidTarget ? $uidPencapaian . '%' : '-' }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{{ $runningUidCarryOver > 0 ? $formatLmValue($runningUidCarryOver, $lm->satuan->name ?? '') : '0' }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{!! $uidTrendIcon !!}</td>
                                                 @endforeach
@@ -770,14 +776,15 @@ $formatLmValue = function($value, $satuan) {
                                                             
                                                             $up3TargetPlusCarryOver = $isPercent ? $up3Target : ($up3Target + $runningUp3CarryOver);
 
-                                                            $up3Pencapaian = round($calcCapaian($up3TargetPlusCarryOver, $up3Realisasi, $lm->polaritas ?? 'positif'), 2);
+                                                            $hasUp3Target = ($up3TargetPlusCarryOver > 0);
+                                                            $up3Pencapaian = $hasUp3Target ? round($calcCapaian($up3TargetPlusCarryOver, $up3Realisasi, $lm->polaritas ?? 'positif'), 2) : null;
                                                             
                                                             $up3KomData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
                                                             $up3KomVal = $up3KomData !== null ? floatval($up3KomData['komitmen']) : 0;
                                                             
-                                                            $up3BgColor = 'bg-red-500 text-white';
-                                                            if ($up3Pencapaian >= 100) {
-                                                                $up3BgColor = 'bg-green-500 text-white';
+                                                            $up3BgColor = '';
+                                                            if ($hasUp3Target) {
+                                                                $up3BgColor = $up3Pencapaian >= 100 ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
                                                             }
                                                             
                                                             $runningUp3CarryOver = max(0, $up3TargetPlusCarryOver - $up3Realisasi);
@@ -845,7 +852,7 @@ $formatLmValue = function($value, $satuan) {
                                                     <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
                                                         @if($canEditUp3Komitmen || $hasKom)
                                                             <button type="button" 
-                                                                @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3TargetPlusCarryOver }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', wigId: {{ $wig->id }}, up3Id: {{ $up3->id }}, date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUp3Komitmen ? 'false' : 'true' }} } }))"
+                                                                @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $up3->id }}, target: {{ $up3TargetPlusCarryOver }}, realisasi: {{ $up3Realisasi }}, capai: {{ $up3Pencapaian !== null ? $up3Pencapaian : 'null' }}, unitName: '{{ addslashes($up3->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', wigId: {{ $wig->id }}, up3Id: {{ $up3->id }}, date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUp3Komitmen ? 'false' : 'true' }} } }))"
                                                                 class="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
                                                                 title="{{ $hasKom ? ($canEditUp3Komitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUp3Komitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
                                                                 @if($canEditUp3Komitmen)
@@ -859,7 +866,7 @@ $formatLmValue = function($value, $satuan) {
                                                         @endif
                                                     </td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-semibold">{{ $formatLmValue($up3Realisasi, $lm->satuan->name ?? '') }}</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-right font-bold {{ $up3BgColor }}">{{ $up3Pencapaian }}%</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right {{ $hasUp3Target ? 'font-bold ' . $up3BgColor : 'text-center text-gray-400' }}">{{ $hasUp3Target ? $up3Pencapaian . '%' : '-' }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 text-xs font-semibold text-gray-700">
                                                         {{ $runningUp3CarryOver > 0 ? $formatLmValue($runningUp3CarryOver, $lm->satuan->name ?? '') : '0' }}
                                                     </td>
@@ -882,14 +889,15 @@ $formatLmValue = function($value, $satuan) {
                                                                 
                                                                 $ulpTargetPlusCarryOver = $isPercent ? $target : ($target + $runningUlpCarryOver);
 
-                                                                $pencapaian = round($calcCapaian($ulpTargetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
+                                                                $hasTarget = ($ulpTargetPlusCarryOver > 0);
+                                                                $pencapaian = $hasTarget ? round($calcCapaian($ulpTargetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2) : null;
                                                                 $komitmenData = $matrixKomitmen[$lm->id][$u->id][$sw->id] ?? null;
                                                                 $komitmenVal = $komitmenData ? $komitmenData['komitmen'] : '';
                                                                 $carryOverVal = $komitmenData ? $komitmenData['carry_over'] : '';
                                                                 
-                                                                $bgColor = 'bg-red-500 text-white';
-                                                                if ($pencapaian >= 100) {
-                                                                    $bgColor = 'bg-green-500 text-white';
+                                                                $bgColor = '';
+                                                                if ($hasTarget) {
+                                                                    $bgColor = $pencapaian >= 100 ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
                                                                 }
                                                                 
                                                                 $canEditUlpKomitmen = false;
@@ -961,7 +969,7 @@ $formatLmValue = function($value, $satuan) {
                                                                 <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 w-10">
                                                                 @if($canEditUlpKomitmen || $hasKom)
                                                                     <button type="button" 
-                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $ulpTargetPlusCarryOver }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', wigId: {{ $wig->id }}, up3Id: {{ $up3->id }}, date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUlpKomitmen ? 'false' : 'true' }} } }))"
+                                                                        @click="window.dispatchEvent(new CustomEvent('open-komitmen', { detail: { sesi: {{ $sw->id }}, lm: {{ $lm->id }}, unit: {{ $u->id }}, target: {{ $ulpTargetPlusCarryOver }}, realisasi: {{ $realisasi }}, capai: {{ $pencapaian !== null ? $pencapaian : 'null' }}, unitName: '{{ addslashes($u->name) }}', lmName: '{{ addslashes($lm->judul_lm) }}', wigName: '{{ addslashes($wig->judul) }}', wigId: {{ $wig->id }}, up3Id: {{ $up3->id }}, date: '{{ \Carbon\Carbon::parse($sw->tanggal_pelaksanaan)->format('d/m/Y') }}', satuan: '{{ addslashes($lm->satuan->name ?? '') }}', readonly: {{ $canEditUlpKomitmen ? 'false' : 'true' }} } }))"
                                                                         class="inline-flex items-center justify-center w-6 h-6 shrink-0 rounded-full transition-all shadow-sm focus:outline-none {{ $hasKom ? 'bg-green-100 text-green-600 hover:bg-green-200 border border-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200' }}"
                                                                         title="{{ $hasKom ? ($canEditUlpKomitmen ? 'Edit Form Komitmen' : 'Lihat Komitmen') : ($canEditUlpKomitmen ? 'Isi Form Komitmen' : 'Belum Ada Komitmen') }}">
                                                                         @if($canEditUlpKomitmen)
@@ -975,8 +983,8 @@ $formatLmValue = function($value, $satuan) {
                                                                 @endif
                                                             </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-right">{{ $formatLmValue($realisasi, $lm->satuan->name ?? '') }}</td>
-                                                            <td class="px-2 py-2 border border-gray-300 text-right font-bold {{ $bgColor }}">
-                                                                {{ $pencapaian }}%
+                                                            <td class="px-2 py-2 border border-gray-300 text-right {{ $hasTarget ? 'font-bold ' . $bgColor : 'text-center text-gray-400' }}">
+                                                                {{ $hasTarget ? $pencapaian . '%' : '-' }}
                                                             </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 text-xs font-semibold text-gray-700">
                                                                 {{ $ulpCarryOver > 0 ? $formatLmValue($ulpCarryOver, $lm->satuan->name ?? '') : '0' }}
@@ -1453,9 +1461,14 @@ $formatLmValue = function($value, $satuan) {
                                             <span x-show="(params.realisasi - params.target) > 0">+</span><span x-text="formatNumber(params.realisasi - params.target)"></span>
                                         </td>
                                         <td class="py-2 px-4 whitespace-nowrap">
-                                            <span class="px-2 py-1 rounded text-xs font-bold" 
-                                                :class="params.capai >= 100 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
-                                                x-text="params.capai + '%'"></span>
+                                            <template x-if="params.capai !== null && params.capai !== ''">
+                                                <span class="px-2 py-1 rounded text-xs font-bold" 
+                                                    :class="params.capai >= 100 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
+                                                    x-text="params.capai + '%'"></span>
+                                            </template>
+                                            <template x-if="params.capai === null || params.capai === ''">
+                                                <span class="text-gray-400 font-bold">-</span>
+                                            </template>
                                         </td>
                                     </tr>
                                 </tbody>
