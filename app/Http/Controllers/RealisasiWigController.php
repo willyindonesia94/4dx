@@ -232,28 +232,39 @@ class RealisasiWigController extends Controller
             return redirect()->back()->with('error', 'Tidak dapat menyimpan realisasi. Breakdown target untuk unit Anda belum dibuat oleh Admin.');
         }
 
-        // Check if already inputted for this month
-        $existing = RealisasiWig::where('wig_id', $request->wig_id)
-                                ->where('unit_id', $unitId)
-                                ->where('bulan', $request->bulan)
-                                ->where('tahun', $request->tahun)
-                                ->first();
+        $lockKey = "realisasi_wig_store_{$unitId}_{$request->wig_id}_{$request->tahun}_{$request->bulan}";
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 15);
 
-        if ($existing) {
-            return redirect()->back()->with('error', 'Realisasi untuk WIG ini pada bulan tersebut sudah ada. Anda bisa mengeditnya.');
+        if (!$lock->get()) {
+            return redirect()->back()->with('error', 'Permintaan Anda sedang diproses. Mohon tidak menekan tombol kirim berulang kali.');
         }
 
-        $data = $request->except('bukti_file');
-        $data['user_id'] = auth()->id();
-        $data['unit_id'] = $unitId;
+        try {
+            // Check if already inputted for this month
+            $existing = RealisasiWig::where('wig_id', $request->wig_id)
+                                    ->where('unit_id', $unitId)
+                                    ->where('bulan', $request->bulan)
+                                    ->where('tahun', $request->tahun)
+                                    ->first();
 
-        if ($request->hasFile('bukti_file')) {
-            $data['bukti_file'] = $request->file('bukti_file')->store('bukti_realisasi_wig', 'public');
+            if ($existing) {
+                return redirect()->back()->with('error', 'Realisasi untuk WIG ini pada bulan tersebut sudah ada. Anda bisa mengeditnya.');
+            }
+
+            $data = $request->except('bukti_file');
+            $data['user_id'] = auth()->id();
+            $data['unit_id'] = $unitId;
+
+            if ($request->hasFile('bukti_file')) {
+                $data['bukti_file'] = $request->file('bukti_file')->store('bukti_realisasi_wig', 'public');
+            }
+
+            RealisasiWig::create($data);
+
+            return redirect()->back()->with('success', 'Realisasi WIG berhasil ditambahkan.')->with('active_wig', $request->wig_id);
+        } finally {
+            $lock->release();
         }
-
-        RealisasiWig::create($data);
-
-        return redirect()->back()->with('success', 'Realisasi WIG berhasil ditambahkan.')->with('active_wig', $request->wig_id);
     }
 
     public function update(Request $request, RealisasiWig $realisasi_wig)

@@ -187,19 +187,32 @@ class RealisasiLmFormatBidangImport implements ToCollection
                 // Cari user default (admin/superadmin) atau gunakan ID 1
                 $userId = auth()->id() ?? 1;
 
-                Realisasi::updateOrCreate(
-                    [
-                        'lm_id'         => $lm->id,
-                        'unit_id'       => $unit->id,
-                        'tanggal_input' => $tanggal,
-                    ],
-                    [
+                $existingRealisasi = Realisasi::where('lm_id', $lm->id)
+                    ->where('unit_id', $unit->id)
+                    ->whereDate('tanggal_input', $tanggal)
+                    ->first();
+
+                if ($existingRealisasi) {
+                    $finalBuktiFile = (!empty($existingRealisasi->bukti_file) && str_starts_with($existingRealisasi->bukti_file, 'bukti_realisasi/')) 
+                        ? $existingRealisasi->bukti_file 
+                        : 'Upload Massal Excel (Format Bidang)';
+
+                    $existingRealisasi->update([
+                        'angka_realisasi'     => $angka,
+                        'bukti_file'          => $finalBuktiFile,
+                        'keterangan_tambahan' => 'Import dari format Scoreboard Bidang - Minggu ' . $minggu,
+                    ]);
+                } else {
+                    Realisasi::create([
+                        'lm_id'               => $lm->id,
+                        'unit_id'             => $unit->id,
+                        'tanggal_input'       => $tanggal,
                         'user_id'             => $userId,
                         'angka_realisasi'     => $angka,
                         'bukti_file'          => 'Upload Massal Excel (Format Bidang)',
                         'keterangan_tambahan' => 'Import dari format Scoreboard Bidang - Minggu ' . $minggu,
-                    ]
-                );
+                    ]);
+                }
             }
         }
     }

@@ -411,11 +411,11 @@
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
                 
                 <div x-show="openModal" class="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100 max-h-[90vh] flex flex-col">
-                    <form action="{{ route('realisasi-wig.store') }}" method="POST" enctype="multipart/form-data" class="flex flex-col max-h-[90vh]">
+                    <form action="{{ route('realisasi-wig.store') }}" method="POST" enctype="multipart/form-data" class="flex flex-col max-h-[90vh]" x-data="{ isSubmitting: false }" @submit="if (isSubmitting) { $event.preventDefault(); return false; } isSubmitting = true;">
                         @csrf
                         <div class="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-4 flex items-center justify-between">
                             <h3 class="text-lg font-bold text-white tracking-wide" id="modal-title">Input Realisasi WIG</h3>
-                            <button @click="openModal = false" type="button" class="text-indigo-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 focus:outline-none">
+                            <button @click="openModal = false; isSubmitting = false;" type="button" class="text-indigo-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 focus:outline-none">
                                 <span class="sr-only">Close</span>
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
@@ -510,11 +510,15 @@
                             </div>
                         </div>
                         <div class="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 rounded-b-lg flex-shrink-0">
-                            <button @click="openModal = false" type="button" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-slate-200 px-6 py-2.5 bg-white text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none">
+                            <button @click="openModal = false; isSubmitting = false;" type="button" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-slate-200 px-6 py-2.5 bg-white text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none">
                                 Batal
                             </button>
-                            <button type="submit" :disabled="form.target === null" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-transparent px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
-                                Kirim Realisasi
+                            <button type="submit" :disabled="form.target === null || isSubmitting" :class="{ 'opacity-50 cursor-not-allowed pointer-events-none': isSubmitting || form.target === null }" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-transparent px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
+                                <svg x-show="isSubmitting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span x-text="isSubmitting ? 'Memproses...' : 'Kirim Realisasi'"></span>
                             </button>
                         </div>
                     </form>

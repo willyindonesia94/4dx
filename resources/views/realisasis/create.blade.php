@@ -9,7 +9,7 @@
         <div class="max-w-xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm rounded-t-3xl sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
-                    <form action="{{ route('realisasis.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+                    <form action="{{ route('realisasis.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6" x-data="{ isSubmitting: false }" @submit="if (isSubmitting) { $event.preventDefault(); return false; } isSubmitting = true;">
                         @csrf
                         
                         <div>
@@ -55,8 +55,12 @@
                         </div>
 
                         <div class="pt-4">
-                            <button type="submit" class="w-full flex justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                Kirim Realisasi
+                            <button type="submit" :disabled="isSubmitting" :class="{ 'opacity-50 cursor-not-allowed pointer-events-none': isSubmitting }" class="w-full flex items-center justify-center py-4 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all">
+                                <svg x-show="isSubmitting" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span x-text="isSubmitting ? 'Memproses...' : 'Kirim Realisasi'">Kirim Realisasi</span>
                             </button>
                             <p class="text-center text-xs text-gray-400 mt-3 flex justify-center items-center">
                                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>

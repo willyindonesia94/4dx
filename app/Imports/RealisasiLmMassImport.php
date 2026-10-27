@@ -115,19 +115,32 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                     for ($i = 0; $i < $days; $i++) {
                         $currentDate = $this->tanggalMulai->copy()->addDays($i)->format('Y-m-d');
                         
-                        Realisasi::updateOrCreate(
-                            [
-                                "lm_id"         => $lm->id,
-                                "user_id"       => $user->id,
-                                "tanggal_input" => $currentDate,
-                                "unit_id"       => $unit_id,
-                            ],
-                            [
+                        $existingRealisasi = Realisasi::where('lm_id', $lm->id)
+                            ->where('unit_id', $unit_id)
+                            ->whereDate('tanggal_input', $currentDate)
+                            ->first();
+
+                        if ($existingRealisasi) {
+                            $finalBuktiFile = (!empty($existingRealisasi->bukti_file) && str_starts_with($existingRealisasi->bukti_file, 'bukti_realisasi/')) 
+                                ? $existingRealisasi->bukti_file 
+                                : ($buktiFile ?? $existingRealisasi->bukti_file);
+
+                            $existingRealisasi->update([
+                                "angka_realisasi"     => $angkaPerHari,
+                                "bukti_file"          => $finalBuktiFile,
+                                "keterangan_tambahan" => $buktiText . " (Prorata)",
+                            ]);
+                        } else {
+                            Realisasi::create([
+                                "lm_id"               => $lm->id,
+                                "user_id"             => $user->id,
+                                "tanggal_input"       => $currentDate,
+                                "unit_id"             => $unit_id,
                                 "angka_realisasi"     => $angkaPerHari,
                                 "bukti_file"          => $buktiFile,
                                 "keterangan_tambahan" => $buktiText . " (Prorata)",
-                            ]
-                        );
+                            ]);
+                        }
                     }
                 } else {
                     // Jika ada bulanImport/tahunImport, ganti bulan & tahun tanggal sesuai pilihan
@@ -149,19 +162,32 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                     $parsedCarbon->month = $this->bulanImport;
                     $parsedDate = $parsedCarbon->format('Y-m-d');
 
-                    Realisasi::updateOrCreate(
-                        [
-                            "lm_id"         => $lm->id,
-                            "user_id"       => $user->id,
-                            "tanggal_input" => $parsedDate,
-                            "unit_id"       => $unit_id,
-                        ],
-                        [
+                    $existingRealisasi = Realisasi::where('lm_id', $lm->id)
+                        ->where('unit_id', $unit_id)
+                        ->whereDate('tanggal_input', $parsedDate)
+                        ->first();
+
+                    if ($existingRealisasi) {
+                        $finalBuktiFile = (!empty($existingRealisasi->bukti_file) && str_starts_with($existingRealisasi->bukti_file, 'bukti_realisasi/')) 
+                            ? $existingRealisasi->bukti_file 
+                            : ($buktiFile ?? $existingRealisasi->bukti_file);
+
+                        $existingRealisasi->update([
+                            "angka_realisasi"     => $angkaRealisasi,
+                            "bukti_file"          => $finalBuktiFile,
+                            "keterangan_tambahan" => $buktiText,
+                        ]);
+                    } else {
+                        Realisasi::create([
+                            "lm_id"               => $lm->id,
+                            "user_id"             => $user->id,
+                            "tanggal_input"       => $parsedDate,
+                            "unit_id"             => $unit_id,
                             "angka_realisasi"     => $angkaRealisasi,
                             "bukti_file"          => $buktiFile,
                             "keterangan_tambahan" => $buktiText,
-                        ]
-                    );
+                        ]);
+                    }
                 }
             }
             DB::commit();
