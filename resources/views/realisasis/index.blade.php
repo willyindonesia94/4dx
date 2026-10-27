@@ -261,9 +261,7 @@
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Input</th>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capaian</th>
-                                                @if(!isset($isUlpLevel) || !$isUlpLevel)
                                                 <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                                                @endif
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
@@ -284,10 +282,10 @@
                                                     {{ number_format($realisasi->angka_realisasi, 2) }} 
                                                     <span class="text-xs text-gray-500 font-normal">{{ $lm->satuan->name ?? '' }}</span>
                                                 </td>
-                                                @if(!isset($isUlpLevel) || !$isUlpLevel)
                                                 <td class="px-4 py-3 whitespace-nowrap text-center text-sm font-medium space-x-2">
                                                     @php
-                                                        $isAsmanUP3 = auth()->user()->hasAnyRole(['Asman Bidang UP3', 'Asman Perencanaan UP3']) || in_array(auth()->user()->role_name, ['Asman Bidang UP3', 'Asman Perencanaan UP3']);
+                                                        $currentUser = auth()->user();
+                                                        $isAsmanUP3 = $currentUser && ($currentUser->hasAnyRole(['Asman Bidang UP3', 'Asman Perencanaan UP3']) || in_array($currentUser->role_name, ['Asman Bidang UP3', 'Asman Perencanaan UP3']));
                                                         
                                                         $tglInput = \Carbon\Carbon::parse($realisasi->tanggal_input)->startOfDay();
                                                         $hariIni = now()->startOfDay();
@@ -299,25 +297,32 @@
                                                             $isUnlocked = \Illuminate\Support\Facades\Cache::get('unlock_asman_edit', false);
                                                             $canEdit = $isUnlocked ? true : ($tglInput->diffInDays($hariIni, false) <= 1);
                                                             $canDelete = $canEdit;
-                                                        } else {
+                                                        } elseif ($currentUser && $currentUser->unit_id == $realisasi->unit_id) {
+                                                            // ULP hanya dapat mengedit/menghapus data unitnya sendiri pada hari yang sama
                                                             $canEdit = $tglInput->isSameDay($hariIni);
                                                             $canDelete = $canEdit;
+                                                        } else {
+                                                            $canEdit = false;
+                                                            $canDelete = false;
                                                         }
                                                     @endphp
 
                                                     @if($canEdit)
-                                                    <button @click="openEditModal = true; editForm.id = {{ $realisasi->id }}; editForm.angka_realisasi = '{{ $realisasi->angka_realisasi }}'; editForm.keterangan_tambahan = '{{ $realisasi->keterangan_tambahan }}'; editForm.actionUrl = '{{ route('realisasis.update', $realisasi->id) }}'" class="text-indigo-600 hover:text-indigo-900 transition-colors">Edit</button>
+                                                    <button @click="openEditModal = true; editForm.id = {{ $realisasi->id }}; editForm.angka_realisasi = '{{ $realisasi->angka_realisasi }}'; editForm.keterangan_tambahan = '{{ $realisasi->keterangan_tambahan }}'; editForm.actionUrl = '{{ route('realisasis.update', $realisasi->id) }}'" class="text-indigo-600 hover:text-indigo-900 transition-colors font-medium">Edit</button>
                                                     @endif
 
                                                     @if($canDelete)
                                                     <form id="deleteForm-{{ $realisasi->id }}" action="{{ route('realisasis.destroy', $realisasi->id) }}" method="POST" class="inline m-0">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="button" @click="openConfirm([], 'Apakah Anda yakin ingin menghapus realisasi ini?', 'delete', 'deleteForm-{{ $realisasi->id }}')" class="text-red-600 hover:text-red-900 transition-colors">Hapus</button>
+                                                        <button type="button" @click="openConfirm([], 'Apakah Anda yakin ingin menghapus realisasi ini?', 'delete', 'deleteForm-{{ $realisasi->id }}')" class="text-red-600 hover:text-red-900 transition-colors font-medium">Hapus</button>
                                                     </form>
                                                     @endif
+
+                                                    @if(!$canEdit && !$canDelete)
+                                                    <span class="text-xs text-gray-400">-</span>
+                                                    @endif
                                                 </td>
-                                                @endif
                                             </tr>
                                             @endforeach
                                         </tbody>
@@ -496,11 +501,11 @@
                 <div x-show="openUploadModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
                 <div x-show="openUploadModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100 max-h-[90vh] flex flex-col">
-                    <form action="{{ route('realisasis.import') }}" method="POST" enctype="multipart/form-data" class="flex flex-col max-h-[90vh]" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
+                    <form action="{{ route('realisasis.import') }}" method="POST" enctype="multipart/form-data" class="flex flex-col max-h-[90vh]" x-data="{ isSubmitting: false }" @submit="if (isSubmitting) { $event.preventDefault(); return false; } isSubmitting = true;">
                         @csrf
                         <div class="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-4 flex items-center justify-between">
                             <h3 class="text-lg font-bold text-white tracking-wide" id="modal-title">Upload Massal Realisasi Harian</h3>
-                            <button @click="openUploadModal = false" type="button" class="text-indigo-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 focus:outline-none">
+                            <button @click="openUploadModal = false; isSubmitting = false;" type="button" class="text-indigo-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 focus:outline-none">
                                 <span class="sr-only">Close</span>
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
@@ -599,8 +604,8 @@
                             </div>
                         </div>
                         <div class="bg-slate-100 px-6 py-4 border-t border-slate-200 flex flex-col-reverse sm:flex-row justify-end gap-2">
-                            <button @click="openUploadModal = false" type="button" class="w-full sm:w-auto px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500/20 transition-all text-sm">Batal</button>
-                            <button type="submit" :disabled="isSubmitting" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold rounded-lg shadow-md shadow-indigo-200 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all duration-200 text-sm flex items-center justify-center transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button @click="openUploadModal = false; isSubmitting = false;" type="button" class="w-full sm:w-auto px-5 py-2.5 bg-white border border-slate-300 text-slate-700 font-semibold rounded-lg shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-500/20 transition-all text-sm">Batal</button>
+                            <button type="submit" :disabled="isSubmitting" :class="{ 'opacity-50 cursor-not-allowed pointer-events-none': isSubmitting }" class="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold rounded-lg shadow-md shadow-indigo-200 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all duration-200 text-sm flex items-center justify-center transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
                                 <span x-text="isSubmitting ? 'Memproses...' : 'Upload & Proses Realisasi'"></span>
                             </button>
                         </div>
@@ -619,11 +624,11 @@
                 
                 <!-- Modal Panel -->
                 <div x-show="openModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100 max-h-[90vh] flex flex-col">
-                    <form action="{{ route('realisasis.store') }}" method="POST" enctype="multipart/form-data" class="flex flex-col max-h-[90vh]" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
+                    <form action="{{ route('realisasis.store') }}" method="POST" enctype="multipart/form-data" class="flex flex-col max-h-[90vh]" x-data="{ isSubmitting: false }" @submit="if (isSubmitting) { $event.preventDefault(); return false; } if (selectedLm && inputtedLms.includes(Number(selectedLm))) { $event.preventDefault(); alert('Lead Measure ini sudah diinput hari ini. Silakan gunakan tombol Edit pada tabel jika ingin merevisi.'); return false; } isSubmitting = true;">
                         @csrf
                         <div class="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-4 flex items-center justify-between">
                             <h3 class="text-lg font-bold text-white tracking-wide" id="modal-title">Input Realisasi Harian</h3>
-                            <button @click="openModal = false" type="button" class="text-indigo-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 focus:outline-none">
+                            <button @click="openModal = false; isSubmitting = false;" type="button" class="text-indigo-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 focus:outline-none">
                                 <span class="sr-only">Close</span>
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
@@ -632,7 +637,7 @@
                             <div class="space-y-5">
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Pilih WIG Target</label>
-                                    <select x-model="selectedWig" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700">
+                                    <select x-model="selectedWig" @change="selectedLm = ''" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700">
                                         <option value="">-- Pilih WIG --</option>
                                         <template x-for="wig in wigs" :key="wig.id">
                                             <option :value="wig.id" x-text="wig.judul"></option>
@@ -646,9 +651,13 @@
                                     <select name="lm_id" x-model="selectedLm" required class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700">
                                         <option value="">-- Pilih LM --</option>
                                         <template x-for="lm in filteredLms" :key="lm.id">
-                                            <option :value="lm.id" :disabled="inputtedLms.includes(lm.id)" x-text="lm.judul_lm + (inputtedLms.includes(lm.id) ? ' (Sudah Diinput Hari Ini)' : '')"></option>
+                                            <option :value="lm.id" :disabled="inputtedLms.includes(Number(lm.id))" x-text="lm.judul_lm + (inputtedLms.includes(Number(lm.id)) ? ' (Sudah Diinput Hari Ini)' : '')"></option>
                                         </template>
                                     </select>
+                                    <div x-show="selectedLm && inputtedLms.includes(Number(selectedLm))" class="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-md text-xs text-amber-800 flex items-center gap-2">
+                                        <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                        <span>Lead Measure ini sudah pernah diinput hari ini. ULP hanya diperbolehkan 1 kali input per hari. Gunakan tombol Edit pada tabel jika ingin merevisi.</span>
+                                    </div>
                                 </div>
 
                                 <div>
@@ -679,10 +688,14 @@
                             </div>
                         </div>
                         <div class="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 rounded-b-lg flex-shrink-0">
-                            <button @click="openModal = false" type="button" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-slate-200 px-6 py-2.5 bg-white text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-300">
+                            <button @click="openModal = false; isSubmitting = false;" type="button" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-slate-200 px-6 py-2.5 bg-white text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-300">
                                 Batal
                             </button>
-                            <button type="submit" :disabled="isSubmitting" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-transparent px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <button type="submit" :disabled="isSubmitting || !selectedLm || inputtedLms.includes(Number(selectedLm))" :class="{ 'opacity-50 cursor-not-allowed pointer-events-none': isSubmitting || !selectedLm || inputtedLms.includes(Number(selectedLm)) }" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-transparent px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <svg x-show="isSubmitting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
                                 <span x-text="isSubmitting ? 'Memproses...' : 'Kirim Realisasi'"></span>
                             </button>
                         </div>
@@ -697,7 +710,7 @@
                 <div x-show="openEditModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
                 <div x-show="openEditModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100 max-h-[90vh] flex flex-col">
-                    <form :action="editForm.actionUrl" method="POST" enctype="multipart/form-data" class="flex flex-col max-h-[90vh]">
+                    <form :action="editForm.actionUrl" method="POST" enctype="multipart/form-data" class="flex flex-col max-h-[90vh]" x-data="{ isEditing: false }" @submit="if (isEditing) { $event.preventDefault(); return false; } isEditing = true;">
                         @csrf
                         @method('PUT')
                         <div class="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-4 flex items-center justify-between">
@@ -728,8 +741,9 @@
                             <button @click="openEditModal = false" type="button" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-slate-200 px-6 py-2.5 bg-white text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all duration-300">
                                 Batal
                             </button>
-                            <button type="submit" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-transparent px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:-translate-y-0.5">
-                                Simpan Perubahan
+                            <button type="submit" :disabled="isEditing" :class="{ 'opacity-50 cursor-not-allowed pointer-events-none': isEditing }" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-transparent px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:-translate-y-0.5">
+                                <svg x-show="isEditing" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                <span x-text="isEditing ? 'Menyimpan...' : 'Simpan Perubahan'">Simpan Perubahan</span>
                             </button>
                         </div>
                     </form>

@@ -163,10 +163,11 @@ class RealizationController extends Controller
         }
         $inputtedLmIdsToday = [];
         $unitType = strtoupper(trim((string)($user->unit->type ?? '')));
-        if ($unitType === 'ULP' && $user->unit_id) {
+        if (($isUlpLevel || $unitType === 'ULP') && $user && $user->unit_id) {
             $inputtedLmIdsToday = \App\Models\Realisasi::where('unit_id', $user->unit_id)
                 ->whereDate('tanggal_input', now()->toDateString())
                 ->pluck('lm_id')
+                ->map(fn($id) => (int)$id)
                 ->toArray();
         }
 
@@ -211,36 +212,77 @@ class RealizationController extends Controller
             return redirect()->back()->with('error', 'Hanya Pelaksana / Team Leader ULP yang dapat menginput realisasi LM harian.');
         }
 
-        $data = $request->except('bukti_file');
-        $data['user_id'] = auth()->id();
-        $data['unit_id'] = auth()->user()->unit_id;
-        $data['tanggal_input'] = now();
+        $unitId = $user->unit_id;
+        if (!$unitId) {
+            return redirect()->back()->with('error', 'Unit kerja Anda tidak ditemukan. Harap hubungi administrator.');
+        }
 
-        // ULP Restriction: Max 1 input per day per LM
-        $unitType = strtoupper(trim((string)($user->unit->type ?? '')));
-        if ($unitType === 'ULP') {
-            $existing = \App\Models\Realisasi::where('lm_id', $request->lm_id)
-                ->where('unit_id', $data['unit_id'])
-                ->whereDate('tanggal_input', $data['tanggal_input']->toDateString())
-                ->exists();
+        $lmId = (int) $request->lm_id;
+        $targetDate = $request->filled('tanggal_input') 
+            ? \Carbon\Carbon::parse($request->tanggal_input)->toDateString() 
+            : now()->toDateString();
 
-            if ($existing) {
-                return redirect()->back()->with('error', 'Anda hanya dapat menginput realisasi 1 kali dalam sehari untuk LM yang sama.');
+        // Lock to prevent concurrent double-click / double submission race conditions
+        $lockKey = "realisasi_store_{$unitId}_{$lmId}_{$targetDate}";
+        $lock = \Illuminate\Support\Facades\Cache::lock($lockKey, 15);
+
+        if (!$lock->get()) {
+            return redirect()->back()->with('error', 'Permintaan Anda sedang diproses. Mohon tidak menekan tombol kirim berulang kali.');
+        }
+
+        try {
+            $unitType = strtoupper(trim((string)($user->unit->type ?? '')));
+            $isUlpLevel = !$user->hasAnyRole(['Super Admin', 'Perencanaan UID']) && (
+                in_array($unitType, ['ULP', 'UP2D', 'UP2K']) ||
+                str_contains(strtoupper($user->role_name ?? ''), 'ULP') ||
+                $user->hasRole('Team Leader ULP')
+            );
+
+            // 1. Cek duplikasi persis: unit sama, LM sama, tanggal sama, dan capaian (angka_realisasi) sama
+            $duplicateSameCapaian = \App\Models\Realisasi::where('lm_id', $lmId)
+                ->where('unit_id', $unitId)
+                ->whereDate('tanggal_input', $targetDate)
+                ->where('angka_realisasi', $request->angka_realisasi)
+                ->first();
+
+            if ($duplicateSameCapaian) {
+                return redirect()->back()->with('error', 'Realisasi untuk unit dan capaian ini sudah tercatat pada hari ini (tombol tertekan 2 kali). Data tidak diduplikasi.');
             }
-        }
 
-        if ($request->hasFile('bukti_file')) {
-            $data['bukti_file'] = $request->file('bukti_file')->store('bukti_realisasi', 'public');
-        }
+            // 2. Pembatasan ULP: Tepat 1 kali input per hari per LM untuk setiap unit ULP
+            if ($isUlpLevel || $unitType === 'ULP') {
+                $existing = \App\Models\Realisasi::where('lm_id', $lmId)
+                    ->where('unit_id', $unitId)
+                    ->whereDate('tanggal_input', $targetDate)
+                    ->exists();
 
-        Realisasi::create($data);
-        $lm = MasterLm::find($request->lm_id);
+                if ($existing) {
+                    return redirect()->back()->with('error', 'Realisasi untuk Lead Measure ini sudah pernah diinput hari ini oleh unit Anda (' . ($user->unit->name ?? 'ULP') . '). ULP hanya dapat menginput 1 kali dalam sehari. Silakan gunakan fitur Edit pada tabel jika ingin mengubah data.');
+                }
+            }
 
-        $redirect = redirect()->back()->with('success', 'Realisasi berhasil ditambahkan.');
-        if ($lm && $lm->wig_id) {
-            $redirect->with('active_wig', $lm->wig_id)->with('expanded_lm', $lm->id);
+            $data = $request->except('bukti_file');
+            $data['user_id'] = $user->id;
+            $data['unit_id'] = $unitId;
+            $data['tanggal_input'] = $request->filled('tanggal_input') 
+                ? \Carbon\Carbon::parse($request->tanggal_input) 
+                : now();
+
+            if ($request->hasFile('bukti_file')) {
+                $data['bukti_file'] = $request->file('bukti_file')->store('bukti_realisasi', 'public');
+            }
+
+            Realisasi::create($data);
+            $lm = MasterLm::find($lmId);
+
+            $redirect = redirect()->back()->with('success', 'Realisasi berhasil ditambahkan.');
+            if ($lm && $lm->wig_id) {
+                $redirect->with('active_wig', $lm->wig_id)->with('expanded_lm', $lm->id);
+            }
+            return $redirect;
+        } finally {
+            $lock->release();
         }
-        return $redirect;
     }
 
     public function edit(Realisasi $realisasi)
@@ -416,6 +458,11 @@ class RealizationController extends Controller
             return;
         }
 
+        // Pastikan pengguna unit hanya mengedit data unitnya sendiri
+        if ($user->unit_id && $realisasi->unit_id && (int)$user->unit_id !== (int)$realisasi->unit_id) {
+            abort(403, 'Akses Ditolak: Anda hanya dapat mengedit realisasi milik unit kerja Anda.');
+        }
+
         // ULP hanya bisa edit di hari yang sama
         if (!$tanggalRealisasi->isSameDay($hariIni)) {
             abort(403, 'Akses Ditolak: Data realisasi LM hanya dapat diedit pada hari yang sama dengan tanggal pelaksanaannya.');
@@ -445,6 +492,11 @@ class RealizationController extends Controller
                 }
             }
             return;
+        }
+
+        // Pastikan pengguna unit hanya menghapus data unitnya sendiri
+        if ($user->unit_id && $realisasi->unit_id && (int)$user->unit_id !== (int)$realisasi->unit_id) {
+            abort(403, 'Akses Ditolak: Anda hanya dapat menghapus realisasi milik unit kerja Anda.');
         }
 
         // ULP hanya bisa delete di hari yang sama
