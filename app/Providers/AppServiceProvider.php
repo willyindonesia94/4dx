@@ -43,12 +43,12 @@ class AppServiceProvider extends ServiceProvider
             }
         });
         
-        try {
-            if (!\Illuminate\Support\Facades\Schema::hasTable('sesi_wig_presenters')) {
-                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-            }
-        } catch (\Exception $e) {
-            // silent
-        }
+        // try {
+        //     if (!\Illuminate\Support\Facades\Schema::hasTable('sesi_wig_presenters')) {
+        //         \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        //     }
+        // } catch (\Exception $e) {
+        //     // silent
+        // }
     }
 }

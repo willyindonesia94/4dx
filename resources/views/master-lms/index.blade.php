@@ -10,11 +10,19 @@
                   openModal: false, 
                   openUpload: false,
                   editModal: false, 
+                  showDeleteModal: false,
+                  deleteItemId: null,
+                  deleteItemTitle: '',
                   editData: { id: '', wig_id: '', judul_lm: '', satuan_id: '', polaritas: 'positif' },
                   openEdit(lm) {
                     this.editData = { ...lm };
                     this.editModal = true;
-                }
+                  },
+                  openDeleteConfirm(id, title) {
+                    this.deleteItemId = id;
+                    this.deleteItemTitle = title;
+                    this.showDeleteModal = true;
+                  }
             }"
             @open-edit.window="openEdit($event.detail)">
                <div class="py-8">
@@ -23,13 +31,13 @@
                 <!-- Filter Tabs -->
                 <div class="flex space-x-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm w-full sm:w-auto overflow-x-auto">
                     <a href="{{ route('master-lms.index', ['status' => 'all']) }}" class="whitespace-nowrap px-4 py-2 text-sm font-semibold rounded-md transition-colors {{ ($status ?? 'all') === 'all' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">Semua LM</a>
-                    <a href="{{ route('master-lms.index', ['status' => 'draft']) }}" class="whitespace-nowrap px-4 py-2 text-sm font-semibold rounded-md transition-colors flex items-center {{ ($status ?? 'all') === 'draft' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
-                        Menunggu Persetujuan
+                    <a href="{{ route('master-lms.index', ['status' => 'pending_delete']) }}" class="whitespace-nowrap px-4 py-2 text-sm font-semibold rounded-md transition-colors flex items-center {{ ($status ?? 'all') === 'pending_delete' ? 'bg-amber-50 text-amber-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                        Menunggu Persetujuan Hapus
                         @php
-                            $draftCountLm = \App\Models\MasterLm::where('is_approved', false)->count();
+                            $pendingDeleteCountLm = \App\Models\MasterLm::where('is_delete_pending', true)->count();
                         @endphp
-                        @if($draftCountLm > 0)
-                            <span class="ml-2 px-2 py-0.5 bg-red-100 text-red-600 rounded-full text-xs font-bold">{{ $draftCountLm }}</span>
+                        @if($pendingDeleteCountLm > 0)
+                            <span class="ml-2 px-2 py-0.5 bg-red-100 text-red-600 rounded-full text-xs font-bold">{{ $pendingDeleteCountLm }}</span>
                         @endif
                     </a>
                 </div>
@@ -91,7 +99,7 @@
                     @endphp
                     @if($wigLms->count() > 0)
                     @php
-                        $hasHighlight = (request('highlight_lm') && $wigLms->contains('id', request('highlight_lm'))) || request('status') === 'draft';
+                        $hasHighlight = (request('highlight_lm') && $wigLms->contains('id', request('highlight_lm'))) || request('status') === 'pending_delete' || request('status') === 'draft';
                     @endphp
                     <div x-data="{ expanded: {{ $hasHighlight ? 'true' : 'false' }} }" class="bg-white shadow-sm sm:rounded-xl border border-slate-200 overflow-hidden">
                         <div @click="expanded = !expanded" class="cursor-pointer bg-slate-50 hover:bg-slate-100 px-6 py-4 flex justify-between items-center transition-colors">
@@ -119,7 +127,7 @@
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-100">
                                         @foreach($wigLms as $lm)
-                                        @php $isHighlighted = request('highlight_lm') == $lm->id && !$lm->is_approved; @endphp
+                                        @php $isHighlighted = (request('highlight_lm') == $lm->id && !$lm->is_approved) || (request('status') === 'pending_delete' && $lm->is_delete_pending); @endphp
                                         <tr class="hover:bg-slate-50/50 transition-colors {{ $isHighlighted ? 'bg-yellow-50 outline outline-2 outline-yellow-400 z-10 relative' : '' }}"
                                             @if($isHighlighted) x-data="{}" x-init="setTimeout(() => { $el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 500);" @endif
                                         >
@@ -140,30 +148,38 @@
                                                   </span>
                                               </td>
                                               <td class="px-6 py-4 whitespace-nowrap text-center">
-                                                @if($lm->is_approved)
+                                                @if($lm->is_delete_pending)
+                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+                                                        <svg class="w-3 h-3 mr-1 text-red-500 animate-pulse" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
+                                                        Menunggu Persetujuan Hapus
+                                                    </span>
+                                                @elseif($lm->is_approved)
                                                     <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Aktif</span>
                                                 @else
                                                     <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Draft</span>
                                                 @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium flex justify-center items-center space-x-2">
-                                                @php
-                                                    $isSuperAdmin = auth()->user()->role_name === 'Super Admin' || auth()->user()->hasRole('Super Admin');
-                                                    $isSubBidang = auth()->user()->role_name === 'Sub Bidang UID' || auth()->user()->hasRole('Sub Bidang UID');
-                                                @endphp
-                                                @if(!$lm->is_approved && ($isSuperAdmin || ($isSubBidang && auth()->user()->matrix_group_id === $lm->wig->divisi)))
-                                                    <form action="{{ route('master-lms.approve', $lm->id) }}" method="POST" class="inline m-0">
+                                                @if($lm->is_delete_pending)
+                                                    <form action="{{ route('master-lms.destroy', $lm->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menyetujui penghapusan Master LM ini secara permanen?');">
                                                         @csrf
-                                                        <button type="submit" class="text-green-600 hover:text-green-900 hover:bg-green-100 font-bold bg-green-50 px-3 py-1.5 rounded-md border border-green-200 transition-colors text-xs">Setujui</button>
+                                                        @method('DELETE')
+                                                        <button type="submit" class="text-white bg-red-600 hover:bg-red-700 font-bold px-3 py-1.5 rounded-md shadow-sm transition-all duration-200 text-xs flex items-center gap-1">
+                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                                            Setujui Hapus
+                                                        </button>
                                                     </form>
+                                                    <form action="{{ route('master-lms.cancel-delete', $lm->id) }}" method="POST" class="inline m-0">
+                                                        @csrf
+                                                        <button type="submit" class="text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 font-semibold px-2.5 py-1.5 rounded-md border border-slate-300 text-xs">
+                                                            Batal
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    <button @click="$dispatch('open-edit', {{ $lm }})" class="text-indigo-600 hover:text-white hover:bg-indigo-600 font-bold px-3 py-1.5 rounded-md border border-indigo-200 hover:border-transparent transition-all duration-200 text-xs">Edit</button>
+                                                    
+                                                    <button type="button" @click="openDeleteConfirm({{ $lm->id }}, '{{ addslashes($lm->judul_lm) }}')" class="text-red-600 hover:text-white hover:bg-red-600 font-bold px-3 py-1.5 rounded-md border border-red-200 hover:border-transparent transition-all duration-200 text-xs">Hapus</button>
                                                 @endif
-                                                <button @click="$dispatch('open-edit', {{ $lm }})" class="text-indigo-600 hover:text-white hover:bg-indigo-600 font-bold px-3 py-1.5 rounded-md border border-indigo-200 hover:border-transparent transition-all duration-200 text-xs">Edit</button>
-                                                
-                                                <form action="{{ route('master-lms.destroy', $lm->id) }}" method="POST" class="inline m-0" onsubmit="return confirm('Apakah Anda yakin ingin menghapus Master LM ini?');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-red-600 hover:text-white hover:bg-red-600 font-bold px-3 py-1.5 rounded-md border border-red-200 hover:border-transparent transition-all duration-200 text-xs">Hapus</button>
-                                                </form>
                                             </td>
                                         </tr>
                                         @endforeach
@@ -315,6 +331,57 @@
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delete Confirmation Modal -->
+            <div x-show="showDeleteModal" class="fixed inset-0 z-[110] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="display: none;">
+                <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="showDeleteModal = false"></div>
+                    <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+                    
+                    <div class="relative z-10 inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-slate-100">
+                        <div class="bg-red-50 p-6 border-b border-red-100">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 text-red-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-red-900">Persetujuan Penghapusan Master LM</h3>
+                                    <p class="text-xs text-red-700 mt-0.5">Penghapusan memerlukan persetujuan.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-6 space-y-4">
+                            <p class="text-sm text-slate-700">
+                                Anda akan menghapus Master LM:
+                                <strong class="text-slate-900 font-bold block mt-1 p-2 bg-slate-50 border rounded" x-text="deleteItemTitle"></strong>
+                            </p>
+                            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                                Sesuai ketentuan, penghapusan memerlukan persetujuan. Anda dapat <strong>mengajukan persetujuan hapus</strong> ke antrean atau <strong>langsung menyetujui sendiri</strong> untuk menghapus sekarang secara permanen.
+                            </div>
+                        </div>
+                        
+                        <div class="bg-slate-50 px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row sm:justify-end gap-2">
+                            <button @click="showDeleteModal = false" type="button" class="px-4 py-2 border border-slate-200 rounded-md text-slate-700 font-semibold hover:bg-slate-100 text-xs">
+                                Batal
+                            </button>
+                            <form :action="'{{ url('master-lms') }}/' + deleteItemId + '/request-delete'" method="POST" class="inline m-0">
+                                @csrf
+                                <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-md text-xs shadow-sm transition-colors">
+                                    Ajukan Persetujuan
+                                </button>
+                            </form>
+                            <form :action="'{{ url('master-lms') }}/' + deleteItemId" method="POST" class="inline m-0">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="w-full sm:w-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md text-xs shadow-sm transition-colors">
+                                    Setujui Sendiri & Hapus
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>

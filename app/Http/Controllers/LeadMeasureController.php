@@ -17,10 +17,12 @@ class LeadMeasureController extends Controller
         $search = $request->query('search', '');
         
         // Matrix filtering logic:
-        $query = MasterLm::with(['wig', 'satuan']);
+        $query = MasterLm::with(['wig', 'satuan', 'deleteRequestedBy']);
         
         if ($status === 'draft') {
             $query->where('is_approved', false);
+        } elseif ($status === 'pending_delete') {
+            $query->where('is_delete_pending', true);
         }
         
         if ($search) {
@@ -70,11 +72,12 @@ class LeadMeasureController extends Controller
         $wig = MasterWig::with('unitPemilik')->findOrFail($data['wig_id']);
         $data['tujuan_unit_role'] = $wig->unitPemilik ? $wig->unitPemilik->name : '';
 
-        $data['is_approved'] = false; // Created via UI requires approval by MSB
+        $data['is_approved'] = true; // Langsung aktif tanpa persetujuan
+        $data['is_delete_pending'] = false;
         $data['angka_target'] = $data['angka_target'] ?? 0;
         $lm = MasterLm::create($data);
 
-        return redirect()->route('master-lms.index')->with('success', 'Lead Measure berhasil dibuat.');
+        return redirect()->route('master-lms.index')->with('success', 'Lead Measure berhasil dibuat langsung tanpa persetujuan.');
     }
 
     public function edit(MasterLm $masterLm)
@@ -101,28 +104,48 @@ class LeadMeasureController extends Controller
         $data['tujuan_unit_role'] = $wig->unitPemilik ? $wig->unitPemilik->name : '';
 
         $data['angka_target'] = $data['angka_target'] ?? 0;
-        $user = auth()->user();
-        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
-        $isMsb = $user && (strtolower(trim($user->role_name ?? '')) === 'sub bidang uid');
-
-        $data['is_approved'] = ($isSuperAdmin || $isMsb) ? true : false;
+        $data['is_approved'] = true; // Langsung aktif tanpa persetujuan
         
         $masterLm->update($data);
 
-        return redirect()->route('master-lms.index')->with('success', 'Lead Measure berhasil diperbarui.');
+        return redirect()->route('master-lms.index')->with('success', 'Lead Measure berhasil diperbarui langsung tanpa persetujuan.');
+    }
+
+    public function requestDelete(Request $request, $id)
+    {
+        $lm = MasterLm::findOrFail($id);
+        $lm->update([
+            'is_delete_pending' => true,
+            'delete_requested_by' => auth()->id(),
+            'delete_reason' => $request->input('reason', 'Permintaan penghapusan Master LM')
+        ]);
+
+        return redirect()->route('master-lms.index')->with('success', 'Permintaan penghapusan Lead Measure berhasil diajukan dan menunggu persetujuan (dapat disetujui sendiri).');
+    }
+
+    public function cancelDelete($id)
+    {
+        $lm = MasterLm::findOrFail($id);
+        $lm->update([
+            'is_delete_pending' => false,
+            'delete_requested_by' => null,
+            'delete_reason' => null
+        ]);
+
+        return redirect()->route('master-lms.index')->with('success', 'Permintaan penghapusan Lead Measure berhasil dibatalkan.');
     }
 
     public function destroy(MasterLm $masterLm)
     {
         $masterLm->delete();
 
-        return redirect()->route('master-lms.index')->with('success', 'Master LM berhasil dihapus.');
+        return redirect()->route('master-lms.index')->with('success', 'Persetujuan penghapusan berhasil. Master LM telah dihapus.');
     }
 
     public function approve($id)
     {
         $lm = MasterLm::findOrFail($id);
-        $lm->update(['is_approved' => true]);
+        $lm->update(['is_approved' => true, 'is_delete_pending' => false]);
         return redirect()->back()->with('success', 'Lead Measure berhasil disetujui.');
     }
 }

@@ -19,6 +19,11 @@ class MasterLm extends Model
     }
     protected $guarded = [];
 
+    public function deleteRequestedBy()
+    {
+        return $this->belongsTo(User::class, 'delete_requested_by');
+    }
+
     public function wig()
     {
         return $this->belongsTo(MasterWig::class, 'wig_id');

@@ -16,10 +16,12 @@ class MasterWigController extends Controller
         $status = $request->query('status', 'all'); // 'all' or 'draft'
         $search = $request->query('search', '');
         
-        $query = MasterWig::with(['unitPemilik', 'satuan']);
+        $query = MasterWig::with(['unitPemilik', 'satuan', 'deleteRequestedBy']);
         
         if ($status === 'draft') {
             $query->where('is_approved', false);
+        } elseif ($status === 'pending_delete') {
+            $query->where('is_delete_pending', true);
         }
         
         if ($search) {
@@ -58,7 +60,8 @@ class MasterWigController extends Controller
         ]);
 
         $data = $request->all();
-        $data['is_approved'] = false; // Created via UI requires approval by MSB
+        $data['is_approved'] = true; // Langsung aktif tanpa persetujuan
+        $data['is_delete_pending'] = false;
         $wig = MasterWig::create($data);
 
         // Auto-create cascading to UID Jabar
@@ -88,7 +91,7 @@ class MasterWigController extends Controller
             ]);
         }
 
-        return redirect()->route('master-wigs.index')->with('success', 'Master WIG berhasil dibuat beserta breakdown otomatis untuk UID.');
+        return redirect()->route('master-wigs.index')->with('success', 'Master WIG berhasil dibuat langsung tanpa persetujuan beserta breakdown otomatis untuk UID.');
     }
 
     public function update(Request $request, MasterWig $masterWig)
@@ -105,27 +108,47 @@ class MasterWigController extends Controller
         ]);
 
         $data = $request->all();
-        $user = auth()->user();
-        $isSuperAdmin = $user && (in_array(strtolower(trim($user->role_name ?? '')), ['super admin', 'superadmin']) || (method_exists($user, 'hasAnyRole') && $user->hasAnyRole(['Super Admin'])));
-        $isMsb = $user && (strtolower(trim($user->role_name ?? '')) === 'sub bidang uid');
-
-        $data['is_approved'] = ($isSuperAdmin || $isMsb) ? true : false;
+        $data['is_approved'] = true; // Langsung aktif tanpa persetujuan
         $masterWig->update($data);
 
-        return redirect()->route('master-wigs.index')->with('success', 'Master WIG berhasil diperbarui.');
+        return redirect()->route('master-wigs.index')->with('success', 'Master WIG berhasil diperbarui langsung tanpa persetujuan.');
+    }
+
+    public function requestDelete(Request $request, $id)
+    {
+        $wig = MasterWig::findOrFail($id);
+        $wig->update([
+            'is_delete_pending' => true,
+            'delete_requested_by' => auth()->id(),
+            'delete_reason' => $request->input('reason', 'Permintaan penghapusan Master WIG')
+        ]);
+
+        return redirect()->route('master-wigs.index')->with('success', 'Permintaan penghapusan Master WIG berhasil diajukan dan menunggu persetujuan (dapat disetujui sendiri).');
+    }
+
+    public function cancelDelete($id)
+    {
+        $wig = MasterWig::findOrFail($id);
+        $wig->update([
+            'is_delete_pending' => false,
+            'delete_requested_by' => null,
+            'delete_reason' => null
+        ]);
+
+        return redirect()->route('master-wigs.index')->with('success', 'Permintaan penghapusan Master WIG berhasil dibatalkan.');
     }
 
     public function destroy(MasterWig $masterWig)
     {
         $masterWig->delete();
 
-        return redirect()->route('master-wigs.index')->with('success', 'Master WIG berhasil dihapus.');
+        return redirect()->route('master-wigs.index')->with('success', 'Persetujuan penghapusan berhasil. Master WIG telah dihapus.');
     }
 
     public function approve($id)
     {
         $wig = MasterWig::findOrFail($id);
-        $wig->update(['is_approved' => true]);
+        $wig->update(['is_approved' => true, 'is_delete_pending' => false]);
         return redirect()->back()->with('success', 'WIG berhasil disetujui.');
     }
 }

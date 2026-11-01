@@ -59,7 +59,7 @@ class LmMassImport implements ToCollection, WithHeadingRow
                         'tujuan_unit_role' => $roleLm ?? 'Bidang UID',
                         'angka_target' => $targetLm ?? 0,
                         'satuan_id' => $satuanLmObj ? $satuanLmObj->id : null,
-                        'is_approved' => false,
+                        'is_approved' => true,
                     ]);
                 }
             }

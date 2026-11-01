@@ -38,7 +38,13 @@ class LaporanBulananController extends Controller
         }
         $availableWigs = $wigsQuery->get();
 
-        return view('laporan-bulanan.index', compact('bulan', 'tahun', 'previewData', 'availableWigs', 'isUlpLevel', 'isUp3Level', 'userMatrixGroup'));
+        $sesiWigsQuery = \App\Models\SesiWig::where('tahun', $tahun);
+        if ($bulan !== 'all') {
+            $sesiWigsQuery->where('bulan', (int)$bulan);
+        }
+        $availableSesiWigs = $sesiWigsQuery->orderBy('minggu_ke')->get();
+
+        return view('laporan-bulanan.index', compact('bulan', 'tahun', 'previewData', 'availableWigs', 'availableSesiWigs', 'isUlpLevel', 'isUp3Level', 'userMatrixGroup'));
     }
 
     public function downloadTemplate(Request $request)
@@ -100,12 +106,33 @@ class LaporanBulananController extends Controller
         return Excel::download(new \App\Exports\WigReportExport($tahun, $bulan), $filename);
     }
 
+    public function exportSesiWig(Request $request)
+    {
+        ini_set('memory_limit', '-1');
+        ini_set('max_execution_time', '300');
+
+        $bulan = $request->input('bulan', date('n'));
+        $tahun = $request->input('tahun', date('Y'));
+        $sesiWigId = $request->input('sesi_wig_id', 'all');
+        $wigId = $request->input('wig_id', 'all');
+
+        $wigSuffix = ($wigId && $wigId !== 'all') ? "_WIG_{$wigId}" : "";
+        $filename = "Laporan_Sesi_WIG{$wigSuffix}_{$tahun}_{$bulan}.xlsx";
+        return Excel::download(new \App\Exports\SesiWigReportExport($tahun, $bulan, $sesiWigId, $wigId), $filename);
+    }
 
     public function previewReport(Request $request)
     {
         $bulan = $request->input('bulan', date('n'));
         $tahun = $request->input('tahun', date('Y'));
         $jenis = $request->input('jenis', 'lm');
+
+        if ($jenis === 'sesi_wig') {
+            $sesiWigId = $request->input('sesi_wig_id', 'all');
+            $wigId = $request->input('wig_id', 'all');
+            $export = new \App\Exports\SesiWigReportExport($tahun, $bulan, $sesiWigId, $wigId);
+            return response()->json(['html' => $export->view()->render()]);
+        }
 
         if ($jenis === 'wig') {
             $export = new \App\Exports\WigReportExport($tahun, $bulan);

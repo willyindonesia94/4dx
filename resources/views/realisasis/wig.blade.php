@@ -28,6 +28,10 @@
                         $isManager = str_contains($roleNameLower, 'manager up3') || str_contains($roleNameLower, 'manajer up3') || str_contains($roleNameLower, 'manager ulp') || str_contains($roleNameLower, 'manajer ulp') || str_contains($roleNameLower, 'perencanaan up3');
                     @endphp
                     @if(!$isManager)
+                    <button @click="openProyeksiModal = true" style="background-color: #4f46e5;" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-lg shadow transition-colors text-sm flex items-center justify-center gap-2 whitespace-nowrap">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                        Input Proyeksi Realisasi WIG
+                    </button>
                     <button @click="openModal = true" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-lg shadow transition-colors text-sm flex items-center justify-center gap-2 whitespace-nowrap">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                         Input Realisasi WIG
@@ -526,6 +530,104 @@
             </div>
         </div>
 
+        <!-- Proyeksi Modal WIG 1 sampai 4 using Alpine.js -->
+        <div x-show="openProyeksiModal" class="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="display: none;">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="openProyeksiModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+                
+                <div x-show="openProyeksiModal" class="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border border-slate-100 max-h-[90vh] flex flex-col">
+                    <form action="{{ route('realisasi-wig.store-proyeksi') }}" method="POST" class="flex flex-col max-h-[90vh]" x-data="{ isSubmitting: false }" @submit="if (isSubmitting) { $event.preventDefault(); return false; } isSubmitting = true;">
+                        @csrf
+                        <div style="background: linear-gradient(to right, #4f46e5, #1d4ed8);" class="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-indigo-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                                <div>
+                                    <h3 class="text-lg font-bold text-white tracking-wide" id="modal-title-proyeksi">Input Proyeksi Realisasi WIG</h3>
+                                    <p class="text-xs text-indigo-100 font-medium">Proyeksi WIG 1 s.d. 4 & capaian (%) untuk dashboard</p>
+                                </div>
+                            </div>
+                            <button @click="openProyeksiModal = false; isSubmitting = false;" type="button" class="text-indigo-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 focus:outline-none">
+                                <span class="sr-only">Close</span>
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+
+                        <div class="bg-indigo-50/70 border-b border-indigo-100 px-6 py-2.5 flex items-center gap-2 text-xs text-indigo-800">
+                            <svg class="w-4 h-4 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>Data proyeksi yang disimpan akan terus tampil di dashboard pada setiap minggu dan setiap bulan hingga diubah kembali.</span>
+                        </div>
+
+                        <div class="bg-white px-6 pt-5 pb-6 overflow-y-auto flex-1 space-y-4">
+                            @foreach($allMasterWigs ?? [] as $w)
+                                @php
+                                    $pItem = $proyeksiMap[$w->id] ?? null;
+                                    $valReal = $pItem ? $pItem->angka_proyeksi : '';
+                                    $valPct = $pItem ? $pItem->capaian_persen : '';
+                                @endphp
+                                <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-lg hover:border-indigo-400 transition-colors">
+                                    <div class="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-200">
+                                        <div class="font-bold text-xs text-[#0b2256] uppercase tracking-wide flex items-center gap-2">
+                                            <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+                                            {{ $w->judul }}
+                                        </div>
+                                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                            Satuan: {{ $w->satuan->name ?? '-' }}
+                                        </span>
+                                    </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">
+                                                Proyeksi Realisasi Mingguan
+                                            </label>
+                                            <div class="relative">
+                                                <input type="number" step="0.000001" name="proyeksi[{{ $w->id }}][angka_proyeksi]" value="{{ old('proyeksi.' . $w->id . '.angka_proyeksi', $valReal) }}" class="block w-full py-2 px-3 pr-14 text-sm rounded-md border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm font-medium" placeholder="0.00">
+                                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-semibold">
+                                                    {{ $w->satuan->name ?? '' }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">
+                                                Capaian Proyeksi (%)
+                                            </label>
+                                            <div class="relative">
+                                                <input type="number" step="0.01" name="proyeksi[{{ $w->id }}][capaian_persen]" value="{{ old('proyeksi.' . $w->id . '.capaian_persen', $valPct) }}" class="block w-full py-2 px-3 pr-8 text-sm rounded-md border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm font-bold text-indigo-700" placeholder="0.00">
+                                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-semibold">
+                                                    %
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+
+                            <div class="pt-2">
+                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Catatan / Keterangan Proyeksi (Opsional)</label>
+                                @php
+                                    $firstCatatan = isset($proyeksiMap) ? $proyeksiMap->first(function($p) { return !empty($p->catatan); }) : null;
+                                @endphp
+                                <textarea name="catatan" rows="2" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700" placeholder="Catatan asumsi atau dasar proyeksi realisasi WIG...">{{ old('catatan', $firstCatatan->catatan ?? '') }}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 rounded-b-lg flex-shrink-0">
+                            <button @click="openProyeksiModal = false; isSubmitting = false;" type="button" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-slate-200 px-6 py-2.5 bg-white text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none">
+                                Batal
+                            </button>
+                            <button type="submit" :disabled="isSubmitting" :class="{ 'opacity-50 cursor-not-allowed pointer-events-none': isSubmitting }" style="background: linear-gradient(to right, #4f46e5, #2563eb);" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-transparent px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:from-indigo-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
+                                <svg x-show="isSubmitting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span x-text="isSubmitting ? 'Memproses...' : 'Simpan Proyeksi Realisasi WIG'"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Edit Modal -->
         <div x-show="openEditModal" class="fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="display: none;">
             <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -654,6 +756,7 @@
                 confirmActionUrl: '',
                 isBulkAction: false,
                 openModal: false,
+                openProyeksiModal: false,
                 openEditModal: false,
                 openUploadModal: false,
                 isLoadingTarget: false,

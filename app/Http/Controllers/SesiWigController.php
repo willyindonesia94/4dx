@@ -10,6 +10,7 @@ use App\Models\BreakdownWig;
 use App\Models\SesiWigKomitmen;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class SesiWigController extends Controller
 {
@@ -637,6 +638,166 @@ class SesiWigController extends Controller
             }
         }
 
+        // --- Calculate Target Bulanan & Defisit Bulan Lalu ---
+        $matrixTargetBulanan = [];
+        $matrixDefisitBulanLalu = [];
+
+        // 1. Cek record bulanan (durasi >= 20 hari) untuk bulan berjalan
+        $startCurMonth = Carbon::create($sesi_wig->tahun, $sesi_wig->bulan, 1)->startOfMonth()->format('Y-m-d');
+        $endCurMonth = Carbon::create($sesi_wig->tahun, $sesi_wig->bulan, 1)->endOfMonth()->format('Y-m-d');
+        $curMonthlyBdRecords = DB::table('breakdown_lms')
+            ->where('periode_start', '>=', $startCurMonth)
+            ->where('periode_start', '<=', $endCurMonth)
+            ->get();
+        $curMonthlyBdMap = [];
+        foreach ($curMonthlyBdRecords as $b) {
+            $diff = Carbon::parse($b->periode_start)->diffInDays(Carbon::parse($b->periode_end));
+            if ($diff >= 20) {
+                $curMonthlyBdMap[$b->lm_id][$b->unit_id] = (float)$b->angka_target;
+            }
+        }
+
+        // 2. Data Bulan Lalu untuk Defisit Bulan Lalu
+        $prevBulanNum = $sesi_wig->bulan > 1 ? $sesi_wig->bulan - 1 : 12;
+        $prevTahunNum = $sesi_wig->bulan > 1 ? $sesi_wig->tahun : $sesi_wig->tahun - 1;
+        $startPrev = Carbon::create($prevTahunNum, $prevBulanNum, 1)->startOfMonth()->format('Y-m-d');
+        $endPrev = Carbon::create($prevTahunNum, $prevBulanNum, 1)->endOfMonth()->format('Y-m-d');
+
+        $prevBdRecords = DB::table('breakdown_lms')
+            ->where('periode_start', '>=', $startPrev)
+            ->where('periode_start', '<=', $endPrev)
+            ->get();
+        $prevRealRecords = DB::table('realisasis')
+            ->where('tanggal_input', '>=', $startPrev . ' 00:00:00')
+            ->where('tanggal_input', '<=', $endPrev . ' 23:59:59')
+            ->select('lm_id', 'unit_id', DB::raw('SUM(angka_realisasi) as total_realisasi'), DB::raw('AVG(angka_realisasi) as avg_realisasi'))
+            ->groupBy('lm_id', 'unit_id')
+            ->get();
+
+        $prevRealMap = [];
+        foreach ($prevRealRecords as $pr) {
+            $prevRealMap[$pr->lm_id][$pr->unit_id] = [
+                'sum' => (float)$pr->total_realisasi,
+                'avg' => (float)$pr->avg_realisasi,
+            ];
+        }
+
+        $prevBdMap = [];
+        foreach ($prevBdRecords as $b) {
+            $diff = Carbon::parse($b->periode_start)->diffInDays(Carbon::parse($b->periode_end));
+            $prevBdMap[$b->lm_id][$b->unit_id][] = [
+                'target' => (float)$b->angka_target,
+                'is_monthly' => ($diff >= 20)
+            ];
+        }
+
+        foreach ($lms as $lm) {
+            $isPercent = (($lm->satuan_id ?? null) == 1) || (trim($lm->satuan->name ?? '') === '%');
+            $isPolaritasNegatif = strtolower(trim($lm->polaritas ?? 'positif')) === 'negatif' || ($lm->polaritas === '3');
+            $isEligibleCarryOver = !$isPercent && !$isPolaritasNegatif;
+            $isNonSummable = in_array($lm->satuan_id, $nonSummableSatuans);
+
+            // A. Target Bulanan Bulan Berjalan & Defisit Bulan Lalu untuk ULP
+            $prevTargetUlp = [];
+            $prevRealUlp = [];
+            foreach ($allUlps as $ulp) {
+                // Target Bulanan Bulan Ini
+                if (isset($curMonthlyBdMap[$lm->id][$ulp->id]) && $curMonthlyBdMap[$lm->id][$ulp->id] > 0) {
+                    $matrixTargetBulanan[$lm->id][$ulp->id] = $curMonthlyBdMap[$lm->id][$ulp->id];
+                } else {
+                    $sumT = 0; $cntT = 0;
+                    foreach ($sesi_wigs_matrix as $sw) {
+                        $tVal = $matrixTargets[$lm->id][$ulp->id][$sw->id] ?? 0;
+                        if ($tVal > 0) { $sumT += $tVal; $cntT++; }
+                    }
+                    $matrixTargetBulanan[$lm->id][$ulp->id] = $isNonSummable ? ($cntT > 0 ? $sumT / $cntT : 0) : $sumT;
+                }
+
+                // Defisit Bulan Lalu
+                $bds = $prevBdMap[$lm->id][$ulp->id] ?? [];
+                $tPrev = 0;
+                if (!empty($bds)) {
+                    $monthly = null; $sumT = 0; $countT = 0;
+                    foreach ($bds as $bd) {
+                        if ($bd['is_monthly']) { $monthly = $bd['target']; break; }
+                        $sumT += $bd['target']; $countT++;
+                    }
+                    $tPrev = $monthly !== null ? $monthly : ($isNonSummable ? ($countT > 0 ? $sumT / $countT : 0) : $sumT);
+                }
+                $rPrev = $isNonSummable ? ($prevRealMap[$lm->id][$ulp->id]['avg'] ?? 0) : ($prevRealMap[$lm->id][$ulp->id]['sum'] ?? 0);
+                $prevTargetUlp[$ulp->id] = $tPrev;
+                $prevRealUlp[$ulp->id] = $rPrev;
+                $matrixDefisitBulanLalu[$lm->id][$ulp->id] = $isEligibleCarryOver ? max(0, $tPrev - $rPrev) : 0;
+            }
+
+            // B. Target Bulanan Bulan Berjalan & Defisit Bulan Lalu untuk UP3
+            foreach ($up3s as $up3) {
+                $ulpsOfUp3 = $allUlps->where('parent_id', $up3->id);
+                if ($ulpsOfUp3->isNotEmpty()) {
+                    $sumTCur = 0; $cntTCur = 0;
+                    $sumTPrev = 0; $sumRPrev = 0; $cntTPrev = 0; $cntRPrev = 0;
+                    foreach ($ulpsOfUp3 as $u) {
+                        $tCur = $matrixTargetBulanan[$lm->id][$u->id] ?? 0;
+                        if ($tCur > 0) { $sumTCur += $tCur; $cntTCur++; }
+                        $tP = $prevTargetUlp[$u->id] ?? 0;
+                        $rP = $prevRealUlp[$u->id] ?? 0;
+                        if ($tP > 0) { $sumTPrev += $tP; $cntTPrev++; }
+                        if ($rP > 0) { $sumRPrev += $rP; $cntRPrev++; }
+                    }
+                    $matrixTargetBulanan[$lm->id][$up3->id] = $isNonSummable ? ($cntTCur > 0 ? $sumTCur / $cntTCur : 0) : $sumTCur;
+                    $tPrev = $isNonSummable ? ($cntTPrev > 0 ? $sumTPrev / $cntTPrev : 0) : $sumTPrev;
+                    $rPrev = $isNonSummable ? ($cntRPrev > 0 ? $sumRPrev / $cntRPrev : 0) : $sumRPrev;
+                } else {
+                    if (isset($curMonthlyBdMap[$lm->id][$up3->id]) && $curMonthlyBdMap[$lm->id][$up3->id] > 0) {
+                        $matrixTargetBulanan[$lm->id][$up3->id] = $curMonthlyBdMap[$lm->id][$up3->id];
+                    } else {
+                        $sumT = 0; $cntT = 0;
+                        foreach ($sesi_wigs_matrix as $sw) {
+                            $tVal = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
+                            if ($tVal > 0) { $sumT += $tVal; $cntT++; }
+                        }
+                        $matrixTargetBulanan[$lm->id][$up3->id] = $isNonSummable ? ($cntT > 0 ? $sumT / $cntT : 0) : $sumT;
+                    }
+                    $bds = $prevBdMap[$lm->id][$up3->id] ?? [];
+                    $tPrev = 0;
+                    if (!empty($bds)) {
+                        $monthly = null; $sumT = 0; $countT = 0;
+                        foreach ($bds as $bd) {
+                            if ($bd['is_monthly']) { $monthly = $bd['target']; break; }
+                            $sumT += $bd['target']; $countT++;
+                        }
+                        $tPrev = $monthly !== null ? $monthly : ($isNonSummable ? ($countT > 0 ? $sumT / $countT : 0) : $sumT);
+                    }
+                    $rPrev = $isNonSummable ? ($prevRealMap[$lm->id][$up3->id]['avg'] ?? 0) : ($prevRealMap[$lm->id][$up3->id]['sum'] ?? 0);
+                }
+                $matrixDefisitBulanLalu[$lm->id][$up3->id] = $isEligibleCarryOver ? max(0, $tPrev - $rPrev) : 0;
+            }
+
+            // C. Target Bulanan Bulan Berjalan & Defisit Bulan Lalu untuk UID (unit 1)
+            $wigOfLm = $wigs->where('id', $lm->wig_id)->first();
+            $isWig4 = $wigOfLm && (str_contains(strtolower($wigOfLm->judul), 'wig 4') || str_contains(strtolower($wigOfLm->judul), 'frequency rate accident') || str_contains(strtolower($wigOfLm->judul), 'peningkatan kepuasan pelanggan'));
+            $rollupUp3s = ($isWig4 && $up2dUnit) ? $up3s->concat([$up2dUnit]) : $up3s;
+
+            if (isset($curMonthlyBdMap[$lm->id][1]) && $curMonthlyBdMap[$lm->id][1] > 0) {
+                $matrixTargetBulanan[$lm->id][1] = $curMonthlyBdMap[$lm->id][1];
+            } else {
+                $sumTUid = 0; $cntTUid = 0;
+                foreach ($rollupUp3s as $up3) {
+                    $tVal = $matrixTargetBulanan[$lm->id][$up3->id] ?? 0;
+                    if ($tVal > 0) { $sumTUid += $tVal; $cntTUid++; }
+                }
+                $matrixTargetBulanan[$lm->id][1] = $isNonSummable ? ($cntTUid > 0 ? $sumTUid / $cntTUid : 0) : $sumTUid;
+            }
+
+            $sumDefUid = 0; $cntDefUid = 0;
+            foreach ($rollupUp3s as $up3) {
+                $def = $matrixDefisitBulanLalu[$lm->id][$up3->id] ?? 0;
+                $sumDefUid += $def;
+                $cntDefUid++;
+            }
+            $matrixDefisitBulanLalu[$lm->id][1] = $isEligibleCarryOver ? ($isNonSummable ? ($cntDefUid > 0 ? $sumDefUid / $cntDefUid : 0) : $sumDefUid) : 0;
+        }
+
         // Calculate MenangKalah dynamically from Matrix data for THIS SESSION ($sesi_wig->id)
         $lmMenangKalah = [];
         foreach ($lms as $lm) {
@@ -645,19 +806,44 @@ class SesiWigController extends Controller
         $sid = $sesi_wig->id;
         foreach ($lms as $lm) {
             $isPercent = (($lm->satuan_id ?? null) == 1) || (trim($lm->satuan->name ?? '') === '%');
+            $isPolaritasNegatif = strtolower(trim($lm->polaritas ?? 'positif')) === 'negatif' || ($lm->polaritas === '3');
+            $isEligibleCarryOver = !$isPercent && !$isPolaritasNegatif;
             $wigOfLm = $wigs->where('id', $lm->wig_id)->first();
             $isWig4 = $wigOfLm && (str_contains(strtolower($wigOfLm->judul), 'wig 4') || str_contains(strtolower($wigOfLm->judul), 'frequency rate accident') || str_contains(strtolower($wigOfLm->judul), 'peningkatan kepuasan pelanggan'));
             $lmUp3s = ($isWig4 && $up2dUnit && ($isSuperAdmin || !in_array($unitType ?? '', ['UP3', 'ULP']))) ? $up3s->concat([$up2dUnit]) : $up3s;
 
             foreach ($lmUp3s as $up3) {
                 $runningCarryOver = 0;
+                $prevTargetPlusCarryOver = 0;
                 $targetPlusCarryOver = 0;
                 $realisasi = 0;
-                foreach($sesi_wigs_month as $sw) {
+                $kumulatifRealisasi = 0;
+                $targetBulananUnit = $matrixTargetBulanan[$lm->id][$up3->id] ?? 0;
+                $defisitBulanLaluUnit = $matrixDefisitBulanLalu[$lm->id][$up3->id] ?? 0;
+
+                foreach($sesi_wigs_month as $swIdx => $sw) {
                     $t = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                     $r = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
-                    $targetPlusCarryOver = $isPercent ? $t : ($t + $runningCarryOver);
-                    $runningCarryOver = max(0, $targetPlusCarryOver - $r);
+                    
+                    if (!$isEligibleCarryOver) {
+                        $targetPlusCarryOver = $t;
+                        $runningCarryOver = 0;
+                    } else {
+                        if ($swIdx === 0) {
+                            $targetPlusCarryOver = $t + $defisitBulanLaluUnit;
+                        } else {
+                            if ($targetBulananUnit > 0 && $kumulatifRealisasi >= $targetBulananUnit) {
+                                $floorTarget = $t > 0 ? max(1, ceil($t * 0.10)) : 0;
+                                $targetPlusCarryOver = $floorTarget;
+                            } else {
+                                $targetPlusCarryOver = max($t, $prevTargetPlusCarryOver + $runningCarryOver);
+                            }
+                        }
+                        $runningCarryOver = $targetPlusCarryOver - $r;
+                    }
+                    $prevTargetPlusCarryOver = $targetPlusCarryOver;
+                    $kumulatifRealisasi += $r;
+
                     if ($sw->id == $sid) {
                         $realisasi = $r;
                         break;
@@ -672,13 +858,36 @@ class SesiWigController extends Controller
 
             foreach ($allUlps as $ulp) {
                 $runningCarryOver = 0;
+                $prevTargetPlusCarryOver = 0;
                 $targetPlusCarryOver = 0;
                 $realisasi = 0;
-                foreach($sesi_wigs_month as $sw) {
+                $kumulatifRealisasi = 0;
+                $targetBulananUnit = $matrixTargetBulanan[$lm->id][$ulp->id] ?? 0;
+                $defisitBulanLaluUnit = $matrixDefisitBulanLalu[$lm->id][$ulp->id] ?? 0;
+
+                foreach($sesi_wigs_month as $swIdx => $sw) {
                     $t = $matrixTargets[$lm->id][$ulp->id][$sw->id] ?? 0;
                     $r = $matrixRealisasi[$lm->id][$ulp->id][$sw->id] ?? 0;
-                    $targetPlusCarryOver = $isPercent ? $t : ($t + $runningCarryOver);
-                    $runningCarryOver = max(0, $targetPlusCarryOver - $r);
+                    
+                    if (!$isEligibleCarryOver) {
+                        $targetPlusCarryOver = $t;
+                        $runningCarryOver = 0;
+                    } else {
+                        if ($swIdx === 0) {
+                            $targetPlusCarryOver = $t + $defisitBulanLaluUnit;
+                        } else {
+                            if ($targetBulananUnit > 0 && $kumulatifRealisasi >= $targetBulananUnit) {
+                                $floorTarget = $t > 0 ? max(1, ceil($t * 0.10)) : 0;
+                                $targetPlusCarryOver = $floorTarget;
+                            } else {
+                                $targetPlusCarryOver = max($t, $prevTargetPlusCarryOver + $runningCarryOver);
+                            }
+                        }
+                        $runningCarryOver = $targetPlusCarryOver - $r;
+                    }
+                    $prevTargetPlusCarryOver = $targetPlusCarryOver;
+                    $kumulatifRealisasi += $r;
+
                     if ($sw->id == $sid) {
                         $realisasi = $r;
                         break;
@@ -698,7 +907,7 @@ class SesiWigController extends Controller
             }
         }
 
-        return view('sesi-wigs.show', compact('sesi_wig', 'previousSesi', 'wigs', 'lms', 'units', 'wig_bulan', 'lm_unit', 'leaderboard', 'lmMenangKalah', 'presenters', 'up3s', 'filteredUp3sByWig', 'allUlps', 'sesi_wigs_matrix', 'sesi_wigs_month', 'matrixTargets', 'matrixRealisasi', 'matrixKomitmen', 'isUlpLevel', 'isUp3Level', 'userMatrixGroup', 'canEditSesiWig', 'wigUnitData', 'targetBulan', 'prevBulan', 'calcCapaian'));
+        return view('sesi-wigs.show', compact('sesi_wig', 'previousSesi', 'wigs', 'lms', 'units', 'wig_bulan', 'lm_unit', 'leaderboard', 'lmMenangKalah', 'presenters', 'up3s', 'filteredUp3sByWig', 'allUlps', 'sesi_wigs_matrix', 'sesi_wigs_month', 'matrixTargets', 'matrixRealisasi', 'matrixKomitmen', 'isUlpLevel', 'isUp3Level', 'userMatrixGroup', 'canEditSesiWig', 'wigUnitData', 'targetBulan', 'prevBulan', 'calcCapaian', 'matrixTargetBulanan', 'matrixDefisitBulanLalu'));
     }
 
     public function drawPresenter(Request $request, SesiWig $sesi_wig)

@@ -21,3 +21,18 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Scratch and temporary scripts
+scratch*
+test*.php
+test_*.php
+fix_*.php
+temp_*.php
+export_doc.php
+rendered.html
+public/test-*.php
+mysql_recovery/
+import_db.bat
+restore_database.bat
+start-server-direct.bat
+*.xlsx

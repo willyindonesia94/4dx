@@ -1039,6 +1039,11 @@ class DashboardController extends Controller
             $wig->capaian = $wp['progress'] ?? 0;
             $wig->trend_capaian = $trendData[$wig->id] ?? [];
             
+            $proyeksi = \App\Models\ProyeksiWig::where('wig_id', $wig->id)->latest()->first();
+            $wig->proyeksi_realisasi = $proyeksi ? (float)$proyeksi->angka_proyeksi : null;
+            $wig->proyeksi_capaian = $proyeksi ? (float)$proyeksi->capaian_persen : null;
+            $wig->proyeksi_catatan = $proyeksi ? $proyeksi->catatan : '';
+            
             $wigUnitData[$wig->id] = [];
             foreach ($currentUp3List as $up3) {
                 $curT = \Illuminate\Support\Facades\DB::table('breakdown_wigs')

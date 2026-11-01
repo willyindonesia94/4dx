@@ -153,7 +153,7 @@ class WigMassImport implements ToCollection
                         "angka_target" => 0,
                         "satuan_id" => $satuanWigObj ? $satuanWigObj->id : null,
                         "polaritas" => "positif",
-                        "is_approved" => false,
+                        "is_approved" => true,
                     ]);
                 }
 

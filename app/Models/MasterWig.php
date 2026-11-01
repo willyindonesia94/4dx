@@ -35,7 +35,15 @@ class MasterWig extends Model
         'satuan_id',
         'polaritas',
         'is_approved',
+        'is_delete_pending',
+        'delete_requested_by',
+        'delete_reason',
     ];
+
+    public function deleteRequestedBy()
+    {
+        return $this->belongsTo(User::class, 'delete_requested_by');
+    }
 
     public function unitPemilik()
     {
@@ -60,5 +68,15 @@ class MasterWig extends Model
     public function realisasis()
     {
         return $this->hasMany(RealisasiWig::class, 'wig_id');
+    }
+
+    public function proyeksis()
+    {
+        return $this->hasMany(ProyeksiWig::class, 'wig_id');
+    }
+
+    public function latestProyeksi()
+    {
+        return $this->hasOne(ProyeksiWig::class, 'wig_id')->latestOfMany();
     }
 }

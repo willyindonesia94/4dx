@@ -96,8 +96,10 @@ class RealisasiWigController extends Controller
         $wigs = $wigsInputQuery->get();
 
         $availableUnits = \App\Models\MasterUnit::whereIn('type', ['UP3', 'UP2D', 'UP2K', 'UID'])->get();
+        $allMasterWigs = MasterWig::with('satuan')->orderBy('id')->get();
+        $proyeksiMap = \App\Models\ProyeksiWig::all()->keyBy('wig_id');
 
-        return view('realisasis.wig', compact('displayWigs', 'wigs', 'bulanFilter', 'tahunFilter', 'wigFilter', 'up3Filter', 'availableUnits', 'isSuperAdmin'));
+        return view('realisasis.wig', compact('displayWigs', 'wigs', 'bulanFilter', 'tahunFilter', 'wigFilter', 'up3Filter', 'availableUnits', 'isSuperAdmin', 'allMasterWigs', 'proyeksiMap'));
     }
 
     public function bulkDestroy(Request $request)
@@ -441,5 +443,30 @@ class RealisasiWigController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Terjadi kesalahan saat impor: ' . $e->getMessage());
         }
+    }
+
+    public function storeProyeksi(Request $request)
+    {
+        $request->validate([
+            'proyeksi' => 'required|array',
+            'catatan' => 'nullable|string',
+        ]);
+
+        foreach ($request->input('proyeksi', []) as $wigId => $data) {
+            $angka = isset($data['angka_proyeksi']) && $data['angka_proyeksi'] !== '' ? (float)$data['angka_proyeksi'] : 0;
+            $capaian = isset($data['capaian_persen']) && $data['capaian_persen'] !== '' ? (float)$data['capaian_persen'] : 0;
+
+            \App\Models\ProyeksiWig::updateOrCreate(
+                ['wig_id' => $wigId],
+                [
+                    'angka_proyeksi' => $angka,
+                    'capaian_persen' => $capaian,
+                    'catatan' => $request->input('catatan'),
+                    'user_id' => auth()->id(),
+                ]
+            );
+        }
+
+        return redirect()->back()->with('success', 'Data Proyeksi Realisasi WIG Mingguan (WIG 1-4) berhasil disimpan!');
     }
 }

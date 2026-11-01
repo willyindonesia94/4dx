@@ -35,9 +35,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     // WIG & LM Management (Matrix Architecture)
     Route::post('/master-wigs/{id}/approve', [\App\Http\Controllers\MasterWigController::class, 'approve'])->name('master-wigs.approve');
+    Route::post('/master-wigs/{id}/request-delete', [\App\Http\Controllers\MasterWigController::class, 'requestDelete'])->name('master-wigs.request-delete');
+    Route::post('/master-wigs/{id}/cancel-delete', [\App\Http\Controllers\MasterWigController::class, 'cancelDelete'])->name('master-wigs.cancel-delete');
     Route::resource('master-wigs', \App\Http\Controllers\MasterWigController::class)->except(['show']);
     
     Route::post('/master-lms/{id}/approve', [\App\Http\Controllers\LeadMeasureController::class, 'approve'])->name('master-lms.approve');
+    Route::post('/master-lms/{id}/request-delete', [\App\Http\Controllers\LeadMeasureController::class, 'requestDelete'])->name('master-lms.request-delete');
+    Route::post('/master-lms/{id}/cancel-delete', [\App\Http\Controllers\LeadMeasureController::class, 'cancelDelete'])->name('master-lms.cancel-delete');
     Route::resource('master-lms', \App\Http\Controllers\LeadMeasureController::class)->except(['show']);
     
     Route::post('/master-periodes/generate', [\App\Http\Controllers\MasterPeriodeController::class, 'generate'])->name('master-periodes.generate');
@@ -109,6 +113,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/realisasi-wig/template', [\App\Http\Controllers\RealisasiWigController::class, 'downloadTemplate'])->name('realisasi-wig.template')->middleware('role:Super Admin|Perencanaan UID|Asman Perencanaan UP3');
     Route::post('/realisasi-wig/import', [\App\Http\Controllers\RealisasiWigController::class, 'import'])->name('realisasi-wig.import')->middleware('role:Super Admin|Perencanaan UID|Asman Perencanaan UP3');
     Route::get('/realisasi-wig/target', [\App\Http\Controllers\RealisasiWigController::class, 'getTargetBulanan'])->name('realisasi-wig.target');
+    Route::post('/realisasi-wig/proyeksi', [\App\Http\Controllers\RealisasiWigController::class, 'storeProyeksi'])->name('realisasi-wig.store-proyeksi');
 
     // Laporan Bulanan & Import Historis
     Route::get('/laporan-bulanan', [\App\Http\Controllers\LaporanBulananController::class, 'index'])->name('laporan.index');
@@ -116,6 +121,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/laporan-bulanan/import', [\App\Http\Controllers\LaporanBulananController::class, 'importData'])->name('laporan.import');
     Route::get('/laporan-bulanan/export', [\App\Http\Controllers\LaporanBulananController::class, 'exportLaporan'])->name('laporan.export');
     Route::get('/laporan-bulanan/export-wig', [\App\Http\Controllers\LaporanBulananController::class, 'exportWig'])->name('laporan.exportWig');
+    Route::get('/laporan-bulanan/export-sesi-wig', [\App\Http\Controllers\LaporanBulananController::class, 'exportSesiWig'])->name('laporan.exportSesiWig');
     Route::get('/laporan-bulanan/export-lengkap', [\App\Http\Controllers\LaporanBulananController::class, 'exportLengkap'])->name('laporan.exportLengkap');
     Route::get('/laporan-bulanan/preview', [\App\Http\Controllers\LaporanBulananController::class, 'previewReport'])->name('laporan.preview');
 

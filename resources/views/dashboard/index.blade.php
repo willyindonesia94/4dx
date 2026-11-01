@@ -170,74 +170,112 @@
                                 <div class="flex flex-col gap-5 mb-6">
                                     <!-- KIRI: WIG Card & Tabel WIG -->
                                     <div class="w-full flex flex-col gap-4">
-                                        <!-- WIG Card -->
-                                        <div class="w-full bg-white rounded-lg shadow-sm border border-[#0b2256] overflow-hidden flex flex-col">
-                                            <div class="bg-[#0b2256] text-white px-3 py-2 text-[10px] font-bold uppercase truncate">
-                                                WIG PERFORMANCE | {{ $isExceed ? 'EXCEEDED TARGET' : 'PERFORMANCE WATCH' }}
-                                            </div>
-                                            <div class="p-3 flex-1 flex flex-col sm:flex-row">
-                                                <div class="w-full sm:w-1/2 text-center flex flex-col justify-center items-center px-2 py-2">
-                                                    <div class="text-2xl font-bold text-[#0b2256]">{{ number_format($wig->total_target ?? 0, 2) }} <span class="text-sm">{{ $wig->satuan->name ?? '' }}</span></div>
-                                                    <div class="text-[10px] font-bold text-gray-700 mt-1">Target WIG UID Jabar</div>
-                                                    <div class="text-[9px] text-gray-500 mt-1">Realisasi: {{ number_format($wig->total_realisasi ?? 0, 2) }} {{ $wig->satuan->name ?? '' }}</div>
+                                        <!-- Grid WIG Performance & Proyeksi Realisasi WIG -->
+                                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                            <!-- WIG Card -->
+                                            <div class="w-full bg-white rounded-lg shadow-sm border border-[#0b2256] overflow-hidden flex flex-col">
+                                                <div class="bg-[#0b2256] text-white px-3 py-2 text-[10px] font-bold uppercase truncate">
+                                                    WIG PERFORMANCE | {{ $isExceed ? 'EXCEEDED TARGET' : 'PERFORMANCE WATCH' }}
                                                 </div>
-                                                <div class="w-full sm:w-1/2 border-t sm:border-t-0 sm:border-l border-gray-200 mt-2 sm:mt-0 pt-2 sm:pt-0 sm:pl-3 flex flex-col justify-between">
-                                                    <div>
-                                                        <div class="text-[9px] font-bold text-gray-800 uppercase mb-1 pb-1 border-b border-gray-100">
-                                                            CAPAIAN WIG BULAN LALU ({{ strtoupper($namaBulanPrev) }})
-                                                        </div>
-                                                        <div class="flex items-center gap-3">
-                                                            <div class="text-xl font-black {{ ($wig->capaian_prev ?? 0) >= 100 ? 'text-green-600' : 'text-orange-500' }}">
-                                                                {{ number_format($wig->capaian_prev ?? 0, 2) }} %
+                                                <div class="p-3 flex-1 flex flex-col sm:flex-row">
+                                                    <div class="w-full sm:w-1/2 text-center flex flex-col justify-center items-center px-2 py-2">
+                                                        <div class="text-2xl font-bold text-[#0b2256]">{{ number_format($wig->total_target ?? 0, 2) }} <span class="text-sm">{{ $wig->satuan->name ?? '' }}</span></div>
+                                                        <div class="text-[10px] font-bold text-gray-700 mt-1">Target WIG UID Jabar</div>
+                                                        <div class="text-[9px] text-gray-500 mt-1">Realisasi: {{ number_format($wig->total_realisasi ?? 0, 2) }} {{ $wig->satuan->name ?? '' }}</div>
+                                                    </div>
+                                                    <div class="w-full sm:w-1/2 border-t sm:border-t-0 sm:border-l border-gray-200 mt-2 sm:mt-0 pt-2 sm:pt-0 sm:pl-3 flex flex-col justify-between">
+                                                        <div>
+                                                            <div class="text-[9px] font-bold text-gray-800 uppercase mb-1 pb-1 border-b border-gray-100">
+                                                                CAPAIAN WIG BULAN LALU ({{ strtoupper($namaBulanPrev) }})
                                                             </div>
-                                                            <div class="flex flex-col">
-                                                                <div class="text-[9px] text-gray-500 font-medium">Target: <span class="font-bold text-gray-700">{{ number_format($wig->total_target_prev ?? 0, 2) }}</span></div>
-                                                                <div class="text-[9px] text-gray-500 font-medium">Realisasi: <span class="font-bold text-gray-700">{{ number_format($wig->total_realisasi_prev ?? 0, 2) }}</span></div>
+                                                            <div class="flex items-center gap-3">
+                                                                <div class="text-xl font-black {{ ($wig->capaian_prev ?? 0) >= 100 ? 'text-green-600' : 'text-orange-500' }}">
+                                                                    {{ number_format($wig->capaian_prev ?? 0, 2) }} %
+                                                                </div>
+                                                                <div class="flex flex-col">
+                                                                    <div class="text-[9px] text-gray-500 font-medium">Target: <span class="font-bold text-gray-700">{{ number_format($wig->total_target_prev ?? 0, 2) }}</span></div>
+                                                                    <div class="text-[9px] text-gray-500 font-medium">Realisasi: <span class="font-bold text-gray-700">{{ number_format($wig->total_realisasi_prev ?? 0, 2) }}</span></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="mt-2">
+                                                            <div class="text-[8px] font-bold text-gray-400 text-center mb-0.5">TREND WIG (%)</div>
+                                                            <div class="h-6 relative w-full group">
+                                                                @php
+                                                                    $trendValues = $wig->trend_capaian ?? [];
+                                                                    $maxVal = max(100, count($trendValues) ? max($trendValues) : 0) * 1.1;
+                                                                    if ($maxVal == 0) $maxVal = 100;
+                                                                    
+                                                                    $xStep = $bulanT > 1 ? 90 / ($bulanT - 1) : 0;
+                                                                    $points = [];
+                                                                    $xPos = 5;
+                                                                    
+                                                                    for($i=1; $i<=$bulanT; $i++) {
+                                                                        $val = $trendValues[$i] ?? 0;
+                                                                        $yPos = 90 - ($val / $maxVal) * 80;
+                                                                        $points[] = "{$xPos},{$yPos}";
+                                                                        $xPos += $xStep;
+                                                                    }
+                                                                    $pointsStr = implode(" ", $points);
+                                                                @endphp
+                                                                
+                                                                <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+                                                                    <polyline points="{{ $pointsStr }}" fill="none" stroke="#3b82f6" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
+                                                                </svg>
+                                                                
+                                                                @php $xPos = 5; @endphp
+                                                                @for($i=1; $i<=$bulanT; $i++)
+                                                                    @php
+                                                                        $val = $trendValues[$i] ?? 0;
+                                                                        $yPos = 90 - ($val / $maxVal) * 80;
+                                                                    @endphp
+                                                                    <div class="absolute w-[7px] h-[7px] bg-white border border-blue-500 rounded-full hover:bg-blue-100 hover:scale-125 transition-transform" 
+                                                                         style="left: {{ $xPos }}%; top: {{ $yPos }}%; transform: translate(-50%, -50%); cursor: pointer;"
+                                                                         title="Bulan {{ ['JAN','FEB','MAR','APR','MEI','JUN','JUL','AGU','SEP','OKT','NOV','DES'][$i-1] }}: {{ $val }}%">
+                                                                    </div>
+                                                                    @php $xPos += $xStep; @endphp
+                                                                @endfor
+                                                            </div>
+                                                            <div class="flex justify-between text-[7px] text-gray-400 font-bold mt-1">
+                                                                <span>JAN</span>
+                                                                <span>..</span>
+                                                                <span>{{ strtoupper(substr(['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][$bulan - 1], 0, 3)) }}</span>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div class="mt-2">
-                                                        <div class="text-[8px] font-bold text-gray-400 text-center mb-0.5">TREND WIG (%)</div>
-                                                        <div class="h-6 relative w-full group">
-                                                            @php
-                                                                $trendValues = $wig->trend_capaian ?? [];
-                                                                $maxVal = max(100, count($trendValues) ? max($trendValues) : 0) * 1.1;
-                                                                if ($maxVal == 0) $maxVal = 100;
-                                                                
-                                                                $xStep = $bulanT > 1 ? 90 / ($bulanT - 1) : 0;
-                                                                $points = [];
-                                                                $xPos = 5;
-                                                                
-                                                                for($i=1; $i<=$bulanT; $i++) {
-                                                                    $val = $trendValues[$i] ?? 0;
-                                                                    $yPos = 90 - ($val / $maxVal) * 80;
-                                                                    $points[] = "{$xPos},{$yPos}";
-                                                                    $xPos += $xStep;
-                                                                }
-                                                                $pointsStr = implode(" ", $points);
-                                                            @endphp
-                                                            
-                                                            <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-                                                                <polyline points="{{ $pointsStr }}" fill="none" stroke="#3b82f6" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" />
-                                                            </svg>
-                                                            
-                                                            @php $xPos = 5; @endphp
-                                                            @for($i=1; $i<=$bulanT; $i++)
-                                                                @php
-                                                                    $val = $trendValues[$i] ?? 0;
-                                                                    $yPos = 90 - ($val / $maxVal) * 80;
-                                                                @endphp
-                                                                <div class="absolute w-[7px] h-[7px] bg-white border border-blue-500 rounded-full hover:bg-blue-100 hover:scale-125 transition-transform" 
-                                                                     style="left: {{ $xPos }}%; top: {{ $yPos }}%; transform: translate(-50%, -50%); cursor: pointer;"
-                                                                     title="Bulan {{ ['JAN','FEB','MAR','APR','MEI','JUN','JUL','AGU','SEP','OKT','NOV','DES'][$i-1] }}: {{ $val }}%">
-                                                                </div>
-                                                                @php $xPos += $xStep; @endphp
-                                                            @endfor
+                                                </div>
+                                            </div>
+
+                                            <!-- 2 KOTAK PROYEKSI REALISASI WIG (DISAMPING WIG PERFORMANCE) -->
+                                            <div class="w-full bg-white rounded-lg shadow-sm border border-[#0b2256] overflow-hidden flex flex-col">
+                                                <div class="bg-[#0b2256] text-white px-3 py-2 text-[10px] font-bold uppercase truncate flex items-center gap-1.5">
+                                                    <svg class="w-3.5 h-3.5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                                                    PROYEKSI REALISASI WIG MINGGUAN | {{ ($wig->proyeksi_capaian !== null && $wig->proyeksi_capaian >= 100) ? 'EXCEEDED TARGET' : 'PROJECTION WATCH' }}
+                                                </div>
+                                                <div class="p-3 flex-1 flex flex-col sm:flex-row">
+                                                    <!-- Kotak 1: Proyeksi Realisasi Mingguan -->
+                                                    <div class="w-full sm:w-1/2 text-center flex flex-col justify-center items-center px-2 py-2">
+                                                        <div class="text-2xl font-bold text-[#0b2256]">
+                                                            {{ $wig->proyeksi_realisasi !== null ? number_format($wig->proyeksi_realisasi, 2) : '0.00' }} 
+                                                            <span class="text-sm font-semibold text-gray-700">{{ $wig->satuan->name ?? '' }}</span>
                                                         </div>
-                                                        <div class="flex justify-between text-[7px] text-gray-400 font-bold mt-1">
-                                                            <span>JAN</span>
-                                                            <span>..</span>
-                                                            <span>{{ strtoupper(substr(['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][$bulan - 1], 0, 3)) }}</span>
+                                                        <div class="text-[10px] font-bold text-gray-700 mt-1 uppercase tracking-wider">Proyeksi Realisasi Mingguan</div>
+                                                        <div class="text-[9px] text-gray-500 mt-1">UID Jawa Barat</div>
+                                                    </div>
+                                                    <!-- Kotak 2: Proyeksi Capaian (%) -->
+                                                    <div class="w-full sm:w-1/2 border-t sm:border-t-0 sm:border-l border-gray-200 mt-2 sm:mt-0 pt-2 sm:pt-0 sm:pl-3 flex flex-col justify-center items-center text-center">
+                                                        <div class="text-[9px] font-bold text-gray-800 uppercase mb-1 pb-1 border-b border-gray-100 w-full text-center">
+                                                            PROYEKSI CAPAIAN WIG
+                                                        </div>
+                                                        <div class="flex items-center justify-center my-auto">
+                                                            <div class="text-2xl font-black {{ ($wig->proyeksi_capaian !== null && $wig->proyeksi_capaian >= 100) ? 'text-green-600' : 'text-orange-500' }}">
+                                                                {{ $wig->proyeksi_capaian !== null ? number_format($wig->proyeksi_capaian, 2) : '0.00' }} %
+                                                            </div>
+                                                        </div>
+                                                        <div class="mt-2">
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold {{ ($wig->proyeksi_capaian !== null && $wig->proyeksi_capaian >= 100) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                                                {{ ($wig->proyeksi_capaian !== null && $wig->proyeksi_capaian >= 100) ? 'EXCEEDED TARGET' : 'PROJECTION WATCH' }}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
