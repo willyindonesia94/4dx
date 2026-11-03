@@ -34,6 +34,34 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">
+        @if(session()->has('impersonator_id'))
+            <div class="bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white px-4 py-2.5 shadow-md sticky top-0 z-[100] border-b border-amber-700">
+                <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-sm">
+                    <div class="flex items-center gap-2">
+                        <span class="flex h-3 w-3 relative flex-shrink-0">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+                        </span>
+                        <span>
+                            <strong>Mode Akses Pengguna:</strong> Anda sedang masuk sebagai
+                            <span class="underline font-bold">{{ auth()->user()->name }}</span>
+                            <span class="bg-white/20 px-2 py-0.5 rounded text-xs ml-1 font-medium">{{ auth()->user()->role_name ?? 'User' }}</span>
+                            @if(auth()->user()->unit)
+                                <span class="text-amber-100 text-xs">({{ auth()->user()->unit->name }})</span>
+                            @endif
+                        </span>
+                    </div>
+                    <form action="{{ route('impersonate.leave') }}" method="POST" class="inline m-0">
+                        @csrf
+                        <button type="submit" class="inline-flex items-center gap-1.5 bg-white text-amber-900 hover:bg-amber-50 font-bold px-3 py-1.5 rounded-md text-xs shadow-sm transition-all transform hover:scale-105">
+                            <svg class="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            Kembali ke Akun Utama
+                        </button>
+                    </form>
+                </div>
+            </div>
+        @endif
+
         <div class="min-h-screen bg-gray-100">
             @include('layouts.navigation')
 

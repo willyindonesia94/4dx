@@ -137,6 +137,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/users/preview-import', [\App\Http\Controllers\UserController::class, 'previewImport'])->name('users.preview_import');
     Route::post('/users/import', [\App\Http\Controllers\UserController::class, 'import'])->name('users.import');
     Route::post('/users/{user}/toggle-active', [\App\Http\Controllers\UserController::class, 'toggleActive'])->name('users.toggle_active')->middleware(['role:Super Admin|Perencanaan UID']);
+    Route::post('/users/{user}/impersonate', [\App\Http\Controllers\UserController::class, 'impersonate'])->name('users.impersonate')->middleware(['role:Super Admin|Perencanaan UID']);
+    Route::post('/impersonate/leave', [\App\Http\Controllers\UserController::class, 'stopImpersonate'])->name('impersonate.leave');
     Route::resource('users', \App\Http\Controllers\UserController::class)
         ->middleware(['role:Super Admin|Perencanaan UID']);
         

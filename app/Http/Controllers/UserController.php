@@ -6,6 +6,7 @@ use App\Models\MasterUnit;
 use App\Models\MasterBidang;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules;
 use Spatie\Permission\Models\Role;
 
@@ -205,5 +206,77 @@ class UserController extends Controller
     public function template()
     {
         return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\UsersTemplateExport, 'Template_Bulk_User.xlsx');
+    }
+
+    /**
+     * Masuk sebagai pengguna lain (Impersonation).
+     * Hanya dapat diakses oleh Super Admin dan Perencanaan UID.
+     */
+    public function impersonate(User $user)
+    {
+        $currentUser = auth()->user();
+
+        // Validasi hak akses
+        if (!$currentUser->hasAnyRole(['Super Admin', 'Perencanaan UID'])) {
+            abort(403, 'Anda tidak memiliki hak akses untuk fitur ini.');
+        }
+
+        // Tidak boleh impersonate diri sendiri
+        if ($currentUser->id === $user->id) {
+            return redirect()->back()->with('error', 'Anda tidak dapat masuk sebagai akun Anda sendiri.');
+        }
+
+        // Tidak boleh nested impersonate
+        if (session()->has('impersonator_id')) {
+            return redirect()->back()->with('error', 'Anda sedang dalam mode penyamaran akun. Harap kembali ke akun utama terlebih dahulu.');
+        }
+
+        // Validasi status akun target
+        if (!$user->is_active) {
+            return redirect()->back()->with('error', 'Akun pengguna ini sedang non-aktif dan tidak dapat diakses.');
+        }
+
+        // Simpan ID admin asli di session
+        session()->put('impersonator_id', $currentUser->id);
+
+        if (function_exists('activity')) {
+            activity()
+                ->causedBy($currentUser)
+                ->performedOn($user)
+                ->log('Masuk sebagai pengguna (Impersonate): ' . $user->name . ' (' . ($user->role_name ?? '-') . ')');
+        }
+
+        // Login sebagai target user
+        Auth::loginUsingId($user->id);
+
+        return redirect()->route('dashboard')->with('success', 'Anda sekarang masuk sebagai ' . $user->name . ' (' . ($user->role_name ?? 'Pengguna') . ').');
+    }
+
+    /**
+     * Kembali ke akun utama setelah impersonation.
+     */
+    public function stopImpersonate()
+    {
+        if (!session()->has('impersonator_id')) {
+            return redirect()->route('dashboard');
+        }
+
+        $originalUserId = session()->pull('impersonator_id');
+        $originalUser = User::find($originalUserId);
+
+        if (!$originalUser) {
+            Auth::logout();
+            return redirect()->route('login')->with('error', 'Sesi akun utama tidak ditemukan. Silakan login kembali.');
+        }
+
+        Auth::loginUsingId($originalUser->id);
+
+        if (function_exists('activity')) {
+            activity()
+                ->causedBy($originalUser)
+                ->log('Kembali ke akun utama setelah impersonate');
+        }
+
+        return redirect()->route('users.index')->with('success', 'Berhasil kembali ke akun utama (' . $originalUser->name . ').');
     }
 }

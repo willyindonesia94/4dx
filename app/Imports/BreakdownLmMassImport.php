@@ -219,6 +219,13 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
                         $startDate = $weeks[$tipe]["start"];
                         $endDate = $weeks[$tipe]["end"];
 
+                        // Normalisasi persentase: Jika satuan LM adalah % (satuan_id = 1)
+                        // dan angka bernilai <= 1.0 (misalnya 1 atau 1.0 yang dihasilkan dari sel Excel berformat Percentage '100%', atau 0.9 untuk 90%),
+                        // maka kalikan 100 agar menjadi skala persentase 0 - 100.
+                        if ((int)$lm->satuan_id === 1 && $angka > 0 && $angka <= 1.0) {
+                            $angka = round($angka * 100, 2);
+                        }
+
                         BreakdownLm::updateOrCreate(
                             [
                                 "lm_id" => $lm->id,

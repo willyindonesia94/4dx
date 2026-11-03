@@ -100,6 +100,11 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                 $isPercent = str_contains($angkaStr, '%');
                 $angkaClean = str_replace([",", "%"], "", $angkaStr);
                 $angkaRealisasi = floatval($angkaClean);
+
+                // Normalisasi desimal persen Excel jika satuan LM adalah %
+                if ((int)$lm->satuan_id === 1 && $angkaRealisasi > 0 && $angkaRealisasi <= 1.0) {
+                    $angkaRealisasi = round($angkaRealisasi * 100, 2);
+                }
                 
                 // Format bukti dan keterangan
                 $buktiText = $bukti ? trim((string)$bukti) : 'Diimport dari Upload Massal Excel';

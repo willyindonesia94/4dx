@@ -5,8 +5,21 @@
         </h2>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="py-12" x-data="{
+        showImpersonateModal: false,
+        impersonateUserId: null,
+        impersonateUserName: '',
+        impersonateUserRole: '',
+        impersonateUserUnit: '',
+        openImpersonateModal(id, name, role, unit) {
+            this.impersonateUserId = id;
+            this.impersonateUserName = name;
+            this.impersonateUserRole = role;
+            this.impersonateUserUnit = unit;
+            this.showImpersonateModal = true;
+        }
+    }">
+        <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
             @if(session('success'))
                 <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
                     <span class="block sm:inline">{{ session('success') }}</span>
@@ -52,59 +65,80 @@
                 </div>
             </div>
             
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6" id="ajax-container">
-                <div class="p-0 sm:p-6 bg-white border-b border-gray-200 overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6 border border-gray-200" id="ajax-container">
+                <div class="p-0 overflow-x-auto">
+                    <table class="w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50/80">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama & Username</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role Aplikasi</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Kerja</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matrix Group (Bidang)</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Nama & Username</th>
+                                <th class="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Role Aplikasi</th>
+                                <th class="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Unit Kerja</th>
+                                <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Matrix Group</th>
+                                <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                                <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
+                        <tbody class="bg-white divide-y divide-gray-100">
                             @forelse($users as $user)
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-medium text-gray-900">{{ $user->name }}</div>
-                                    <div class="text-sm text-gray-500">{{ $user->username }}</div>
+                            <tr class="hover:bg-slate-50/60 transition-colors">
+                                <td class="px-4 py-2.5">
+                                    <div class="text-sm font-semibold text-gray-900 leading-snug">{{ $user->name }}</div>
+                                    <div class="text-xs text-gray-500 mt-0.5">{{ $user->username }}</div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                <td class="px-3 py-2.5 whitespace-nowrap text-xs">
+                                    <span class="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                                         {{ $user->role_name }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $user->unit->name ?? '-' }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                                <td class="px-3 py-2.5 text-xs text-gray-600 font-medium whitespace-nowrap">{{ $user->unit->name ?? '-' }}</td>
+                                <td class="px-3 py-2.5 whitespace-nowrap text-center text-xs">
+                                    <span class="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-purple-50 text-purple-700 border border-purple-200">
                                         {{ $user->matrix_group_id }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td class="px-3 py-2.5 whitespace-nowrap text-center text-xs">
                                     @if($user->hasRole('Super Admin'))
-                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Permanent</span>
+                                        <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Permanent</span>
                                     @else
                                         <label class="relative inline-flex items-center cursor-pointer">
                                             <input type="checkbox" class="sr-only peer" {{ $user->is_active ? 'checked' : '' }} onchange="toggleUserStatus(this, '{{ route('users.toggle_active', $user->id) }}')" {{ $user->id === auth()->id() ? 'disabled' : '' }}>
-                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 {{ $user->id === auth()->id() ? 'opacity-50 cursor-not-allowed' : '' }}"></div>
+                                            <div class="w-10 h-5.5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-green-600 {{ $user->id === auth()->id() ? 'opacity-50 cursor-not-allowed' : '' }}"></div>
                                         </label>
                                     @endif
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
-                                    <a href="{{ route('users.edit', ['user' => $user->id] + ($selectedLevel ? ['level' => $selectedLevel] : [])) }}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
-                                    <form action="{{ route('users.destroy', ['user' => $user->id] + ($selectedLevel ? ['level' => $selectedLevel] : [])) }}" method="POST" class="inline-block" onsubmit="return confirm('Hapus pengguna ini?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-red-600 hover:text-red-900">Hapus</button>
-                                    </form>
+                                <td class="px-3 py-2.5 whitespace-nowrap text-center text-xs">
+                                    <div class="inline-flex items-center justify-center gap-1.5">
+                                        @if(auth()->user()->hasAnyRole(['Super Admin', 'Perencanaan UID']) && !session()->has('impersonator_id') && $user->id !== auth()->id() && $user->is_active)
+                                            <button type="button"
+                                                @click="openImpersonateModal({{ $user->id }}, '{{ addslashes($user->name) }}', '{{ addslashes($user->role_name ?? '') }}', '{{ addslashes($user->unit->name ?? 'UID') }}')"
+                                                class="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white border border-emerald-200 hover:border-transparent px-2 py-1 rounded-md text-xs font-semibold transition-all duration-200 shadow-sm"
+                                                title="Masuk sebagai {{ $user->name }}">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                                                Masuk Sebagai
+                                            </button>
+                                        @endif
+                                        <a href="{{ route('users.edit', ['user' => $user->id] + ($selectedLevel ? ['level' => $selectedLevel] : [])) }}"
+                                           class="inline-flex items-center gap-1 text-indigo-700 bg-indigo-50 hover:bg-indigo-600 hover:text-white border border-indigo-200 hover:border-transparent px-2 py-1 rounded-md text-xs font-semibold transition-all duration-200 shadow-sm"
+                                           title="Edit pengguna">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                            Edit
+                                        </a>
+                                        <form action="{{ route('users.destroy', ['user' => $user->id] + ($selectedLevel ? ['level' => $selectedLevel] : [])) }}" method="POST" class="inline-block m-0" onsubmit="return confirm('Hapus pengguna ini?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                class="inline-flex items-center gap-1 text-red-700 bg-red-50 hover:bg-red-600 hover:text-white border border-red-200 hover:border-transparent px-2 py-1 rounded-md text-xs font-semibold transition-all duration-200 shadow-sm"
+                                                title="Hapus pengguna">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                                Hapus
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                                <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
                                     Tidak ada pengguna yang ditemukan dengan level ini.
                                 </td>
                             </tr>
@@ -363,6 +397,71 @@
                     });
                 }
             </script>
+
+            <!-- Impersonate Confirmation Modal (Standard Style) -->
+            <div x-show="showImpersonateModal" class="fixed inset-0 z-[110] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="display: none;">
+                <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="showImpersonateModal = false" x-show="showImpersonateModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"></div>
+                    <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+                    
+                    <div class="relative z-10 inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-slate-100"
+                        x-show="showImpersonateModal"
+                        x-transition:enter="ease-out duration-300"
+                        x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                        x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                        x-transition:leave="ease-in duration-200"
+                        x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                        x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
+                        
+                        <!-- Header -->
+                        <div class="bg-emerald-50 p-6 border-b border-emerald-100">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 text-emerald-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-bold text-emerald-950">Konfirmasi Akses Pengguna</h3>
+                                    <p class="text-xs text-emerald-700 mt-0.5">Masuk sebagai pengguna tanpa kata sandi (Impersonation)</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Body -->
+                        <div class="p-6 space-y-4" style="padding: 1.5rem;">
+                            <p class="text-sm text-slate-600 leading-relaxed">
+                                Apakah Anda yakin ingin masuk ke dalam sistem menggunakan akun ini?
+                            </p>
+                            
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl shadow-sm" style="padding: 16px; margin-top: 12px; margin-bottom: 16px;">
+                                <div class="font-bold text-slate-900 text-base tracking-wide" x-text="impersonateUserName" style="margin-bottom: 8px;"></div>
+                                <div class="flex flex-wrap items-center gap-2" style="gap: 8px;">
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200" x-text="impersonateUserRole"></span>
+                                    <span class="inline-flex items-center text-xs text-slate-600 font-medium" x-text="'Unit: ' + impersonateUserUnit"></span>
+                                </div>
+                            </div>
+
+                            <div class="bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-2.5" style="padding: 12px;">
+                                <svg class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span class="leading-relaxed">Seluruh tampilan, data, dan hak akses aplikasi akan berubah sesuai pengguna ini. Anda dapat kembali ke akun utama kapan saja melalui tombol di bagian atas layar.</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div class="bg-slate-50 px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row sm:justify-end gap-2.5">
+                            <button @click="showImpersonateModal = false" type="button" class="w-full sm:w-auto px-4 py-2 border border-slate-200 rounded-md text-slate-700 font-semibold hover:bg-slate-100 text-xs transition-colors">
+                                Batal
+                            </button>
+                            <form :action="'{{ url('users') }}/' + impersonateUserId + '/impersonate'" method="POST" class="inline m-0">
+                                @csrf
+                                <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md text-xs shadow-sm transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                                    Masuk Sebagai Pengguna
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </x-app-layout>
