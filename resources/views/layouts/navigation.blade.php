@@ -85,6 +85,15 @@
                                 <x-dropdown-link :href="route('master-satuans.index')">
                                     {{ __('Master Satuan') }}
                                 </x-dropdown-link>
+                                @hasrole('Super Admin')
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <x-dropdown-link :href="route('database-backup.index')">
+                                    <div class="flex items-center gap-1.5 text-indigo-700 font-semibold">
+                                        <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                                        {{ __('Backup & Restore Database') }}
+                                    </div>
+                                </x-dropdown-link>
+                                @endhasrole
                             </x-slot>
                         </x-dropdown>
                     </div>
@@ -390,10 +399,10 @@
                             @endhasanyrole
 
                             @hasrole('Super Admin')
-                            <x-dropdown-link :href="route('database.backup')">
+                            <x-dropdown-link :href="route('database-backup.index')">
                                 <div class="flex items-center text-gray-700">
                                     <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
-                                    {{ __('Download Database') }}
+                                    {{ __('Backup & Restore Database') }}
                                 </div>
                             </x-dropdown-link>
                             @endhasrole
@@ -590,9 +599,9 @@
                          </a>
                          @endhasanyrole
                          @hasrole('Super Admin')
-                         <a href="{{ route('database.backup') }}" class="flex items-center justify-center w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all shadow-sm">
+                         <a href="{{ route('database-backup.index') }}" class="flex items-center justify-center w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all shadow-sm">
                             <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
-                            Download Database
+                            Backup & Restore Database
                          </a>
                          @endhasrole
                          <a href="{{ route('profile.edit') }}" class="flex items-center justify-center w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-all shadow-sm">

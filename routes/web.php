@@ -147,10 +147,15 @@ Route::middleware('auth')->group(function () {
         ->middleware(['role:Super Admin|Perencanaan UID|General Manager UID|Manager UP3|Manager ULP|Perencanaan UP3|UP2D|UP2K|Staff ULP'])
         ->name('audit-logs.index');
 
-    // Database Backup (Super Admin Only)
-    Route::get('/database-backup', [\App\Http\Controllers\DatabaseBackupController::class, 'download'])
-        ->middleware(['role:Super Admin'])
-        ->name('database.backup');
+    // Database Backup & Restore (Super Admin Only)
+    Route::middleware(['role:Super Admin'])->prefix('database-backup')->name('database-backup.')->group(function() {
+        Route::get('/', [\App\Http\Controllers\DatabaseBackupController::class, 'index'])->name('index');
+        Route::post('/export', [\App\Http\Controllers\DatabaseBackupController::class, 'export'])->name('export');
+        Route::post('/import', [\App\Http\Controllers\DatabaseBackupController::class, 'import'])->name('import');
+        Route::post('/restore-local/{filename}', [\App\Http\Controllers\DatabaseBackupController::class, 'restoreFromLocal'])->name('restore-local');
+        Route::get('/download/{filename}', [\App\Http\Controllers\DatabaseBackupController::class, 'downloadBackup'])->name('download');
+        Route::delete('/delete/{filename}', [\App\Http\Controllers\DatabaseBackupController::class, 'deleteBackup'])->name('delete');
+    });
 
     // Notifications
     Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
