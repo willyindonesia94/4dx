@@ -99,7 +99,32 @@ class RealisasiWigController extends Controller
         $allMasterWigs = MasterWig::with('satuan')->orderBy('id')->get();
         $proyeksiMap = \App\Models\ProyeksiWig::all()->keyBy('wig_id');
 
-        return view('realisasis.wig', compact('displayWigs', 'wigs', 'bulanFilter', 'tahunFilter', 'wigFilter', 'up3Filter', 'availableUnits', 'isSuperAdmin', 'allMasterWigs', 'proyeksiMap'));
+        // Target Bulan Berjalan untuk Proyeksi Realisasi WIG (UID)
+        $monthMap = [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'];
+        $targetCol = 'target_' . ($monthMap[$bulanFilter] ?? 'jan');
+        $uidUnit = \App\Models\MasterUnit::where('type', 'UID')->first();
+        $uidUnitId = $uidUnit ? $uidUnit->id : 1;
+        $targetBulanIniMap = [];
+
+        foreach ($allMasterWigs as $w) {
+            $tVal = \App\Models\BreakdownWig::where('wig_id', $w->id)
+                ->where('tahun', $tahunFilter)
+                ->where('unit_id', $uidUnitId)
+                ->value($targetCol);
+
+            if ($tVal === null || (float)$tVal == 0) {
+                $up3Units = \App\Models\MasterUnit::where('type', 'UP3')->pluck('id');
+                $isAvg = in_array($w->satuan_id, [1, 2, 14]);
+                if ($isAvg) {
+                    $tVal = \App\Models\BreakdownWig::where('wig_id', $w->id)->where('tahun', $tahunFilter)->whereIn('unit_id', $up3Units)->avg($targetCol);
+                } else {
+                    $tVal = \App\Models\BreakdownWig::where('wig_id', $w->id)->where('tahun', $tahunFilter)->whereIn('unit_id', $up3Units)->sum($targetCol);
+                }
+            }
+            $targetBulanIniMap[$w->id] = (float)($tVal ?? 0);
+        }
+
+        return view('realisasis.wig', compact('displayWigs', 'wigs', 'bulanFilter', 'tahunFilter', 'wigFilter', 'up3Filter', 'availableUnits', 'isSuperAdmin', 'allMasterWigs', 'proyeksiMap', 'targetBulanIniMap'));
     }
 
     public function bulkDestroy(Request $request)
@@ -450,11 +475,46 @@ class RealisasiWigController extends Controller
         $request->validate([
             'proyeksi' => 'required|array',
             'catatan' => 'nullable|string',
+            'bulan' => 'nullable|integer',
+            'tahun' => 'nullable|integer',
         ]);
+
+        $bulan = (int)$request->input('bulan', date('n'));
+        $tahun = (int)$request->input('tahun', date('Y'));
+        $monthMap = [1=>'jan',2=>'feb',3=>'mar',4=>'apr',5=>'mei',6=>'jun',7=>'jul',8=>'agu',9=>'sep',10=>'okt',11=>'nov',12=>'des'];
+        $targetCol = 'target_' . ($monthMap[$bulan] ?? 'jan');
+
+        $uidUnit = \App\Models\MasterUnit::where('type', 'UID')->first();
+        $uidUnitId = $uidUnit ? $uidUnit->id : 1;
 
         foreach ($request->input('proyeksi', []) as $wigId => $data) {
             $angka = isset($data['angka_proyeksi']) && $data['angka_proyeksi'] !== '' ? (float)$data['angka_proyeksi'] : 0;
-            $capaian = isset($data['capaian_persen']) && $data['capaian_persen'] !== '' ? (float)$data['capaian_persen'] : 0;
+            
+            // Ambil target bulan berjalan untuk WIG ini
+            $targetBulanan = (float)\App\Models\BreakdownWig::where('wig_id', $wigId)
+                ->where('tahun', $tahun)
+                ->where('unit_id', $uidUnitId)
+                ->value($targetCol);
+
+            if ($targetBulanan == 0) {
+                $up3Units = \App\Models\MasterUnit::where('type', 'UP3')->pluck('id');
+                $wModel = \App\Models\MasterWig::find($wigId);
+                $isAvg = $wModel && in_array($wModel->satuan_id, [1, 2, 14]);
+                if ($isAvg) {
+                    $targetBulanan = (float)\App\Models\BreakdownWig::where('wig_id', $wigId)->where('tahun', $tahun)->whereIn('unit_id', $up3Units)->avg($targetCol);
+                } else {
+                    $targetBulanan = (float)\App\Models\BreakdownWig::where('wig_id', $wigId)->where('tahun', $tahun)->whereIn('unit_id', $up3Units)->sum($targetCol);
+                }
+            }
+
+            // Rumus Capaian Proyeksi (%): Proyeksi Realisasi / Target Bulan Berjalan * 100
+            if ($targetBulanan > 0) {
+                $capaian = round(($angka / $targetBulanan) * 100, 2);
+            } elseif (isset($data['capaian_persen']) && $data['capaian_persen'] !== '') {
+                $capaian = (float)$data['capaian_persen'];
+            } else {
+                $capaian = 0;
+            }
 
             \App\Models\ProyeksiWig::updateOrCreate(
                 ['wig_id' => $wigId],
@@ -467,6 +527,6 @@ class RealisasiWigController extends Controller
             );
         }
 
-        return redirect()->back()->with('success', 'Data Proyeksi Realisasi WIG Mingguan (WIG 1-4) berhasil disimpan!');
+        return redirect()->back()->with('success', 'Data Proyeksi Realisasi WIG Bulanan (WIG 1-4) berhasil disimpan!');
     }
 }

@@ -51,7 +51,7 @@
                             @endif
                         </span>
                     </div>
-                    <form action="{{ route('impersonate.leave') }}" method="POST" class="inline m-0">
+                    <form action="{{ route('impersonate.leave', [], false) }}" method="POST" class="inline m-0">
                         @csrf
                         <button type="submit" class="inline-flex items-center gap-1.5 bg-white text-amber-900 hover:bg-amber-50 font-bold px-3 py-1.5 rounded-md text-xs shadow-sm transition-all transform hover:scale-105">
                             <svg class="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>

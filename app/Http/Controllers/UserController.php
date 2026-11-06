@@ -212,12 +212,12 @@ class UserController extends Controller
      * Masuk sebagai pengguna lain (Impersonation).
      * Hanya dapat diakses oleh Super Admin dan Perencanaan UID.
      */
-    public function impersonate(User $user)
+    public function impersonate(Request $request, User $user)
     {
         $currentUser = auth()->user();
 
         // Validasi hak akses
-        if (!$currentUser->hasAnyRole(['Super Admin', 'Perencanaan UID'])) {
+        if (!$currentUser || !$currentUser->hasAnyRole(['Super Admin', 'Perencanaan UID'])) {
             abort(403, 'Anda tidak memiliki hak akses untuk fitur ini.');
         }
 
@@ -227,7 +227,7 @@ class UserController extends Controller
         }
 
         // Tidak boleh nested impersonate
-        if (session()->has('impersonator_id')) {
+        if ($request->session()->has('impersonator_id')) {
             return redirect()->back()->with('error', 'Anda sedang dalam mode penyamaran akun. Harap kembali ke akun utama terlebih dahulu.');
         }
 
@@ -236,8 +236,7 @@ class UserController extends Controller
             return redirect()->back()->with('error', 'Akun pengguna ini sedang non-aktif dan tidak dapat diakses.');
         }
 
-        // Simpan ID admin asli di session
-        session()->put('impersonator_id', $currentUser->id);
+        $adminId = $currentUser->id;
 
         if (function_exists('activity')) {
             activity()
@@ -247,7 +246,11 @@ class UserController extends Controller
         }
 
         // Login sebagai target user
-        Auth::loginUsingId($user->id);
+        Auth::login($user);
+
+        // Simpan ID admin asli di session setelah login agar tidak hilang saat session regenerate
+        $request->session()->put('impersonator_id', $adminId);
+        $request->session()->save();
 
         return redirect()->route('dashboard')->with('success', 'Anda sekarang masuk sebagai ' . $user->name . ' (' . ($user->role_name ?? 'Pengguna') . ').');
     }
@@ -255,21 +258,24 @@ class UserController extends Controller
     /**
      * Kembali ke akun utama setelah impersonation.
      */
-    public function stopImpersonate()
+    public function stopImpersonate(Request $request)
     {
-        if (!session()->has('impersonator_id')) {
+        if (!$request->session()->has('impersonator_id')) {
             return redirect()->route('dashboard');
         }
 
-        $originalUserId = session()->pull('impersonator_id');
+        $originalUserId = $request->session()->pull('impersonator_id');
         $originalUser = User::find($originalUserId);
 
         if (!$originalUser) {
             Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
             return redirect()->route('login')->with('error', 'Sesi akun utama tidak ditemukan. Silakan login kembali.');
         }
 
-        Auth::loginUsingId($originalUser->id);
+        Auth::login($originalUser);
+        $request->session()->save();
 
         if (function_exists('activity')) {
             activity()

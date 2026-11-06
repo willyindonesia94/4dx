@@ -836,7 +836,7 @@ class SesiWigController extends Controller
                                 $floorTarget = $t > 0 ? max(1, ceil($t * 0.10)) : 0;
                                 $targetPlusCarryOver = $floorTarget;
                             } else {
-                                $targetPlusCarryOver = max($t, $prevTargetPlusCarryOver + $runningCarryOver);
+                                $targetPlusCarryOver = max($t, $t + $runningCarryOver);
                             }
                         }
                         $runningCarryOver = $targetPlusCarryOver - $r;
@@ -880,7 +880,7 @@ class SesiWigController extends Controller
                                 $floorTarget = $t > 0 ? max(1, ceil($t * 0.10)) : 0;
                                 $targetPlusCarryOver = $floorTarget;
                             } else {
-                                $targetPlusCarryOver = max($t, $prevTargetPlusCarryOver + $runningCarryOver);
+                                $targetPlusCarryOver = max($t, $t + $runningCarryOver);
                             }
                         }
                         $runningCarryOver = $targetPlusCarryOver - $r;

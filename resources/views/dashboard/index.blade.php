@@ -250,16 +250,16 @@
                                             <div class="w-full bg-white rounded-lg shadow-sm border border-[#0b2256] overflow-hidden flex flex-col">
                                                 <div class="bg-[#0b2256] text-white px-3 py-2 text-[10px] font-bold uppercase truncate flex items-center gap-1.5">
                                                     <svg class="w-3.5 h-3.5 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                                                    PROYEKSI REALISASI WIG MINGGUAN | {{ ($wig->proyeksi_capaian !== null && $wig->proyeksi_capaian >= 100) ? 'EXCEEDED TARGET' : 'PROJECTION WATCH' }}
+                                                    PROYEKSI REALISASI WIG BULANAN | {{ ($wig->proyeksi_capaian !== null && $wig->proyeksi_capaian >= 100) ? 'EXCEEDED TARGET' : 'PROJECTION WATCH' }}
                                                 </div>
                                                 <div class="p-3 flex-1 flex flex-col sm:flex-row">
-                                                    <!-- Kotak 1: Proyeksi Realisasi Mingguan -->
+                                                    <!-- Kotak 1: Proyeksi Realisasi Bulanan -->
                                                     <div class="w-full sm:w-1/2 text-center flex flex-col justify-center items-center px-2 py-2">
                                                         <div class="text-2xl font-bold text-[#0b2256]">
                                                             {{ $wig->proyeksi_realisasi !== null ? number_format($wig->proyeksi_realisasi, 2) : '0.00' }} 
                                                             <span class="text-sm font-semibold text-gray-700">{{ $wig->satuan->name ?? '' }}</span>
                                                         </div>
-                                                        <div class="text-[10px] font-bold text-gray-700 mt-1 uppercase tracking-wider">Proyeksi Realisasi Mingguan</div>
+                                                        <div class="text-[10px] font-bold text-gray-700 mt-1 uppercase tracking-wider">Proyeksi Realisasi Bulanan</div>
                                                         <div class="text-[9px] text-gray-500 mt-1">UID Jawa Barat</div>
                                                     </div>
                                                     <!-- Kotak 2: Proyeksi Capaian (%) -->
@@ -491,7 +491,9 @@
                                                     <table class="min-w-full divide-y divide-gray-300 text-[10px]">
                                                         <thead class="bg-gray-100">
                                                             <tr>
-                                                                <th rowspan="2" class="px-3 py-2 border border-gray-300 text-left font-bold text-gray-800 sticky left-0 bg-gray-100 z-10">UNIT</th>
+                                                                <th rowspan="2" class="px-3 py-2 border border-gray-300 text-left font-bold text-gray-800 sticky left-0 bg-gray-100 z-10 whitespace-nowrap">UNIT</th>
+                                                                <th rowspan="2" class="px-2 py-2 border border-gray-300 text-center font-bold text-gray-800 bg-gray-100 whitespace-nowrap">TARGET BULANAN</th>
+                                                                <th rowspan="2" class="px-2 py-2 border border-gray-300 text-center font-bold text-gray-800 bg-gray-100 whitespace-nowrap">CARRY OVER BULAN LALU</th>
                                                                 @foreach($sesi_wigs_matrix as $sw)
                                                                     <th colspan="4" class="px-2 py-1 border border-gray-300 text-center font-bold text-gray-800 bg-indigo-50">
                                                                         @php
@@ -513,13 +515,15 @@
                                                                         {!! $headerLabel !!}
                                                                     </th>
                                                                 @endforeach
+                                                                <th rowspan="2" class="px-2 py-2 border border-gray-300 text-center font-bold text-gray-800 bg-gray-100 whitespace-nowrap">REALISASI BULANAN</th>
+                                                                <th rowspan="2" class="px-2 py-2 border border-gray-300 text-center font-bold text-gray-800 bg-gray-100 whitespace-nowrap">% CAPAIAN BULANAN</th>
                                                             </tr>
                                                             <tr>
                                                                 @foreach($sesi_wigs_matrix as $sw)
-                                                                    <th class="px-1 py-1 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50">TARGET</th>
-                                                                    <th class="px-1 py-1 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50">REALISASI</th>
-                                                                    <th class="px-1 py-1 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50">PENCAPAIAN (%)</th>
-                                                                    <th class="px-1 py-1 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50 w-8" title="Tren terhadap Realisasi Minggu Sebelumnya">TREN</th>
+                                                                    <th class="px-1 py-1 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">TARGET</th>
+                                                                    <th class="px-1 py-1 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">REALISASI</th>
+                                                                    <th class="px-1 py-1 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">PENCAPAIAN (%)</th>
+                                                                    <th class="px-1 py-1 border border-gray-300 text-center font-semibold text-gray-700 bg-gray-50 w-8 whitespace-nowrap" title="Tren terhadap Realisasi Minggu Sebelumnya">TREN</th>
                                                                 @endforeach
                                                             </tr>
                                                         </thead>
@@ -529,10 +533,23 @@
                                                                 <td class="px-3 py-1 border border-gray-300 font-black text-indigo-900 whitespace-nowrap sticky left-0 bg-indigo-50 z-10 uppercase">
                                                                     UID JABAR
                                                                 </td>
+                                                                @php
+                                                                    $uidTargetBulanan = $matrixTargetBulanan[$lm->id][1] ?? 0;
+                                                                    $uidDefisitBulanLalu = $matrixDefisitBulanLalu[$lm->id][1] ?? 0;
+                                                                    $isPercent = (($lm->satuan_id ?? null) == 1) || (trim($lm->satuan->name ?? '') === '%');
+                                                                    $totalUidRealisasiBulan = 0;
+                                                                    $countUidMingguReal = 0;
+                                                                @endphp
+                                                                <td class="px-1 py-1 border border-gray-300 text-right font-black text-indigo-900 bg-indigo-50/50 whitespace-nowrap">{{ $formatLmValue($uidTargetBulanan, $lm->satuan->name ?? '') }}</td>
+                                                                <td class="px-1 py-1 border border-gray-300 text-right font-black text-amber-900 bg-amber-50/50 whitespace-nowrap">{{ $formatLmValue($uidDefisitBulanLalu, $lm->satuan->name ?? '') }}</td>
                                                                 @foreach($sesi_wigs_matrix as $sw)
                                                                     @php
                                                                         $uidTarget = $matrixTargets[$lm->id][1][$sw->id] ?? 0;
                                                                         $uidRealisasi = $matrixRealisasi[$lm->id][1][$sw->id] ?? 0;
+                                                                        if ($uidRealisasi > 0) {
+                                                                            $totalUidRealisasiBulan += $uidRealisasi;
+                                                                            $countUidMingguReal++;
+                                                                        }
                                                                         $uidPencapaian = $uidTarget > 0 ? round(($uidRealisasi / $uidTarget) * 100, 2) : 0;
                                                                         $uidBgColor = $uidPencapaian < 100 ? 'bg-red-500 text-white' : 'bg-green-500 text-white';
                                                                         $prevSw = $sesi_wigs_month->where('minggu_ke', $sw->minggu_ke - 1)->first();
@@ -549,16 +566,32 @@
                                                                             }
                                                                         }
                                                                     @endphp
-                                                                    <td class="px-1 py-1 border border-gray-300 text-right font-black text-indigo-900">{{ number_format($uidTarget, 2) }}</td>
-                                                                    <td class="px-1 py-1 border border-gray-300 text-right font-black text-indigo-900">{{ number_format($uidRealisasi, 2) }}</td>
-                                                                    <td class="px-1 py-1 border border-gray-300 text-right font-black {{ $uidBgColor }}">{{ $uidPencapaian }}%</td>
+                                                                    <td class="px-1 py-1 border border-gray-300 text-right font-black text-indigo-900 whitespace-nowrap">{{ $formatLmValue($uidTarget, $lm->satuan->name ?? '') }}</td>
+                                                                    <td class="px-1 py-1 border border-gray-300 text-right font-black text-indigo-900 whitespace-nowrap">{{ $formatLmValue($uidRealisasi, $lm->satuan->name ?? '') }}</td>
+                                                                    <td class="px-1 py-1 border border-gray-300 text-right font-black {{ $uidBgColor }} whitespace-nowrap">{{ $uidPencapaian }}%</td>
                                                                     <td class="px-1 py-1 border border-gray-300 text-center bg-slate-50">{!! $uidTrendIcon !!}</td>
                                                                 @endforeach
+                                                                @php
+                                                                    $finalUidRealBulan = $isPercent ? ($countUidMingguReal > 0 ? $totalUidRealisasiBulan / $countUidMingguReal : 0) : $totalUidRealisasiBulan;
+                                                                    $hasUidTargetBulan = ($uidTargetBulanan > 0);
+                                                                    $uidCapaianBulan = null;
+                                                                    $uidBgCapaianBulan = '';
+                                                                    if ($hasUidTargetBulan) {
+                                                                        $uidCapaianBulan = round($calcCapaian($uidTargetBulanan, $finalUidRealBulan, $lm->polaritas ?? 'positif'), 2);
+                                                                        $uidBgCapaianBulan = $uidCapaianBulan >= 100 ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
+                                                                    }
+                                                                @endphp
+                                                                <td class="px-1 py-1 border border-gray-300 text-right font-black text-indigo-900 bg-indigo-50/50 whitespace-nowrap">{{ $formatLmValue($finalUidRealBulan, $lm->satuan->name ?? '') }}</td>
+                                                                <td class="px-1 py-1 border border-gray-300 text-right {{ $hasUidTargetBulan ? 'font-black ' . $uidBgCapaianBulan : 'text-center text-gray-400 font-bold' }} whitespace-nowrap">{{ $hasUidTargetBulan ? $uidCapaianBulan . '%' : '-' }}</td>
                                                             </tr>
                                                             @foreach($filteredUp3sByWig[$lm->wig_id] ?? $up3s as $up3)
                                                                 @php
-                                                                    $up3Ulps = $ulps->where('parent_id', $up3->id);
+                                                                    $up3Ulps = $allUlps->where('parent_id', $up3->id);
                                                                     $isExpanded = false;
+                                                                    $up3TargetBulanan = $matrixTargetBulanan[$lm->id][$up3->id] ?? 0;
+                                                                    $up3DefisitBulanLalu = $matrixDefisitBulanLalu[$lm->id][$up3->id] ?? 0;
+                                                                    $totalUp3RealisasiBulan = 0;
+                                                                    $countUp3MingguReal = 0;
                                                                 @endphp
                                                                 <tr class="hover:bg-slate-200 transition-colors bg-slate-100 cursor-pointer up3-row-rt" onclick="toggleUlpsRt('{{$lm->id}}-{{$up3->id}}')">
                                                                     <td class="px-3 py-1 border border-gray-300 font-bold text-indigo-900 whitespace-nowrap sticky left-0 bg-slate-100 z-10">
@@ -567,10 +600,16 @@
                                                                             <svg id="icon-rt-{{$lm->id}}-{{$up3->id}}" class="w-3 h-3 text-gray-500 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                                                                         </div>
                                                                     </td>
+                                                                    <td class="px-1 py-1 border border-gray-300 text-right font-black text-indigo-900 bg-slate-100 whitespace-nowrap">{{ $formatLmValue($up3TargetBulanan, $lm->satuan->name ?? '') }}</td>
+                                                                    <td class="px-1 py-1 border border-gray-300 text-right font-black text-amber-900 bg-amber-50/50 whitespace-nowrap">{{ $formatLmValue($up3DefisitBulanLalu, $lm->satuan->name ?? '') }}</td>
                                                                     @foreach($sesi_wigs_matrix as $sw)
                                                                         @php
                                                                             $up3Target = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                                                                             $up3Realisasi = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
+                                                                            if ($up3Realisasi > 0) {
+                                                                                $totalUp3RealisasiBulan += $up3Realisasi;
+                                                                                $countUp3MingguReal++;
+                                                                            }
                                                                             $hasUp3Target = ($up3Target > 0);
                                                                             $up3Pencapaian = $hasUp3Target ? round(($up3Realisasi / $up3Target) * 100, 2) : null;
                                                                             $up3BgColor = '';
@@ -592,21 +631,45 @@
                                                                                 }
                                                                             }
                                                                         @endphp
-                                                                        <td class="px-1 py-1 border border-gray-300 text-right font-semibold">{{ number_format($up3Target, 2) }}</td>
-                                                                        <td class="px-1 py-1 border border-gray-300 text-right font-semibold">{{ number_format($up3Realisasi, 2) }}</td>
-                                                                        <td class="px-1 py-1 border border-gray-300 text-right {{ $hasUp3Target ? 'font-bold ' . $up3BgColor : 'text-center text-gray-400' }}">{{ $hasUp3Target ? $up3Pencapaian . '%' : '-' }}</td>
+                                                                        <td class="px-1 py-1 border border-gray-300 text-right font-semibold whitespace-nowrap">{{ $formatLmValue($up3Target, $lm->satuan->name ?? '') }}</td>
+                                                                        <td class="px-1 py-1 border border-gray-300 text-right font-semibold whitespace-nowrap">{{ $formatLmValue($up3Realisasi, $lm->satuan->name ?? '') }}</td>
+                                                                        <td class="px-1 py-1 border border-gray-300 text-right {{ $hasUp3Target ? 'font-bold ' . $up3BgColor : 'text-center text-gray-400' }} whitespace-nowrap">{{ $hasUp3Target ? $up3Pencapaian . '%' : '-' }}</td>
                                                                         <td class="px-1 py-1 border border-gray-300 text-center bg-slate-50">{!! $up3TrendIcon !!}</td>
                                                                     @endforeach
+                                                                    @php
+                                                                        $finalUp3RealBulan = $isPercent ? ($countUp3MingguReal > 0 ? $totalUp3RealisasiBulan / $countUp3MingguReal : 0) : $totalUp3RealisasiBulan;
+                                                                        $hasUp3TargetBulan = ($up3TargetBulanan > 0);
+                                                                        $up3CapaianBulan = null;
+                                                                        $up3BgCapaianBulan = '';
+                                                                        if ($hasUp3TargetBulan) {
+                                                                            $up3CapaianBulan = round($calcCapaian($up3TargetBulanan, $finalUp3RealBulan, $lm->polaritas ?? 'positif'), 2);
+                                                                            $up3BgCapaianBulan = $up3CapaianBulan >= 100 ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
+                                                                        }
+                                                                    @endphp
+                                                                    <td class="px-1 py-1 border border-gray-300 text-right font-black text-indigo-900 bg-slate-100 whitespace-nowrap">{{ $formatLmValue($finalUp3RealBulan, $lm->satuan->name ?? '') }}</td>
+                                                                    <td class="px-1 py-1 border border-gray-300 text-right {{ $hasUp3TargetBulan ? 'font-black ' . $up3BgCapaianBulan : 'text-center text-gray-400 font-bold' }} whitespace-nowrap">{{ $hasUp3TargetBulan ? $up3CapaianBulan . '%' : '-' }}</td>
                                                                 </tr>
                                                                 @foreach($up3Ulps as $u)
+                                                                    @php
+                                                                        $ulpTargetBulanan = $matrixTargetBulanan[$lm->id][$u->id] ?? 0;
+                                                                        $ulpDefisitBulanLalu = $matrixDefisitBulanLalu[$lm->id][$u->id] ?? 0;
+                                                                        $totalUlpRealisasiBulan = 0;
+                                                                        $countUlpMingguReal = 0;
+                                                                    @endphp
                                                                     <tr class="hover:bg-slate-50 transition-colors ulp-row-rt-{{$lm->id}}-{{$up3->id}} hidden">
                                                                         <td class="px-3 py-1 border border-gray-300 font-medium text-gray-800 whitespace-nowrap sticky left-0 bg-white z-10 pl-6">
                                                                             {{ $u->name }}
                                                                         </td>
+                                                                        <td class="px-1 py-1 border border-gray-300 text-right font-medium text-gray-800 bg-white whitespace-nowrap">{{ $formatLmValue($ulpTargetBulanan, $lm->satuan->name ?? '') }}</td>
+                                                                        <td class="px-1 py-1 border border-gray-300 text-right font-medium text-amber-800 bg-amber-50/30 whitespace-nowrap">{{ $formatLmValue($ulpDefisitBulanLalu, $lm->satuan->name ?? '') }}</td>
                                                                         @foreach($sesi_wigs_matrix as $sw)
                                                                             @php
                                                                                 $target = $matrixTargets[$lm->id][$u->id][$sw->id] ?? 0;
                                                                                 $realisasi = $matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0;
+                                                                                if ($realisasi > 0) {
+                                                                                    $totalUlpRealisasiBulan += $realisasi;
+                                                                                    $countUlpMingguReal++;
+                                                                                }
                                                                                 $hasTarget = ($target > 0);
                                                                                 $pencapaian = $hasTarget ? round(($realisasi / $target) * 100, 2) : null;
                                                                                 $bgColor = '';
@@ -628,11 +691,23 @@
                                                                                     }
                                                                                 }
                                                                             @endphp
-                                                                            <td class="px-1 py-1 border border-gray-300 text-right">{{ number_format($target, 2) }}</td>
-                                                                            <td class="px-1 py-1 border border-gray-300 text-right">{{ number_format($realisasi, 2) }}</td>
-                                                                            <td class="px-1 py-1 border border-gray-300 text-right {{ $hasTarget ? 'font-bold ' . $bgColor : 'text-center text-gray-400' }}">{{ $hasTarget ? $pencapaian . '%' : '-' }}</td>
+                                                                            <td class="px-1 py-1 border border-gray-300 text-right whitespace-nowrap">{{ $formatLmValue($target, $lm->satuan->name ?? '') }}</td>
+                                                                            <td class="px-1 py-1 border border-gray-300 text-right whitespace-nowrap">{{ $formatLmValue($realisasi, $lm->satuan->name ?? '') }}</td>
+                                                                            <td class="px-1 py-1 border border-gray-300 text-right {{ $hasTarget ? 'font-bold ' . $bgColor : 'text-center text-gray-400' }} whitespace-nowrap">{{ $hasTarget ? $pencapaian . '%' : '-' }}</td>
                                                                             <td class="px-1 py-1 border border-gray-300 text-center">{!! $trendIcon !!}</td>
                                                                         @endforeach
+                                                                        @php
+                                                                            $finalUlpRealBulan = $isPercent ? ($countUlpMingguReal > 0 ? $totalUlpRealisasiBulan / $countUlpMingguReal : 0) : $totalUlpRealisasiBulan;
+                                                                            $hasUlpTargetBulan = ($ulpTargetBulanan > 0);
+                                                                            $ulpCapaianBulan = null;
+                                                                            $ulpBgCapaianBulan = '';
+                                                                            if ($hasUlpTargetBulan) {
+                                                                                $ulpCapaianBulan = round($calcCapaian($ulpTargetBulanan, $finalUlpRealBulan, $lm->polaritas ?? 'positif'), 2);
+                                                                                $ulpBgCapaianBulan = $ulpCapaianBulan >= 100 ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
+                                                                            }
+                                                                        @endphp
+                                                                        <td class="px-1 py-1 border border-gray-300 text-right font-medium text-gray-800 bg-white whitespace-nowrap">{{ $formatLmValue($finalUlpRealBulan, $lm->satuan->name ?? '') }}</td>
+                                                                        <td class="px-1 py-1 border border-gray-300 text-right {{ $hasUlpTargetBulan ? 'font-bold ' . $ulpBgCapaianBulan : 'text-center text-gray-400' }} whitespace-nowrap">{{ $hasUlpTargetBulan ? $ulpCapaianBulan . '%' : '-' }}</td>
                                                                     </tr>
                                                                 @endforeach
                                                             @endforeach

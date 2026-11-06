@@ -17,6 +17,12 @@
             this.impersonateUserRole = role;
             this.impersonateUserUnit = unit;
             this.showImpersonateModal = true;
+            this.$nextTick(() => {
+                const form = document.getElementById('form-impersonate');
+                if (form) {
+                    form.action = '/users/' + id + '/impersonate';
+                }
+            });
         }
     }">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -451,7 +457,7 @@
                             <button @click="showImpersonateModal = false" type="button" class="w-full sm:w-auto px-4 py-2 border border-slate-200 rounded-md text-slate-700 font-semibold hover:bg-slate-100 text-xs transition-colors">
                                 Batal
                             </button>
-                            <form :action="'{{ url('users') }}/' + impersonateUserId + '/impersonate'" method="POST" class="inline m-0">
+                            <form id="form-impersonate" :action="'/users/' + impersonateUserId + '/impersonate'" method="POST" class="inline m-0">
                                 @csrf
                                 <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-md text-xs shadow-sm transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>

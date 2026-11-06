@@ -539,11 +539,14 @@
                 <div x-show="openProyeksiModal" class="relative z-10 inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border border-slate-100 max-h-[90vh] flex flex-col">
                     <form action="{{ route('realisasi-wig.store-proyeksi') }}" method="POST" class="flex flex-col max-h-[90vh]" x-data="{ isSubmitting: false }" @submit="if (isSubmitting) { $event.preventDefault(); return false; } isSubmitting = true;">
                         @csrf
+                        <input type="hidden" name="bulan" value="{{ $bulanFilter }}">
+                        <input type="hidden" name="tahun" value="{{ $tahunFilter }}">
+
                         <div style="background: linear-gradient(to right, #4f46e5, #1d4ed8);" class="bg-gradient-to-r from-indigo-600 to-blue-700 px-6 py-4 flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <svg class="w-5 h-5 text-indigo-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                                 <div>
-                                    <h3 class="text-lg font-bold text-white tracking-wide" id="modal-title-proyeksi">Input Proyeksi Realisasi WIG</h3>
+                                    <h3 class="text-lg font-bold text-white tracking-wide" id="modal-title-proyeksi">Input Proyeksi Realisasi WIG Bulanan</h3>
                                     <p class="text-xs text-indigo-100 font-medium">Proyeksi WIG 1 s.d. 4 & capaian (%) untuk dashboard</p>
                                 </div>
                             </div>
@@ -564,35 +567,67 @@
                                     $pItem = $proyeksiMap[$w->id] ?? null;
                                     $valReal = $pItem ? $pItem->angka_proyeksi : '';
                                     $valPct = $pItem ? $pItem->capaian_persen : '';
+                                    $wigTargetBulanan = $targetBulanIniMap[$w->id] ?? 0;
                                 @endphp
-                                <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-lg hover:border-indigo-400 transition-colors">
-                                    <div class="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-200">
+                                <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-lg hover:border-indigo-400 transition-colors"
+                                     x-data="{
+                                         proyeksi: '{{ old('proyeksi.' . $w->id . '.angka_proyeksi', $valReal) }}',
+                                         capaian: '{{ old('proyeksi.' . $w->id . '.capaian_persen', $valPct) }}',
+                                         target: {{ (float)$wigTargetBulanan }},
+                                         calcCapaian() {
+                                             let p = parseFloat(this.proyeksi);
+                                             if (!isNaN(p) && this.target > 0) {
+                                                 this.capaian = ((p / this.target) * 100).toFixed(2);
+                                             } else if (!isNaN(p) && this.target === 0) {
+                                                 this.capaian = '0.00';
+                                             }
+                                         }
+                                     }"
+                                     x-init="if ((!capaian || capaian === '') && proyeksi) { calcCapaian(); }">
+                                    <div class="flex flex-wrap items-center justify-between gap-1 mb-2 pb-1.5 border-b border-slate-200">
                                         <div class="font-bold text-xs text-[#0b2256] uppercase tracking-wide flex items-center gap-2">
                                             <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
                                             {{ $w->judul }}
                                         </div>
-                                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
-                                            Satuan: {{ $w->satuan->name ?? '-' }}
-                                        </span>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                                                Target Bulan Ini: <strong class="text-indigo-900">{{ number_format($wigTargetBulanan, 2) }}</strong>
+                                            </span>
+                                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                                Satuan: {{ $w->satuan->name ?? '-' }}
+                                            </span>
+                                        </div>
                                     </div>
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div>
                                             <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">
-                                                Proyeksi Realisasi Mingguan
+                                                Proyeksi Realisasi Bulanan
                                             </label>
                                             <div class="relative">
-                                                <input type="number" step="0.000001" name="proyeksi[{{ $w->id }}][angka_proyeksi]" value="{{ old('proyeksi.' . $w->id . '.angka_proyeksi', $valReal) }}" class="block w-full py-2 px-3 pr-14 text-sm rounded-md border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm font-medium" placeholder="0.00">
+                                                <input type="number" step="0.000001" 
+                                                       name="proyeksi[{{ $w->id }}][angka_proyeksi]" 
+                                                       x-model="proyeksi"
+                                                       @input="calcCapaian()"
+                                                       value="{{ old('proyeksi.' . $w->id . '.angka_proyeksi', $valReal) }}" 
+                                                       class="block w-full py-2 px-3 pr-14 text-sm rounded-md border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm font-medium" 
+                                                       placeholder="0.00">
                                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-semibold">
                                                     {{ $w->satuan->name ?? '' }}
                                                 </div>
                                             </div>
                                         </div>
                                         <div>
-                                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1">
-                                                Capaian Proyeksi (%)
+                                            <label class="block text-[11px] font-semibold text-slate-600 uppercase mb-1 flex items-center justify-between">
+                                                <span>Capaian Proyeksi (%)</span>
+                                                <span class="text-[9px] text-indigo-600 font-normal lowercase">(otomatis: proyeksi / target)</span>
                                             </label>
                                             <div class="relative">
-                                                <input type="number" step="0.01" name="proyeksi[{{ $w->id }}][capaian_persen]" value="{{ old('proyeksi.' . $w->id . '.capaian_persen', $valPct) }}" class="block w-full py-2 px-3 pr-8 text-sm rounded-md border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm font-bold text-indigo-700" placeholder="0.00">
+                                                <input type="number" step="0.01" 
+                                                       name="proyeksi[{{ $w->id }}][capaian_persen]" 
+                                                       x-model="capaian"
+                                                       value="{{ old('proyeksi.' . $w->id . '.capaian_persen', $valPct) }}" 
+                                                       class="block w-full py-2 px-3 pr-8 text-sm rounded-md border-slate-200 bg-indigo-50/40 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm font-bold text-indigo-700" 
+                                                       placeholder="0.00">
                                                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400 text-xs font-semibold">
                                                     %
                                                 </div>

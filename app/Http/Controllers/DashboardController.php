@@ -645,6 +645,8 @@ class DashboardController extends Controller
         $matrixRealisasi = [];
         $matrixRealisasiCount = [];
         $matrixKomitmen = [];
+        $matrixTargetBulanan = [];
+        $matrixDefisitBulanLalu = [];
         $rtMenangKalah = [];
         $rtBdMap = [];
         $rtRealMap = [];
@@ -814,11 +816,167 @@ class DashboardController extends Controller
             }
         }
 
-        $targetQuery = \Illuminate\Support\Facades\DB::table('breakdown_lms')
+        // --- Calculate Target Bulanan & Carry Over (Defisit) Bulan Lalu ---
+        $startCurMonth = Carbon::create($tahun, $bulan, 1)->startOfMonth()->format('Y-m-d');
+        $endCurMonth = Carbon::create($tahun, $bulan, 1)->endOfMonth()->format('Y-m-d');
+        $curMonthlyBdRecords = DB::table('breakdown_lms')
+            ->where('periode_start', '>=', $startCurMonth)
+            ->where('periode_start', '<=', $endCurMonth)
+            ->get();
+        $curMonthlyBdMap = [];
+        foreach ($curMonthlyBdRecords as $b) {
+            $diff = Carbon::parse($b->periode_start)->diffInDays(Carbon::parse($b->periode_end));
+            if ($diff >= 20) {
+                $curMonthlyBdMap[$b->lm_id][$b->unit_id] = (float)$b->angka_target;
+            }
+        }
+
+        // Data Bulan Lalu untuk Carry Over Bulan Lalu
+        $prevBulanNum = $bulan > 1 ? $bulan - 1 : 12;
+        $prevTahunNum = $bulan > 1 ? $tahun : $tahun - 1;
+        $startPrev = Carbon::create($prevTahunNum, $prevBulanNum, 1)->startOfMonth()->format('Y-m-d');
+        $endPrev = Carbon::create($prevTahunNum, $prevBulanNum, 1)->endOfMonth()->format('Y-m-d');
+
+        $prevBdRecords = DB::table('breakdown_lms')
+            ->where('periode_start', '>=', $startPrev)
+            ->where('periode_start', '<=', $endPrev)
+            ->get();
+        $prevRealRecords = DB::table('realisasis')
+            ->where('tanggal_input', '>=', $startPrev . ' 00:00:00')
+            ->where('tanggal_input', '<=', $endPrev . ' 23:59:59')
+            ->select('lm_id', 'unit_id', DB::raw('SUM(angka_realisasi) as total_realisasi'), DB::raw('AVG(angka_realisasi) as avg_realisasi'))
+            ->groupBy('lm_id', 'unit_id')
+            ->get();
+
+        $prevRealMap = [];
+        foreach ($prevRealRecords as $pr) {
+            $prevRealMap[$pr->lm_id][$pr->unit_id] = [
+                'sum' => (float)$pr->total_realisasi,
+                'avg' => (float)$pr->avg_realisasi,
+            ];
+        }
+
+        $prevBdMap = [];
+        foreach ($prevBdRecords as $b) {
+            $diff = Carbon::parse($b->periode_start)->diffInDays(Carbon::parse($b->periode_end));
+            $prevBdMap[$b->lm_id][$b->unit_id][] = [
+                'target' => (float)$b->angka_target,
+                'is_monthly' => ($diff >= 20)
+            ];
+        }
+
+        foreach ($lms as $lm) {
+            $isPercent = (($lm->satuan_id ?? null) == 1) || (trim($lm->satuan->name ?? '') === '%');
+            $isPolaritasNegatif = strtolower(trim($lm->polaritas ?? 'positif')) === 'negatif' || ($lm->polaritas === '3');
+            $isEligibleCarryOver = !$isPercent && !$isPolaritasNegatif;
+            $isNonSummable = in_array($lm->satuan_id, $nonSummableSatuans);
+
+            // A. Target Bulanan & Carry Over Bulan Lalu untuk ULP
+            $prevTargetUlp = [];
+            $prevRealUlp = [];
+            foreach ($allUlps as $ulp) {
+                // Target Bulanan Bulan Ini
+                if (isset($curMonthlyBdMap[$lm->id][$ulp->id]) && $curMonthlyBdMap[$lm->id][$ulp->id] > 0) {
+                    $matrixTargetBulanan[$lm->id][$ulp->id] = $curMonthlyBdMap[$lm->id][$ulp->id];
+                } else {
+                    $sumT = 0; $cntT = 0;
+                    foreach ($sesi_wigs_matrix as $sw) {
+                        $tVal = $matrixTargets[$lm->id][$ulp->id][$sw->id] ?? 0;
+                        if ($tVal > 0) { $sumT += $tVal; $cntT++; }
+                    }
+                    $matrixTargetBulanan[$lm->id][$ulp->id] = $isNonSummable ? ($cntT > 0 ? $sumT / $cntT : 0) : $sumT;
+                }
+
+                // Carry Over Bulan Lalu
+                $bds = $prevBdMap[$lm->id][$ulp->id] ?? [];
+                $tPrev = 0;
+                if (!empty($bds)) {
+                    $monthly = null; $sumT = 0; $countT = 0;
+                    foreach ($bds as $bd) {
+                        if ($bd['is_monthly']) { $monthly = $bd['target']; break; }
+                        $sumT += $bd['target']; $countT++;
+                    }
+                    $tPrev = $monthly !== null ? $monthly : ($isNonSummable ? ($countT > 0 ? $sumT / $countT : 0) : $sumT);
+                }
+                $rPrev = $isNonSummable ? ($prevRealMap[$lm->id][$ulp->id]['avg'] ?? 0) : ($prevRealMap[$lm->id][$ulp->id]['sum'] ?? 0);
+                $prevTargetUlp[$ulp->id] = $tPrev;
+                $prevRealUlp[$ulp->id] = $rPrev;
+                $matrixDefisitBulanLalu[$lm->id][$ulp->id] = $isEligibleCarryOver ? max(0, $tPrev - $rPrev) : 0;
+            }
+
+            // B. Target Bulanan & Carry Over Bulan Lalu untuk UP3
+            foreach ($up3s as $up3) {
+                $ulpsOfUp3 = $allUlps->where('parent_id', $up3->id);
+                if ($ulpsOfUp3->isNotEmpty()) {
+                    $sumTCur = 0; $cntTCur = 0;
+                    $sumTPrev = 0; $sumRPrev = 0; $cntTPrev = 0; $cntRPrev = 0;
+                    foreach ($ulpsOfUp3 as $u) {
+                        $tCur = $matrixTargetBulanan[$lm->id][$u->id] ?? 0;
+                        if ($tCur > 0) { $sumTCur += $tCur; $cntTCur++; }
+                        $tP = $prevTargetUlp[$u->id] ?? 0;
+                        $rP = $prevRealUlp[$u->id] ?? 0;
+                        if ($tP > 0) { $sumTPrev += $tP; $cntTPrev++; }
+                        if ($rP > 0) { $sumRPrev += $rP; $cntRPrev++; }
+                    }
+                    $matrixTargetBulanan[$lm->id][$up3->id] = $isNonSummable ? ($cntTCur > 0 ? $sumTCur / $cntTCur : 0) : $sumTCur;
+                    $tPrev = $isNonSummable ? ($cntTPrev > 0 ? $sumTPrev / $cntTPrev : 0) : $sumTPrev;
+                    $rPrev = $isNonSummable ? ($cntRPrev > 0 ? $sumRPrev / $cntRPrev : 0) : $sumRPrev;
+                } else {
+                    if (isset($curMonthlyBdMap[$lm->id][$up3->id]) && $curMonthlyBdMap[$lm->id][$up3->id] > 0) {
+                        $matrixTargetBulanan[$lm->id][$up3->id] = $curMonthlyBdMap[$lm->id][$up3->id];
+                    } else {
+                        $sumT = 0; $cntT = 0;
+                        foreach ($sesi_wigs_matrix as $sw) {
+                            $tVal = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
+                            if ($tVal > 0) { $sumT += $tVal; $cntT++; }
+                        }
+                        $matrixTargetBulanan[$lm->id][$up3->id] = $isNonSummable ? ($cntT > 0 ? $sumT / $cntT : 0) : $sumT;
+                    }
+                    $bds = $prevBdMap[$lm->id][$up3->id] ?? [];
+                    $tPrev = 0;
+                    if (!empty($bds)) {
+                        $monthly = null; $sumT = 0; $countT = 0;
+                        foreach ($bds as $bd) {
+                            if ($bd['is_monthly']) { $monthly = $bd['target']; break; }
+                            $sumT += $bd['target']; $countT++;
+                        }
+                        $tPrev = $monthly !== null ? $monthly : ($isNonSummable ? ($countT > 0 ? $sumT / $countT : 0) : $sumT);
+                    }
+                    $rPrev = $isNonSummable ? ($prevRealMap[$lm->id][$up3->id]['avg'] ?? 0) : ($prevRealMap[$lm->id][$up3->id]['sum'] ?? 0);
+                }
+                $matrixDefisitBulanLalu[$lm->id][$up3->id] = $isEligibleCarryOver ? max(0, $tPrev - $rPrev) : 0;
+            }
+
+            // C. Target Bulanan & Carry Over Bulan Lalu untuk UID (unit 1)
+            $wigOfLm = $wigs->where('id', $lm->wig_id)->first();
+            $isWig4 = $wigOfLm && (str_contains(strtolower($wigOfLm->judul), 'wig 4') || str_contains(strtolower($wigOfLm->judul), 'frequency rate accident') || str_contains(strtolower($wigOfLm->judul), 'peningkatan kepuasan pelanggan'));
+            $rollupUp3s = ($isWig4 && $up2dUnit) ? $up3s->concat([$up2dUnit]) : $up3s;
+
+            if (isset($curMonthlyBdMap[$lm->id][1]) && $curMonthlyBdMap[$lm->id][1] > 0) {
+                $matrixTargetBulanan[$lm->id][1] = $curMonthlyBdMap[$lm->id][1];
+            } else {
+                $sumTUid = 0; $cntTUid = 0;
+                foreach ($rollupUp3s as $up3) {
+                    $tVal = $matrixTargetBulanan[$lm->id][$up3->id] ?? 0;
+                    if ($tVal > 0) { $sumTUid += $tVal; $cntTUid++; }
+                }
+                $matrixTargetBulanan[$lm->id][1] = $isNonSummable ? ($cntTUid > 0 ? $sumTUid / $cntTUid : 0) : $sumTUid;
+            }
+
+            $sumDefUid = 0; $cntDefUid = 0;
+            foreach ($rollupUp3s as $up3) {
+                $def = $matrixDefisitBulanLalu[$lm->id][$up3->id] ?? 0;
+                $sumDefUid += $def;
+                $cntDefUid++;
+            }
+            $matrixDefisitBulanLalu[$lm->id][1] = $isEligibleCarryOver ? ($isNonSummable ? ($cntDefUid > 0 ? $sumDefUid / $cntDefUid : 0) : $sumDefUid) : 0;
+        }
+
+        $targetQuery = DB::table('breakdown_lms')
             ->where('bulan', $bulan)
             ->where('tahun', $tahun)
             ->whereRaw('DATEDIFF(periode_end, periode_start) >= 20')
-            ->select('lm_id', 'unit_id', \Illuminate\Support\Facades\DB::raw('SUM(angka_target) as target'))
+            ->select('lm_id', 'unit_id', DB::raw('SUM(angka_target) as target'))
             ->groupBy('lm_id', 'unit_id')
             ->get();
         $rtBdMap = [];
@@ -830,11 +988,12 @@ class DashboardController extends Controller
         $calcCapaian = function($target, $realisasi, $polaritas) {
             $target = (float)$target;
             $realisasi = (float)$realisasi;
-            if ($target <= 0) return 0;
             $pol = strtolower(trim($polaritas ?? 'positif'));
             if ($pol === 'negatif' || $pol === '3') {
+                if ($target == 0) return $realisasi == 0 ? 100 : 0;
                 return $realisasi == 0 ? 100 : ($target / $realisasi) * 100;
             } else {
+                if ($target == 0) return $realisasi > 0 ? 100 : 0;
                 return ($realisasi / $target) * 100;
             }
         };
@@ -972,7 +1131,6 @@ class DashboardController extends Controller
 
         $targetBulan = $bulan;
         $prevBulan = $bulan > 1 ? $bulan - 1 : 12;
-        $allUlps = $ulps;
         $formatLmValue = function($value, $satuan) {
             if ($value === null || $value === '') return '-';
             $formatted = number_format((float)$value, 2, ",", ".");
@@ -1071,7 +1229,8 @@ class DashboardController extends Controller
             'up3s', 'ulps', 'allUlps', 'selectedUp3', 'selectedUlp',
             'leaderboard', 'leaderboardUp3', 'menangKalah', 'bulan', 'tahun', 'trendData',
             'wigs', 'latestSesiWig', 'sesi_wigs_month', 'sesi_wigs_matrix', 'matrixTargets', 'matrixRealisasi', 'matrixKomitmen', 'rtMenangKalah', 'periodeWig',
-            'rtBdMap', 'rtRealMap', 'targetBulan', 'prevBulan', 'calcCapaian', 'formatLmValue', 'wigUnitData', 'filteredUp3sByWig', 'namaBulanTarget', 'namaBulanPrev', 'lms'
+            'rtBdMap', 'rtRealMap', 'targetBulan', 'prevBulan', 'calcCapaian', 'formatLmValue', 'wigUnitData', 'filteredUp3sByWig', 'namaBulanTarget', 'namaBulanPrev', 'lms',
+            'matrixTargetBulanan', 'matrixDefisitBulanLalu'
         ));
     }
 }

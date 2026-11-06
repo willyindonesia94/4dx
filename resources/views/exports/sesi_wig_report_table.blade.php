@@ -100,7 +100,7 @@
             <th rowspan="2" align="center" valign="middle">Polaritas</th>
             <th rowspan="2" align="left" valign="middle">Unit</th>
             <th rowspan="2" bgcolor="#1e3a8a" align="right" valign="middle" style="color: #ffffff;">Target Bulanan</th>
-            <th rowspan="2" bgcolor="#1e3a8a" align="right" valign="middle" style="color: #ffffff;">Defisit Bln Lalu</th>
+            <th rowspan="2" bgcolor="#1e3a8a" align="right" valign="middle" style="color: #ffffff;">Carry Over Bulan Lalu</th>
             @foreach($sesiWigs as $sw)
                 <th colspan="6" bgcolor="#2563eb" align="center" valign="middle" style="color: #ffffff;">
                     {{ $sw->nama_sesi }}
@@ -164,7 +164,7 @@
                                     $floorT = $t > 0 ? max(1, ceil($t * 0.10)) : 0;
                                     $tPlusCO = $floorT;
                                 } else {
-                                    $tPlusCO = max($t, $prevUidTPlusCO + $runningUidCO);
+                                    $tPlusCO = max($t, $t + $runningUidCO);
                                 }
                             }
                             $coThisWeek = $tPlusCO - $r;
@@ -228,7 +228,7 @@
                                         $floorT = $t > 0 ? max(1, ceil($t * 0.10)) : 0;
                                         $tPlusCO = $floorT;
                                     } else {
-                                        $tPlusCO = max($t, $prevUp3TPlusCO + $runningUp3CO);
+                                        $tPlusCO = max($t, $t + $runningUp3CO);
                                     }
                                 }
                                 $coThisWeek = $tPlusCO - $r;
@@ -294,7 +294,7 @@
                                             $floorT = $t > 0 ? max(1, ceil($t * 0.10)) : 0;
                                             $tPlusCO = $floorT;
                                         } else {
-                                            $tPlusCO = max($t, $prevUlpTPlusCO + $runningUlpCO);
+                                            $tPlusCO = max($t, $t + $runningUlpCO);
                                         }
                                     }
                                     $coThisWeek = $tPlusCO - $r;

@@ -609,7 +609,7 @@ $formatLmValue = function($value, $satuan) {
                                             <tr>
                                                 <th rowspan="2" class="px-4 py-3 border border-gray-300 text-left font-bold text-gray-800 sticky left-0 bg-gray-100 z-10 whitespace-nowrap">UNIT</th>
                                                 <th rowspan="2" class="px-3 py-3 border border-gray-300 text-center font-bold text-gray-800 bg-gray-100 whitespace-nowrap">TARGET BULANAN</th>
-                                                <th rowspan="2" class="px-3 py-3 border border-gray-300 text-center font-bold text-gray-800 bg-gray-100 whitespace-nowrap">DEFISIT BLN LALU</th>
+                                                <th rowspan="2" class="px-3 py-3 border border-gray-300 text-center font-bold text-gray-800 bg-gray-100 whitespace-nowrap">CARRY OVER BULAN LALU</th>
                                                 @foreach($sesi_wigs_matrix as $sw)
                                                         @php
                                                             $headerLabel = strtoupper($sw->tipe_sesi);
@@ -723,7 +723,7 @@ $formatLmValue = function($value, $satuan) {
                                                                     $floorTarget = $uidTarget > 0 ? max(1, ceil($uidTarget * 0.10)) : 0;
                                                                     $uidTargetPlusCarryOver = $floorTarget;
                                                                 } else {
-                                                                    $uidTargetPlusCarryOver = max($uidTarget, $prevUidTargetPlusCarryOver + $runningUidCarryOver);
+                                                                    $uidTargetPlusCarryOver = max($uidTarget, $uidTarget + $runningUidCarryOver);
                                                                 }
                                                             }
                                                             $carryOverThisWeek = $uidTargetPlusCarryOver - $uidRealisasi;
@@ -839,7 +839,7 @@ $formatLmValue = function($value, $satuan) {
                                                                         $floorTarget = $up3Target > 0 ? max(1, ceil($up3Target * 0.10)) : 0;
                                                                         $up3TargetPlusCarryOver = $floorTarget;
                                                                     } else {
-                                                                        $up3TargetPlusCarryOver = max($up3Target, $prevUp3TargetPlusCarryOver + $runningUp3CarryOver);
+                                                                        $up3TargetPlusCarryOver = max($up3Target, $up3Target + $runningUp3CarryOver);
                                                                     }
                                                                 }
                                                                 $carryOverThisWeek = $up3TargetPlusCarryOver - $up3Realisasi;
@@ -896,7 +896,7 @@ $formatLmValue = function($value, $satuan) {
                                                                     $floorNext = $nextUp3Target > 0 ? max(1, ceil($nextUp3Target * 0.10)) : 0;
                                                                     $targetCarryOverMingguDepan = $floorNext;
                                                                 } else {
-                                                                    $targetCarryOverMingguDepan = max($nextUp3Target, $up3TargetPlusCarryOver + $carryOverThisWeek);
+                                                                    $targetCarryOverMingguDepan = max($nextUp3Target, $nextUp3Target + $carryOverThisWeek);
                                                                 }
                                                             }
                                                             
@@ -1000,7 +1000,7 @@ $formatLmValue = function($value, $satuan) {
                                                                             $floorTarget = $target > 0 ? max(1, ceil($target * 0.10)) : 0;
                                                                             $ulpTargetPlusCarryOver = $floorTarget;
                                                                         } else {
-                                                                            $ulpTargetPlusCarryOver = max($target, $prevUlpTargetPlusCarryOver + $runningUlpCarryOver);
+                                                                            $ulpTargetPlusCarryOver = max($target, $target + $runningUlpCarryOver);
                                                                         }
                                                                     }
                                                                     $carryOverThisWeek = $ulpTargetPlusCarryOver - $realisasi;
@@ -1079,7 +1079,7 @@ $formatLmValue = function($value, $satuan) {
                                                                         $floorNext = $nextTarget > 0 ? max(1, ceil($nextTarget * 0.10)) : 0;
                                                                         $targetCarryOverMingguDepan = $floorNext;
                                                                     } else {
-                                                                        $targetCarryOverMingguDepan = max($nextTarget, $ulpTargetPlusCarryOver + $carryOverThisWeek);
+                                                                        $targetCarryOverMingguDepan = max($nextTarget, $nextTarget + $carryOverThisWeek);
                                                                     }
                                                                 }
                                                                 
