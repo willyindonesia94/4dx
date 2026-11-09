@@ -386,7 +386,7 @@ class SesiWigController extends Controller
         $ulpsQuery = MasterUnit::where('type', 'ULP')->orderBy('name');
         $up3sQuery = MasterUnit::where('type', 'UP3')->orderBy('name');
         $unitsQuery = MasterUnit::whereIn('type', ['UP3', 'UP2D', 'ULP'])->orderBy('type')->orderBy('name');
-        $up2dUnit = MasterUnit::where('type', 'UP2D')->first();
+        $up2dUnit = MasterUnit::where('type', 'UP2D')->orWhere('name', 'like', '%UP2D%')->first();
 
         $unitType = ($user && $user->unit) ? strtoupper(trim((string)$user->unit->type)) : null;
         if (!$isSuperAdmin && $user && $user->unit) {
@@ -416,9 +416,13 @@ class SesiWigController extends Controller
 
         $filteredUp3sByWig = [];
         foreach ($wigs as $wig) {
-            $isWig4 = str_contains(strtolower($wig->judul), 'wig 4') || str_contains(strtolower($wig->judul), 'frequency rate accident') || str_contains(strtolower($wig->judul), 'peningkatan kepuasan pelanggan');
+            $wigLmIds = $wig->masterLms->pluck('id')->toArray();
+            $hasUp2dTargets = $up2dUnit && \App\Models\BreakdownLm::whereIn('lm_id', $wigLmIds)->where('unit_id', $up2dUnit->id)->exists();
+            $isWig4 = $hasUp2dTargets
+                || preg_match('/(wig\s*[-_]?\s*(4|iv)\b|frequency\s*rate|accident|k3|keselamatan|inspekta|ccv|peningkatan\s*kepuasan\s*pelanggan)/i', $wig->judul);
+
             if ($isSuperAdmin || !in_array($unitType ?? '', ['UP3', 'ULP', 'UP2D', 'UP2K'])) {
-                $filtered = ($isWig4 && $up2dUnit) ? $up3s->concat([$up2dUnit]) : $up3s;
+                $filtered = ($isWig4 && $up2dUnit && !$up3s->contains('id', $up2dUnit->id)) ? $up3s->concat([$up2dUnit]) : $up3s;
             } else {
                 $filtered = collect($up3s)->filter(function($u) use ($isWig4) {
                     $type = strtoupper(trim($u->type ?? ''));
@@ -595,8 +599,10 @@ class SesiWigController extends Controller
                 $sumTargetUid = 0; $sumRealUid = 0; $sumKomUid = 0;
                 $countUp3Target = 0; $countUp3Real = 0; $countUp3Kom = 0;
                 $wigOfLm = $wigs->where('id', $lm->wig_id)->first();
-                $isWig4 = $wigOfLm && (str_contains(strtolower($wigOfLm->judul), 'wig 4') || str_contains(strtolower($wigOfLm->judul), 'frequency rate accident') || str_contains(strtolower($wigOfLm->judul), 'peningkatan kepuasan pelanggan'));
-                $rollupUp3s = ($isWig4 && $up2dUnit) ? $up3s->concat([$up2dUnit]) : $up3s;
+                $hasUp2dTargets = $up2dUnit && \App\Models\BreakdownLm::where('lm_id', $lm->id)->where('unit_id', $up2dUnit->id)->exists();
+                $isWig4 = $hasUp2dTargets
+                    || ($wigOfLm && preg_match('/(wig\s*[-_]?\s*(4|iv)\b|frequency\s*rate|accident|k3|keselamatan|inspekta|ccv|peningkatan\s*kepuasan\s*pelanggan)/i', $wigOfLm->judul));
+                $rollupUp3s = ($isWig4 && $up2dUnit && !$up3s->contains('id', $up2dUnit->id)) ? $up3s->concat([$up2dUnit]) : $up3s;
                 foreach ($rollupUp3s as $up3) {
                     $t = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
                     $r = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
@@ -775,8 +781,10 @@ class SesiWigController extends Controller
 
             // C. Target Bulanan Bulan Berjalan & Defisit Bulan Lalu untuk UID (unit 1)
             $wigOfLm = $wigs->where('id', $lm->wig_id)->first();
-            $isWig4 = $wigOfLm && (str_contains(strtolower($wigOfLm->judul), 'wig 4') || str_contains(strtolower($wigOfLm->judul), 'frequency rate accident') || str_contains(strtolower($wigOfLm->judul), 'peningkatan kepuasan pelanggan'));
-            $rollupUp3s = ($isWig4 && $up2dUnit) ? $up3s->concat([$up2dUnit]) : $up3s;
+            $hasUp2dTargets = $up2dUnit && \App\Models\BreakdownLm::where('lm_id', $lm->id)->where('unit_id', $up2dUnit->id)->exists();
+            $isWig4 = $hasUp2dTargets
+                || ($wigOfLm && preg_match('/(wig\s*[-_]?\s*(4|iv)\b|frequency\s*rate|accident|k3|keselamatan|inspekta|ccv|peningkatan\s*kepuasan\s*pelanggan)/i', $wigOfLm->judul));
+            $rollupUp3s = ($isWig4 && $up2dUnit && !$up3s->contains('id', $up2dUnit->id)) ? $up3s->concat([$up2dUnit]) : $up3s;
 
             if (isset($curMonthlyBdMap[$lm->id][1]) && $curMonthlyBdMap[$lm->id][1] > 0) {
                 $matrixTargetBulanan[$lm->id][1] = $curMonthlyBdMap[$lm->id][1];
@@ -809,8 +817,10 @@ class SesiWigController extends Controller
             $isPolaritasNegatif = strtolower(trim($lm->polaritas ?? 'positif')) === 'negatif' || ($lm->polaritas === '3');
             $isEligibleCarryOver = !$isPercent && !$isPolaritasNegatif;
             $wigOfLm = $wigs->where('id', $lm->wig_id)->first();
-            $isWig4 = $wigOfLm && (str_contains(strtolower($wigOfLm->judul), 'wig 4') || str_contains(strtolower($wigOfLm->judul), 'frequency rate accident') || str_contains(strtolower($wigOfLm->judul), 'peningkatan kepuasan pelanggan'));
-            $lmUp3s = ($isWig4 && $up2dUnit && ($isSuperAdmin || !in_array($unitType ?? '', ['UP3', 'ULP']))) ? $up3s->concat([$up2dUnit]) : $up3s;
+            $hasUp2dTargets = $up2dUnit && \App\Models\BreakdownLm::where('lm_id', $lm->id)->where('unit_id', $up2dUnit->id)->exists();
+            $isWig4 = $hasUp2dTargets
+                || ($wigOfLm && preg_match('/(wig\s*[-_]?\s*(4|iv)\b|frequency\s*rate|accident|k3|keselamatan|inspekta|ccv|peningkatan\s*kepuasan\s*pelanggan)/i', $wigOfLm->judul));
+            $lmUp3s = ($isWig4 && $up2dUnit && !$up3s->contains('id', $up2dUnit->id) && ($isSuperAdmin || !in_array($unitType ?? '', ['UP3', 'ULP']))) ? $up3s->concat([$up2dUnit]) : $up3s;
 
             foreach ($lmUp3s as $up3) {
                 $runningCarryOver = 0;
