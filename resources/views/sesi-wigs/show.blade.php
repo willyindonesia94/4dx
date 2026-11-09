@@ -910,16 +910,30 @@ $formatLmValue = function($value, $satuan) {
                                                             $userAuth = auth()->user();
                                                             $canEditUp3Komitmen = false;
                                                             if ($userAuth) {
-                                                                if ($userAuth->hasRole('Super Admin') || $userAuth->hasRole('Perencanaan UID') || strtolower($userAuth->role_name) === 'super admin' || strtolower($userAuth->role_name) === 'perencanaan uid') {
+                                                                $isSuperOrUid = $userAuth->hasRole('Super Admin') 
+                                                                    || $userAuth->hasRole('Perencanaan UID') 
+                                                                    || strtolower($userAuth->role_name ?? '') === 'super admin' 
+                                                                    || strtolower($userAuth->role_name ?? '') === 'perencanaan uid';
+
+                                                                if ($isSuperOrUid) {
                                                                     $canEditUp3Komitmen = true;
                                                                 } else if ($userAuth->unit_id == $up3->id) {
-                                                                    if (in_array(strtolower($userAuth->role_name), ['admin unit', 'manager up3', 'manajer up3', 'asman perencanaan up3', 'asman bidang up3', 'team leader ulp'])) {
+                                                                    $allowedRoles = [
+                                                                        'admin unit', 'manager up3', 'manajer up3', 'asman perencanaan up3', 'asman bidang up3', 'team leader ulp',
+                                                                        'up2d', 'manager up2d', 'manajer up2d', 'asman perencanaan up2d', 'asman bidang up2d', 'asman up2d',
+                                                                        'up2k', 'manager up2k', 'manajer up2k', 'asman', 'staff up2d', 'staff up3'
+                                                                    ];
+                                                                    $hasAllowedRole = in_array(strtolower($userAuth->role_name ?? ''), $allowedRoles)
+                                                                        || $userAuth->hasAnyRole(['UP2D', 'UP2K', 'Manager UP3', 'Asman Perencanaan UP3', 'Asman Bidang UP3', 'Admin Unit', 'Asman', 'Team Leader ULP'])
+                                                                        || ($userAuth->unit && in_array(strtoupper(trim($userAuth->unit->type ?? '')), ['UP3', 'UP2D', 'UP2K']));
+
+                                                                    if ($hasAllowedRole) {
                                                                         $canEditUp3Komitmen = true;
                                                                     }
                                                                 }
                                                                 
                                                                 // Lock editing when komitmen is locked/dinonaktifkan (unless Super Admin or Perencanaan UID)
-                                                                if ($canEditUp3Komitmen && !($userAuth->hasRole('Super Admin') || $userAuth->hasRole('Perencanaan UID') || strtolower($userAuth->role_name ?? '') === 'super admin' || strtolower($userAuth->role_name ?? '') === 'perencanaan uid')) {
+                                                                if ($canEditUp3Komitmen && !$isSuperOrUid) {
                                                                     if ($komitmenLocks[$sw->id] ?? true) {
                                                                         $canEditUp3Komitmen = false;
                                                                     }
@@ -1026,14 +1040,19 @@ $formatLmValue = function($value, $satuan) {
                                                                 $canEditUlpKomitmen = false;
                                                                 $user = auth()->user();
                                                                 if ($user) {
-                                                                    if ($user->hasRole('Super Admin') || $user->hasRole('Perencanaan UID') || strtolower($user->role_name) === 'super admin' || strtolower($user->role_name) === 'perencanaan uid') {
+                                                                    $isSuperOrUidUlp = $user->hasRole('Super Admin') 
+                                                                        || $user->hasRole('Perencanaan UID') 
+                                                                        || strtolower($user->role_name ?? '') === 'super admin' 
+                                                                        || strtolower($user->role_name ?? '') === 'perencanaan uid';
+
+                                                                    if ($isSuperOrUidUlp) {
                                                                         $canEditUlpKomitmen = true;
-                                                                    } else if (in_array(strtolower($user->role_name), ['team leader ulp', 'admin unit', 'staff ulp', 'manager ulp', 'manajer ulp']) && $user->unit_id == $u->id) {
+                                                                    } else if (in_array(strtolower($user->role_name ?? ''), ['team leader ulp', 'admin unit', 'staff ulp', 'manager ulp', 'manajer ulp']) && $user->unit_id == $u->id) {
                                                                         $canEditUlpKomitmen = true;
                                                                     }
                                                                     
                                                                     // Lock editing when komitmen is locked/dinonaktifkan (unless Super Admin or Perencanaan UID)
-                                                                    if ($canEditUlpKomitmen && !($user->hasRole('Super Admin') || $user->hasRole('Perencanaan UID') || strtolower($user->role_name ?? '') === 'super admin' || strtolower($user->role_name ?? '') === 'perencanaan uid')) {
+                                                                    if ($canEditUlpKomitmen && !$isSuperOrUidUlp) {
                                                                         if ($komitmenLocks[$sw->id] ?? true) {
                                                                             $canEditUlpKomitmen = false;
                                                                         }
