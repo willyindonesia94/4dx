@@ -44,6 +44,30 @@ class MasterPeriode extends Model
     }
 
     /**
+     * Mengambil tanggal awal (start M1) dan akhir (end minggu terakhir) operasional untuk suatu bulan.
+     */
+    public static function getMonthlyPeriod($tahun, $bulan)
+    {
+        $weeksData = self::getWeekDates($tahun, $bulan);
+        $start = $weeksData['target_m1']['start'] ?? Carbon::create($tahun, $bulan, 1)->startOfMonth()->format('Y-m-d');
+        $end = null;
+        for ($m = 5; $m >= 1; $m--) {
+            if (!empty($weeksData["target_m{$m}"]['end'])) {
+                $end = $weeksData["target_m{$m}"]['end'];
+                break;
+            }
+        }
+        if (!$end) {
+            $end = Carbon::create($tahun, $bulan, 1)->endOfMonth()->format('Y-m-d');
+        }
+
+        return [
+            'start' => $start,
+            'end' => $end,
+        ];
+    }
+
+    /**
      * Rumus dinamis menghitung minggu berantai setiap 7 hari, 
      * di mana Minggu 1 (M1) dipastikan selalu berawal dari Hari Senin pertama di bulan tersebut.
      */
