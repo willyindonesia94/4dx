@@ -230,28 +230,50 @@ class SesiWigReportExport implements FromView, WithStyles
         $matrixDefisitBulanLalu = [];
 
         $targetTahun = $this->year;
-        $startCurMonth = Carbon::create($targetTahun, $targetBulan, 1)->startOfMonth()->format('Y-m-d');
-        $endCurMonth = Carbon::create($targetTahun, $targetBulan, 1)->endOfMonth()->format('Y-m-d');
+        $curMonthPeriod = MasterPeriode::getMonthlyPeriod($targetTahun, $targetBulan);
+        $startCurMonth = $curMonthPeriod['start'];
+        $endCurMonth = $curMonthPeriod['end'];
         $curMonthlyBdRecords = DB::table('breakdown_lms')
-            ->where('periode_start', '>=', $startCurMonth)
-            ->where('periode_start', '<=', $endCurMonth)
+            ->where(function($q) use ($targetTahun, $targetBulan, $startCurMonth, $endCurMonth) {
+                $q->where(function($sq) use ($targetTahun, $targetBulan) {
+                    $sq->where('bulan', $targetBulan)
+                       ->where('tahun', $targetTahun);
+                })->orWhere(function($sq) use ($startCurMonth, $endCurMonth) {
+                    $sq->whereNull('bulan')
+                       ->where('periode_start', '>=', $startCurMonth)
+                       ->where('periode_start', '<=', $endCurMonth);
+                });
+            })
+            ->orderBy('id', 'desc')
             ->get();
         $curMonthlyBdMap = [];
         foreach ($curMonthlyBdRecords as $b) {
             $diff = Carbon::parse($b->periode_start)->diffInDays(Carbon::parse($b->periode_end));
             if ($diff >= 20) {
-                $curMonthlyBdMap[$b->lm_id][$b->unit_id] = (float)$b->angka_target;
+                if (!isset($curMonthlyBdMap[$b->lm_id][$b->unit_id])) {
+                    $curMonthlyBdMap[$b->lm_id][$b->unit_id] = (float)$b->angka_target;
+                }
             }
         }
 
         $prevBulanNum = $targetBulan > 1 ? $targetBulan - 1 : 12;
         $prevTahunNum = $targetBulan > 1 ? $targetTahun : $targetTahun - 1;
-        $startPrev = Carbon::create($prevTahunNum, $prevBulanNum, 1)->startOfMonth()->format('Y-m-d');
-        $endPrev = Carbon::create($prevTahunNum, $prevBulanNum, 1)->endOfMonth()->format('Y-m-d');
+        $prevMonthPeriod = MasterPeriode::getMonthlyPeriod($prevTahunNum, $prevBulanNum);
+        $startPrev = $prevMonthPeriod['start'];
+        $endPrev = $prevMonthPeriod['end'];
 
         $prevBdRecords = DB::table('breakdown_lms')
-            ->where('periode_start', '>=', $startPrev)
-            ->where('periode_start', '<=', $endPrev)
+            ->where(function($q) use ($prevBulanNum, $prevTahunNum, $startPrev, $endPrev) {
+                $q->where(function($sq) use ($prevBulanNum, $prevTahunNum) {
+                    $sq->where('bulan', $prevBulanNum)
+                       ->where('tahun', $prevTahunNum);
+                })->orWhere(function($sq) use ($startPrev, $endPrev) {
+                    $sq->whereNull('bulan')
+                       ->where('periode_start', '>=', $startPrev)
+                       ->where('periode_start', '<=', $endPrev);
+                });
+            })
+            ->orderBy('id', 'desc')
             ->get();
         $prevRealRecords = DB::table('realisasis')
             ->where('tanggal_input', '>=', $startPrev . ' 00:00:00')
@@ -271,10 +293,13 @@ class SesiWigReportExport implements FromView, WithStyles
         $prevBdMap = [];
         foreach ($prevBdRecords as $b) {
             $diff = Carbon::parse($b->periode_start)->diffInDays(Carbon::parse($b->periode_end));
-            $prevBdMap[$b->lm_id][$b->unit_id][] = [
-                'target' => (float)$b->angka_target,
-                'is_monthly' => ($diff >= 20)
-            ];
+            if ($diff >= 20) {
+                if (!isset($prevBdMap[$b->lm_id][$b->unit_id]['monthly'])) {
+                    $prevBdMap[$b->lm_id][$b->unit_id]['monthly'] = (float)$b->angka_target;
+                }
+            } else {
+                $prevBdMap[$b->lm_id][$b->unit_id]['weekly'][] = (float)$b->angka_target;
+            }
         }
 
         foreach ($lms as $lm) {
@@ -298,15 +323,16 @@ class SesiWigReportExport implements FromView, WithStyles
                     $matrixTargetBulanan[$lm->id][$ulp->id] = $isNonSummable ? ($cntT > 0 ? $sumT / $cntT : 0) : $sumT;
                 }
 
-                $bds = $prevBdMap[$lm->id][$ulp->id] ?? [];
+                $ulpPrevBd = $prevBdMap[$lm->id][$ulp->id] ?? null;
                 $tPrev = 0;
-                if (!empty($bds)) {
-                    $monthly = null; $sumT = 0; $countT = 0;
-                    foreach ($bds as $bd) {
-                        if ($bd['is_monthly']) { $monthly = $bd['target']; break; }
-                        $sumT += $bd['target']; $countT++;
+                if ($ulpPrevBd) {
+                    if (isset($ulpPrevBd['monthly'])) {
+                        $tPrev = $ulpPrevBd['monthly'];
+                    } elseif (!empty($ulpPrevBd['weekly'])) {
+                        $tPrev = $isNonSummable 
+                            ? (count($ulpPrevBd['weekly']) > 0 ? array_sum($ulpPrevBd['weekly']) / count($ulpPrevBd['weekly']) : 0)
+                            : array_sum($ulpPrevBd['weekly']);
                     }
-                    $tPrev = $monthly !== null ? $monthly : ($isNonSummable ? ($countT > 0 ? $sumT / $countT : 0) : $sumT);
                 }
                 $rPrev = $isNonSummable ? ($prevRealMap[$lm->id][$ulp->id]['avg'] ?? 0) : ($prevRealMap[$lm->id][$ulp->id]['sum'] ?? 0);
                 $prevTargetUlp[$ulp->id] = $tPrev;
@@ -342,15 +368,16 @@ class SesiWigReportExport implements FromView, WithStyles
                         }
                         $matrixTargetBulanan[$lm->id][$up3->id] = $isNonSummable ? ($cntT > 0 ? $sumT / $cntT : 0) : $sumT;
                     }
-                    $bds = $prevBdMap[$lm->id][$up3->id] ?? [];
+                    $up3PrevBd = $prevBdMap[$lm->id][$up3->id] ?? null;
                     $tPrev = 0;
-                    if (!empty($bds)) {
-                        $monthly = null; $sumT = 0; $countT = 0;
-                        foreach ($bds as $bd) {
-                            if ($bd['is_monthly']) { $monthly = $bd['target']; break; }
-                            $sumT += $bd['target']; $countT++;
+                    if ($up3PrevBd) {
+                        if (isset($up3PrevBd['monthly'])) {
+                            $tPrev = $up3PrevBd['monthly'];
+                        } elseif (!empty($up3PrevBd['weekly'])) {
+                            $tPrev = $isNonSummable 
+                                ? (count($up3PrevBd['weekly']) > 0 ? array_sum($up3PrevBd['weekly']) / count($up3PrevBd['weekly']) : 0)
+                                : array_sum($up3PrevBd['weekly']);
                         }
-                        $tPrev = $monthly !== null ? $monthly : ($isNonSummable ? ($countT > 0 ? $sumT / $countT : 0) : $sumT);
                     }
                     $rPrev = $isNonSummable ? ($prevRealMap[$lm->id][$up3->id]['avg'] ?? 0) : ($prevRealMap[$lm->id][$up3->id]['sum'] ?? 0);
                 }
