@@ -37,6 +37,15 @@
                 <!-- Filter Tabs -->
                 <div class="flex space-x-1 bg-white border border-slate-200 p-1 rounded-lg shadow-sm w-full sm:w-auto overflow-x-auto">
                     <a href="{{ route('master-wigs.index', ['status' => 'all']) }}" class="whitespace-nowrap px-4 py-2 text-sm font-semibold rounded-md transition-colors {{ ($status ?? 'all') === 'all' ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">Semua WIG</a>
+                    @php
+                        $draftCountWig = \App\Models\MasterWig::where('is_approved', false)->count();
+                    @endphp
+                    @if($draftCountWig > 0)
+                    <a href="{{ route('master-wigs.index', ['status' => 'draft']) }}" class="whitespace-nowrap px-4 py-2 text-sm font-semibold rounded-md transition-colors flex items-center {{ ($status ?? 'all') === 'draft' ? 'bg-amber-50 text-amber-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                        Draft / Menunggu Persetujuan
+                        <span class="ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">{{ $draftCountWig }}</span>
+                    </a>
+                    @endif
                     <a href="{{ route('master-wigs.index', ['status' => 'pending_delete']) }}" class="whitespace-nowrap px-4 py-2 text-sm font-semibold rounded-md transition-colors flex items-center {{ ($status ?? 'all') === 'pending_delete' ? 'bg-amber-50 text-amber-700 shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
                         Menunggu Persetujuan Hapus
                         @php
@@ -125,6 +134,15 @@
                                             </button>
                                         </form>
                                     @else
+                                        @if(!$wig->is_approved)
+                                            <form action="{{ route('master-wigs.approve', $wig->id) }}" method="POST" class="inline m-0">
+                                                @csrf
+                                                <button type="submit" class="text-white bg-emerald-600 hover:bg-emerald-700 font-bold px-3 py-1.5 rounded-md shadow-sm transition-all duration-200 text-xs flex items-center gap-1">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                                    Setujui
+                                                </button>
+                                            </form>
+                                        @endif
                                         <button @click="openEdit({{ $wig->toJson() }})" class="text-indigo-600 hover:text-white hover:bg-indigo-600 font-bold px-3 py-1.5 rounded-md border border-indigo-200 hover:border-transparent transition-all duration-200 text-xs">Edit</button>
                                         <button @click="openDeleteConfirm({{ $wig->id }}, '{{ addslashes($wig->judul) }}')" class="text-red-600 hover:text-white hover:bg-red-600 font-bold px-3 py-1.5 rounded-md border border-red-200 hover:border-transparent transition-all duration-200 text-xs">Hapus</button>
                                     @endif
