@@ -1017,13 +1017,17 @@ class DashboardController extends Controller
             $target = (float)$target;
             $realisasi = (float)$realisasi;
             $pol = strtolower(trim($polaritas ?? 'positif'));
-            if ($pol === 'negatif' || $pol === '3') {
-                if ($target == 0) return $realisasi == 0 ? 100 : 0;
-                return $realisasi == 0 ? 100 : ($target / $realisasi) * 100;
-            } else {
-                if ($target == 0) return $realisasi > 0 ? 100 : 0;
-                return ($realisasi / $target) * 100;
+            $isNeg = ($pol === 'negatif' || $pol === '3');
+            if (round($target, 2) <= 0) {
+                if (round($realisasi, 2) <= 0) {
+                    return null;
+                }
+                return $isNeg ? 0.0 : 100.0;
             }
+            if ($isNeg) {
+                return ($realisasi == 0) ? 100.0 : round(($target / $realisasi) * 100, 2);
+            }
+            return round(($realisasi / $target) * 100, 2);
         };
         $rtRealQuery = \Illuminate\Support\Facades\DB::table('realisasis')
             ->whereMonth('tanggal_input', $bulan)
@@ -1083,8 +1087,8 @@ class DashboardController extends Controller
             foreach ($lmUp3s as $up3) {
                 $target = $matrixTargets[$lm->id][$up3->id][$sid] ?? 0;
                 $sum = $matrixRealisasi[$lm->id][$up3->id][$sid] ?? 0;
-                if ($target > 0) {
-                    $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
+                $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
+                if ($pct !== null) {
                     $rtMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => round($pct, 1)];
                 }
             }
@@ -1092,8 +1096,8 @@ class DashboardController extends Controller
             foreach ($ulps as $ulp) {
                 $target = $matrixTargets[$lm->id][$ulp->id][$sid] ?? 0;
                 $sum = $matrixRealisasi[$lm->id][$ulp->id][$sid] ?? 0;
-                if ($target > 0) {
-                    $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
+                $pct = $calcCapaian($target, $sum, $lm->polaritas ?? 'positif');
+                if ($pct !== null) {
                     $rtMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => round($pct, 1)];
                 }
             }
@@ -1126,7 +1130,7 @@ class DashboardController extends Controller
                     'name' => $ulp->name,
                     'lat' => $ulp->latitude,
                     'lng' => $ulp->longitude,
-                    'progress' => round($pct, 1),
+                    'progress' => $pct !== null ? round($pct, 1) : 0,
                     'komitmen' => $komitmenVal,
                     'realisasi' => $sum
                 ];
@@ -1150,7 +1154,7 @@ class DashboardController extends Controller
                     'name' => $up3->name,
                     'lat' => $up3->latitude,
                     'lng' => $up3->longitude,
-                    'progress' => round($pct, 1),
+                    'progress' => $pct !== null ? round($pct, 1) : 0,
                     'komitmen' => $komitmenVal,
                     'realisasi' => $sum
                 ];
