@@ -734,15 +734,9 @@ $formatLmValue = function($value, $satuan) {
                                                         $totalUidRealisasiBulan += $uidRealisasi;
                                                         if ($uidRealisasi > 0) $countUidMingguReal++;
 
-                                                        $hasUidTarget = ($uidTargetPlusCarryOver > 0);
-                                                        $uidPencapaian = null;
+                                                        $uidPencapaian = $calcCapaian($uidTargetPlusCarryOver, $uidRealisasi, $lm->polaritas ?? 'positif');
                                                         $uidBgColor = '';
-                                                        if ($hasUidTarget) {
-                                                            if (strtolower($lm->polaritas) === 'negatif' || $lm->polaritas === '3') {
-                                                                $uidPencapaian = round(($uidTargetPlusCarryOver / max(0.0001, $uidRealisasi)) * 100, 2);
-                                                            } else {
-                                                                $uidPencapaian = round(($uidRealisasi / $uidTargetPlusCarryOver) * 100, 2);
-                                                            }
+                                                        if ($uidPencapaian !== null) {
                                                             $uidBgColor = $uidPencapaian >= 100 ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
                                                         }
                                                         
@@ -774,22 +768,21 @@ $formatLmValue = function($value, $satuan) {
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black {{ $hasUidKom ? 'text-indigo-900 bg-indigo-50' : 'text-gray-400 bg-slate-50' }} whitespace-nowrap">{{ $hasUidKom ? $formatLmValue($uidKomitmen, $lm->satuan->name ?? '') : '-' }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center text-gray-400 bg-slate-50">-</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900 whitespace-nowrap">{{ $formatLmValue($uidRealisasi, $lm->satuan->name ?? '') }}</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-right {{ $hasUidTarget ? 'font-black ' . $uidBgColor : 'text-center text-gray-400 font-bold' }} whitespace-nowrap">{{ $hasUidTarget ? $uidPencapaian . '%' : '-' }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right {{ $uidPencapaian !== null ? 'font-black ' . $uidBgColor : 'text-center text-gray-400 font-bold' }} whitespace-nowrap">{{ $uidPencapaian !== null ? $uidPencapaian . '%' : '-' }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 font-semibold {{ $runningUidCarryOver < 0 ? 'text-green-600' : ($runningUidCarryOver > 0 ? 'text-purple-700' : 'text-gray-500') }} whitespace-nowrap">{{ $runningUidCarryOver != 0 ? $formatLmValue($runningUidCarryOver, $lm->satuan->name ?? '') : '0' }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{!! $uidTrendIcon !!}</td>
                                                 @endforeach
                                                 @php
                                                     $finalUidRealBulan = $isPercent ? ($countUidMingguReal > 0 ? $totalUidRealisasiBulan / $countUidMingguReal : 0) : $totalUidRealisasiBulan;
-                                                    $hasUidTargetBulan = ($uidTargetBulanan > 0);
-                                                    $uidCapaianBulan = null;
+                                                    $hasUidTargetBulan = (round($uidTargetBulanan, 2) > 0);
+                                                    $uidCapaianBulan = $calcCapaian($uidTargetBulanan, $finalUidRealBulan, $lm->polaritas ?? 'positif');
                                                     $uidBgCapaianBulan = '';
-                                                    if ($hasUidTargetBulan) {
-                                                        $uidCapaianBulan = round($calcCapaian($uidTargetBulanan, $finalUidRealBulan, $lm->polaritas ?? 'positif'), 2);
+                                                    if ($uidCapaianBulan !== null) {
                                                         $uidBgCapaianBulan = $uidCapaianBulan >= 100 ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
                                                     }
                                                 @endphp
                                                 <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900 bg-indigo-50/50 whitespace-nowrap">{{ $formatLmValue($finalUidRealBulan, $lm->satuan->name ?? '') }}</td>
-                                                <td class="px-2 py-2 border border-gray-300 text-right {{ $hasUidTargetBulan ? 'font-black ' . $uidBgCapaianBulan : 'text-center text-gray-400 font-bold' }} whitespace-nowrap">{{ $hasUidTargetBulan ? $uidCapaianBulan . '%' : '-' }}</td>
+                                                <td class="px-2 py-2 border border-gray-300 text-right {{ $uidCapaianBulan !== null ? 'font-black ' . $uidBgCapaianBulan : 'text-center text-gray-400 font-bold' }} whitespace-nowrap">{{ $uidCapaianBulan !== null ? $uidCapaianBulan . '%' : '-' }}</td>
                                             </tr>
                                             @endif
                                             @foreach($filteredUp3sByWig[$wig->id] as $up3)
@@ -850,14 +843,13 @@ $formatLmValue = function($value, $satuan) {
                                                             $totalUp3RealisasiBulan += $up3Realisasi;
                                                             if ($up3Realisasi > 0) $countUp3MingguReal++;
 
-                                                            $hasUp3Target = ($up3TargetPlusCarryOver > 0);
-                                                            $up3Pencapaian = $hasUp3Target ? round($calcCapaian($up3TargetPlusCarryOver, $up3Realisasi, $lm->polaritas ?? 'positif'), 2) : null;
+                                                            $up3Pencapaian = $calcCapaian($up3TargetPlusCarryOver, $up3Realisasi, $lm->polaritas ?? 'positif');
                                                             
                                                             $up3KomData = $matrixKomitmen[$lm->id][$up3->id][$sw->id] ?? null;
                                                             $up3KomVal = $up3KomData !== null ? floatval($up3KomData['komitmen']) : 0;
                                                             
                                                             $up3BgColor = '';
-                                                            if ($hasUp3Target) {
+                                                            if ($up3Pencapaian !== null) {
                                                                 $up3BgColor = $up3Pencapaian >= 100 ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
                                                             }
                                                             
@@ -960,7 +952,7 @@ $formatLmValue = function($value, $satuan) {
                                                         @endif
                                                     </td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-semibold whitespace-nowrap">{{ $formatLmValue($up3Realisasi, $lm->satuan->name ?? '') }}</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-right {{ $hasUp3Target ? 'font-bold ' . $up3BgColor : 'text-center text-gray-400' }} whitespace-nowrap">{{ $hasUp3Target ? $up3Pencapaian . '%' : '-' }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right {{ $up3Pencapaian !== null ? 'font-bold ' . $up3BgColor : 'text-center text-gray-400' }} whitespace-nowrap">{{ $up3Pencapaian !== null ? $up3Pencapaian . '%' : '-' }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 text-xs font-semibold {{ $runningUp3CarryOver < 0 ? 'text-green-600' : ($runningUp3CarryOver > 0 ? 'text-purple-700' : 'text-gray-700') }} whitespace-nowrap">
                                                         {{ $runningUp3CarryOver != 0 ? $formatLmValue($runningUp3CarryOver, $lm->satuan->name ?? '') : '0' }}
                                                     </td>
@@ -968,16 +960,15 @@ $formatLmValue = function($value, $satuan) {
                                                     @endforeach
                                                     @php
                                                         $finalUp3RealBulan = $isPercent ? ($countUp3MingguReal > 0 ? $totalUp3RealisasiBulan / $countUp3MingguReal : 0) : $totalUp3RealisasiBulan;
-                                                        $hasUp3TargetBulan = ($up3TargetBulanan > 0);
-                                                        $up3CapaianBulan = null;
+                                                        $hasUp3TargetBulan = (round($up3TargetBulanan, 2) > 0);
+                                                        $up3CapaianBulan = $calcCapaian($up3TargetBulanan, $finalUp3RealBulan, $lm->polaritas ?? 'positif');
                                                         $up3BgCapaianBulan = '';
-                                                        if ($hasUp3TargetBulan) {
-                                                            $up3CapaianBulan = round($calcCapaian($up3TargetBulanan, $finalUp3RealBulan, $lm->polaritas ?? 'positif'), 2);
-                                                            $up3BgCapaianBulan = $up3CapaianBulan >= 100 ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
+                                                        if ($up3CapaianBulan !== null) {
+                                                            $up3BgCapaianBulan = $up3CapaianBulan >= 100 ? 'bg-green-500 text-white font-bold' : 'bg-red-500 text-white font-bold';
                                                         }
                                                     @endphp
                                                     <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900 bg-slate-100 whitespace-nowrap">{{ $formatLmValue($finalUp3RealBulan, $lm->satuan->name ?? '') }}</td>
-                                                    <td class="px-2 py-2 border border-gray-300 text-right {{ $hasUp3TargetBulan ? 'font-black ' . $up3BgCapaianBulan : 'text-center text-gray-400 font-bold' }} whitespace-nowrap">{{ $hasUp3TargetBulan ? $up3CapaianBulan . '%' : '-' }}</td>
+                                                    <td class="px-2 py-2 border border-gray-300 text-right {{ $up3CapaianBulan !== null ? 'font-black ' . $up3BgCapaianBulan : 'text-center text-gray-400 font-bold' }} whitespace-nowrap">{{ $up3CapaianBulan !== null ? $up3CapaianBulan . '%' : '-' }}</td>
                                                 </tr>
                                                 @foreach($ulps as $u)
                                                     @php 
@@ -1026,14 +1017,13 @@ $formatLmValue = function($value, $satuan) {
                                                                 $totalUlpRealisasiBulan += $realisasi;
                                                                 if ($realisasi > 0) $countUlpMingguReal++;
 
-                                                                $hasTarget = ($ulpTargetPlusCarryOver > 0);
-                                                                $pencapaian = $hasTarget ? round($calcCapaian($ulpTargetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2) : null;
+                                                                $pencapaian = $calcCapaian($ulpTargetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif');
                                                                 $komitmenData = $matrixKomitmen[$lm->id][$u->id][$sw->id] ?? null;
                                                                 $komitmenVal = $komitmenData ? $komitmenData['komitmen'] : '';
                                                                 $carryOverVal = $komitmenData ? $komitmenData['carry_over'] : '';
                                                                 
                                                                 $bgColor = '';
-                                                                if ($hasTarget) {
+                                                                if ($pencapaian !== null) {
                                                                     $bgColor = $pencapaian >= 100 ? 'bg-green-500 text-white' : 'bg-red-500 text-white';
                                                                 }
                                                                 
@@ -1130,8 +1120,8 @@ $formatLmValue = function($value, $satuan) {
                                                                 @endif
                                                             </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-right whitespace-nowrap">{{ $formatLmValue($realisasi, $lm->satuan->name ?? '') }}</td>
-                                                            <td class="px-2 py-2 border border-gray-300 text-right {{ $hasTarget ? 'font-bold ' . $bgColor : 'text-center text-gray-400' }} whitespace-nowrap">
-                                                                {{ $hasTarget ? $pencapaian . '%' : '-' }}
+                                                            <td class="px-2 py-2 border border-gray-300 text-right {{ $pencapaian !== null ? 'font-bold ' . $bgColor : 'text-center text-gray-400' }} whitespace-nowrap">
+                                                                {{ $pencapaian !== null ? $pencapaian . '%' : '-' }}
                                                             </td>
                                                             <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50 text-xs font-semibold {{ $ulpCarryOver < 0 ? 'text-green-600' : ($ulpCarryOver > 0 ? 'text-purple-700' : 'text-gray-700') }} whitespace-nowrap">
                                                                 {{ $ulpCarryOver != 0 ? $formatLmValue($ulpCarryOver, $lm->satuan->name ?? '') : '0' }}
@@ -1140,16 +1130,15 @@ $formatLmValue = function($value, $satuan) {
                                                         @endforeach
                                                         @php
                                                             $finalUlpRealBulan = $isPercent ? ($countUlpMingguReal > 0 ? $totalUlpRealisasiBulan / $countUlpMingguReal : 0) : $totalUlpRealisasiBulan;
-                                                            $hasUlpTargetBulan = ($ulpTargetBulanan > 0);
-                                                            $ulpCapaianBulan = null;
+                                                            $hasUlpTargetBulan = (round($ulpTargetBulanan, 2) > 0);
+                                                            $ulpCapaianBulan = $calcCapaian($ulpTargetBulanan, $finalUlpRealBulan, $lm->polaritas ?? 'positif');
                                                             $ulpBgCapaianBulan = '';
-                                                            if ($hasUlpTargetBulan) {
-                                                                $ulpCapaianBulan = round($calcCapaian($ulpTargetBulanan, $finalUlpRealBulan, $lm->polaritas ?? 'positif'), 2);
+                                                            if ($ulpCapaianBulan !== null) {
                                                                 $ulpBgCapaianBulan = $ulpCapaianBulan >= 100 ? 'bg-green-500 text-white font-bold' : 'bg-red-500 text-white font-bold';
                                                             }
                                                         @endphp
                                                         <td class="px-2 py-2 border border-gray-300 text-right font-medium text-gray-800 bg-white whitespace-nowrap">{{ $formatLmValue($finalUlpRealBulan, $lm->satuan->name ?? '') }}</td>
-                                                        <td class="px-2 py-2 border border-gray-300 text-right {{ $hasUlpTargetBulan ? $ulpBgCapaianBulan : 'text-center text-gray-400' }} whitespace-nowrap">{{ $hasUlpTargetBulan ? $ulpCapaianBulan . '%' : '-' }}</td>
+                                                        <td class="px-2 py-2 border border-gray-300 text-right {{ $ulpCapaianBulan !== null ? 'font-bold ' . $ulpBgCapaianBulan : 'text-center text-gray-400 font-bold' }} whitespace-nowrap">{{ $ulpCapaianBulan !== null ? $ulpCapaianBulan . '%' : '-' }}</td>
                                                     </tr>
                                                 @endforeach
                                             @endforeach

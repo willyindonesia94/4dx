@@ -142,12 +142,22 @@ class SesiWigController extends Controller
         $wigs = $wigsQuery->get();
 
         $calcCapaian = function($target, $realisasi, $polaritas) {
-            if ($target <= 0) return 0;
-            $isNeg = (strtolower(trim($polaritas)) === 'negatif' || trim($polaritas) === '3');
-            if ($isNeg) {
-                return ($realisasi == 0) ? 100 : ($target / $realisasi) * 100;
+            $target = (float)$target;
+            $realisasi = (float)$realisasi;
+            $pol = strtolower(trim($polaritas ?? 'positif'));
+            $isNeg = ($pol === 'negatif' || $pol === '3');
+
+            if (round($target, 2) <= 0) {
+                if (round($realisasi, 2) <= 0) {
+                    return null;
+                }
+                return $isNeg ? 0.0 : 100.0;
             }
-            return ($realisasi / $target) * 100;
+
+            if ($isNeg) {
+                return ($realisasi == 0) ? 100.0 : round(($target / $realisasi) * 100, 2);
+            }
+            return round(($realisasi / $target) * 100, 2);
         };
 
         $lmsQuery = MasterLm::with('wig', 'satuan');
@@ -380,7 +390,8 @@ class SesiWigController extends Controller
             $lm->total_target = $target;
             $lm->total_realisasi = $realisasi;
             
-            $lm->capaian = ($target > 0) ? round($calcCapaian($target, $realisasi, $lm->polaritas), 2) : null;
+            $capVal = $calcCapaian($target, $realisasi, $lm->polaritas);
+            $lm->capaian = $capVal !== null ? round($capVal, 2) : null;
         }
         
         // Filter Unit sesuai tingkatan akses User (ULP/UP3/UID)
@@ -760,7 +771,7 @@ class SesiWigController extends Controller
                 $rPrev = $isNonSummable ? ($prevRealMap[$lm->id][$ulp->id]['avg'] ?? 0) : ($prevRealMap[$lm->id][$ulp->id]['sum'] ?? 0);
                 $prevTargetUlp[$ulp->id] = $tPrev;
                 $prevRealUlp[$ulp->id] = $rPrev;
-                $matrixDefisitBulanLalu[$lm->id][$ulp->id] = $isEligibleCarryOver ? max(0, $tPrev - $rPrev) : 0;
+                $matrixDefisitBulanLalu[$lm->id][$ulp->id] = ($isEligibleCarryOver && ($matrixTargetBulanan[$lm->id][$ulp->id] ?? 0) > 0) ? max(0, round($tPrev - $rPrev, 2)) : 0;
             }
 
             // B. Target Bulanan Bulan Berjalan & Defisit Bulan Lalu untuk UP3
@@ -804,7 +815,7 @@ class SesiWigController extends Controller
                     }
                     $rPrev = $isNonSummable ? ($prevRealMap[$lm->id][$up3->id]['avg'] ?? 0) : ($prevRealMap[$lm->id][$up3->id]['sum'] ?? 0);
                 }
-                $matrixDefisitBulanLalu[$lm->id][$up3->id] = $isEligibleCarryOver ? max(0, $tPrev - $rPrev) : 0;
+                $matrixDefisitBulanLalu[$lm->id][$up3->id] = ($isEligibleCarryOver && ($matrixTargetBulanan[$lm->id][$up3->id] ?? 0) > 0) ? max(0, round($tPrev - $rPrev, 2)) : 0;
             }
 
             // C. Target Bulanan Bulan Berjalan & Defisit Bulan Lalu untuk UID (unit 1)
@@ -831,7 +842,7 @@ class SesiWigController extends Controller
                 $sumDefUid += $def;
                 $cntDefUid++;
             }
-            $matrixDefisitBulanLalu[$lm->id][1] = $isEligibleCarryOver ? ($isNonSummable ? ($cntDefUid > 0 ? $sumDefUid / $cntDefUid : 0) : $sumDefUid) : 0;
+            $matrixDefisitBulanLalu[$lm->id][1] = ($isEligibleCarryOver && ($matrixTargetBulanan[$lm->id][1] ?? 0) > 0) ? ($isNonSummable ? ($cntDefUid > 0 ? $sumDefUid / $cntDefUid : 0) : $sumDefUid) : 0;
         }
 
         // Calculate MenangKalah dynamically from Matrix data for THIS SESSION ($sesi_wig->id)
@@ -888,8 +899,8 @@ class SesiWigController extends Controller
                     }
                 }
                 
-                if ($targetPlusCarryOver > 0) {
-                    $pct = round($calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
+                $pct = $calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif');
+                if ($pct !== null) {
                     $lmMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => $pct];
                 }
             }
@@ -932,8 +943,8 @@ class SesiWigController extends Controller
                     }
                 }
 
-                if ($targetPlusCarryOver > 0) {
-                    $pct = round($calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif'), 2);
+                $pct = $calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif');
+                if ($pct !== null) {
                     $lmMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => $pct];
                 }
             }

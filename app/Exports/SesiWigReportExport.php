@@ -431,13 +431,20 @@ class SesiWigReportExport implements FromView, WithStyles
         $namaBulan = ($this->month !== 'all') ? ($bulanNames[(int)$this->month] ?? $this->month) : 'Semua Bulan';
 
         $calcCapaian = function($target, $realisasi, $polaritas) {
-            if ($target == 0 && $realisasi == 0) return 100;
-            if ($target == 0) return 0;
-            if (strtolower(trim($polaritas)) === 'negatif' || $polaritas === '3') {
-                if ($realisasi == 0) return 100;
-                return ($target / $realisasi) * 100;
+            $target = (float)$target;
+            $realisasi = (float)$realisasi;
+            $pol = strtolower(trim($polaritas ?? 'positif'));
+            $isNeg = ($pol === 'negatif' || $pol === '3');
+            if (round($target, 2) <= 0) {
+                if (round($realisasi, 2) <= 0) {
+                    return null;
+                }
+                return $isNeg ? 0.0 : 100.0;
             }
-            return ($realisasi / $target) * 100;
+            if ($isNeg) {
+                return ($realisasi == 0) ? 100.0 : round(($target / $realisasi) * 100, 2);
+            }
+            return round(($realisasi / $target) * 100, 2);
         };
 
         return view('exports.sesi_wig_report_table', [

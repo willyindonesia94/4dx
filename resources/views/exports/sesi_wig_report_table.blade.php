@@ -174,21 +174,21 @@
                         $kumulatifUidReal += $r;
                         $totalUidReal += $r;
                         if ($r > 0) $countUidMingguReal++;
-                        $pct = ($tPlusCO > 0) ? round($calcCapaian($tPlusCO, $r, $lm->polaritas ?? 'positif'), 2) : 0;
+                        $pct = $calcCapaian($tPlusCO, $r, $lm->polaritas ?? 'positif');
                     @endphp
                     <td align="right">{{ number_format($t, 2) }}</td>
                     <td align="right" bgcolor="#ede9fe" style="color: #4338ca; font-weight: bold;">{{ number_format($tPlusCO, 2) }}</td>
                     <td align="right">{{ $k !== null ? number_format((float)$k, 2) : '-' }}</td>
                     <td align="right">{{ number_format($r, 2) }}</td>
-                    <td align="center" style="color: {{ $pct >= 100 ? '#15803d' : '#b91c1c' }}; font-weight: bold;">{{ number_format($pct, 2) }}%</td>
+                    <td align="center" style="color: {{ $pct !== null ? ($pct >= 100 ? '#15803d' : '#b91c1c') : '#64748b' }}; font-weight: bold;">{{ $pct !== null ? number_format($pct, 2) . '%' : '-' }}</td>
                     <td align="center" style="color: {{ $runningUidCO < 0 ? '#15803d' : ($runningUidCO > 0 ? '#4338ca' : '#64748b') }}; font-weight: bold;">{{ number_format($runningUidCO, 2) }}</td>
                 @endforeach
                 @php
                     $finalUidReal = $isPercent ? ($countUidMingguReal > 0 ? $totalUidReal / $countUidMingguReal : 0) : $totalUidReal;
-                    $uidCapaianBulan = ($uidTargetBulan > 0) ? round($calcCapaian($uidTargetBulan, $finalUidReal, $lm->polaritas ?? 'positif'), 2) : 0;
+                    $uidCapaianBulan = $calcCapaian($uidTargetBulan, $finalUidReal, $lm->polaritas ?? 'positif');
                 @endphp
                 <td align="right" style="font-weight: bold;">{{ number_format($finalUidReal, 2) }}</td>
-                <td align="center" style="color: {{ $uidCapaianBulan >= 100 ? '#15803d' : '#b91c1c' }}; font-weight: bold;">{{ number_format($uidCapaianBulan, 2) }}%</td>
+                <td align="center" style="color: {{ $uidCapaianBulan !== null ? ($uidCapaianBulan >= 100 ? '#15803d' : '#b91c1c') : '#64748b' }}; font-weight: bold;">{{ $uidCapaianBulan !== null ? number_format($uidCapaianBulan, 2) . '%' : '-' }}</td>
             </tr>
             @endif
 
@@ -238,21 +238,21 @@
                             $kumulatifUp3Real += $r;
                             $totalUp3Real += $r;
                             if ($r > 0) $countUp3MingguReal++;
-                            $pct = ($tPlusCO > 0) ? round($calcCapaian($tPlusCO, $r, $lm->polaritas ?? 'positif'), 2) : 0;
+                            $pct = $calcCapaian($tPlusCO, $r, $lm->polaritas ?? 'positif');
                         @endphp
                         <td align="right">{{ number_format($t, 2) }}</td>
                         <td align="right" bgcolor="#f5f3ff" style="color: #4338ca; font-weight: bold;">{{ number_format($tPlusCO, 2) }}</td>
                         <td align="right">{{ $k !== null ? number_format((float)$k, 2) : '-' }}</td>
                         <td align="right">{{ number_format($r, 2) }}</td>
-                        <td align="center" style="color: {{ $pct >= 100 ? '#15803d' : '#b91c1c' }}; font-weight: bold;">{{ number_format($pct, 2) }}%</td>
+                        <td align="center" style="color: {{ $pct !== null ? ($pct >= 100 ? '#15803d' : '#b91c1c') : '#64748b' }}; font-weight: bold;">{{ $pct !== null ? number_format($pct, 2) . '%' : '-' }}</td>
                         <td align="center" style="color: {{ $runningUp3CO < 0 ? '#15803d' : ($runningUp3CO > 0 ? '#4338ca' : '#64748b') }}; font-weight: bold;">{{ number_format($runningUp3CO, 2) }}</td>
                     @endforeach
                     @php
                         $finalUp3Real = $isPercent ? ($countUp3MingguReal > 0 ? $totalUp3Real / $countUp3MingguReal : 0) : $totalUp3Real;
-                        $up3CapaianBulan = ($up3TargetBulan > 0) ? round($calcCapaian($up3TargetBulan, $finalUp3Real, $lm->polaritas ?? 'positif'), 2) : 0;
+                        $up3CapaianBulan = $calcCapaian($up3TargetBulan, $finalUp3Real, $lm->polaritas ?? 'positif');
                     @endphp
                     <td align="right" style="font-weight: bold;">{{ number_format($finalUp3Real, 2) }}</td>
-                    <td align="center" style="color: {{ $up3CapaianBulan >= 100 ? '#15803d' : '#b91c1c' }}; font-weight: bold;">{{ number_format($up3CapaianBulan, 2) }}%</td>
+                    <td align="center" style="color: {{ $up3CapaianBulan !== null ? ($up3CapaianBulan >= 100 ? '#15803d' : '#b91c1c') : '#64748b' }}; font-weight: bold;">{{ $up3CapaianBulan !== null ? number_format($up3CapaianBulan, 2) . '%' : '-' }}</td>
                 </tr>
 
                 <!-- LEVEL ULP (Di bawah UP3 terkait) -->
@@ -304,21 +304,21 @@
                                 $kumulatifUlpReal += $r;
                                 $totalUlpReal += $r;
                                 if ($r > 0) $countUlpMingguReal++;
-                                $pct = ($tPlusCO > 0) ? round($calcCapaian($tPlusCO, $r, $lm->polaritas ?? 'positif'), 2) : 0;
+                                $pct = $calcCapaian($tPlusCO, $r, $lm->polaritas ?? 'positif');
                             @endphp
                             <td align="right">{{ number_format($t, 2) }}</td>
                             <td align="right" bgcolor="#faf5ff" style="color: #4338ca;">{{ number_format($tPlusCO, 2) }}</td>
                             <td align="right">{{ $k !== null ? number_format((float)$k, 2) : '-' }}</td>
                             <td align="right">{{ number_format($r, 2) }}</td>
-                            <td align="center" style="color: {{ $pct >= 100 ? '#15803d' : '#b91c1c' }};">{{ number_format($pct, 2) }}%</td>
+                            <td align="center" style="color: {{ $pct !== null ? ($pct >= 100 ? '#15803d' : '#b91c1c') : '#64748b' }};">{{ $pct !== null ? number_format($pct, 2) . '%' : '-' }}</td>
                             <td align="center" style="color: {{ $runningUlpCO < 0 ? '#15803d' : ($runningUlpCO > 0 ? '#4338ca' : '#64748b') }};">{{ number_format($runningUlpCO, 2) }}</td>
                         @endforeach
                         @php
                             $finalUlpReal = $isPercent ? ($countUlpMingguReal > 0 ? $totalUlpReal / $countUlpMingguReal : 0) : $totalUlpReal;
-                            $ulpCapaianBulan = ($ulpTargetBulan > 0) ? round($calcCapaian($ulpTargetBulan, $finalUlpReal, $lm->polaritas ?? 'positif'), 2) : 0;
+                            $ulpCapaianBulan = $calcCapaian($ulpTargetBulan, $finalUlpReal, $lm->polaritas ?? 'positif');
                         @endphp
                         <td align="right">{{ number_format($finalUlpReal, 2) }}</td>
-                        <td align="center" style="color: {{ $ulpCapaianBulan >= 100 ? '#15803d' : '#b91c1c' }}; font-weight: bold;">{{ number_format($ulpCapaianBulan, 2) }}%</td>
+                        <td align="center" style="color: {{ $ulpCapaianBulan !== null ? ($ulpCapaianBulan >= 100 ? '#15803d' : '#b91c1c') : '#64748b' }}; font-weight: bold;">{{ $ulpCapaianBulan !== null ? number_format($ulpCapaianBulan, 2) . '%' : '-' }}</td>
                     </tr>
                 @endforeach
             @endforeach
