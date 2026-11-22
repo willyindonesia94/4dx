@@ -123,9 +123,176 @@
     <tbody>
         @foreach($lms as $lm)
             @php
+                $isDecimalLm = in_array((int)($lm->satuan_id ?? 0), [7, 8, 13]) 
+                    || str_contains(strtolower($lm->satuan->name ?? ''), 'mva') 
+                    || str_contains(strtolower($lm->satuan->name ?? ''), 'kwh') 
+                    || str_contains(strtolower($lm->satuan->name ?? ''), 'gwh')
+                    || str_contains(strtolower($lm->judul_lm ?? ''), 'daya tersambung')
+                    || str_contains(strtolower($lm->judul_lm ?? ''), 'smart p2tl')
+                    || str_contains(strtolower($lm->judul_lm ?? ''), 'mva')
+                    || str_contains(strtolower($lm->judul_lm ?? ''), 'kwh');
                 $isPercent = (($lm->satuan_id ?? null) == 1) || (trim($lm->satuan->name ?? '') === '%');
                 $isPolaritasNegatif = strtolower(trim($lm->polaritas ?? 'positif')) === 'negatif' || ($lm->polaritas === '3');
                 $isEligibleCarryOver = !$isPercent && !$isPolaritasNegatif;
+                $isNonSummable = in_array($lm->satuan_id, [1, 2, 6, 14]);
+
+                $lmUnitData = [];
+
+                // 1. ULPs
+                foreach ($allUlps as $u) {
+                    $runningCO = 0;
+                    $kumReal = 0;
+                    $prevT = 0;
+                    $ulpTargetBulanan = $matrixTargetBulanan[$lm->id][$u->id] ?? 0;
+                    $ulpDefisitBulanLalu = $matrixDefisitBulanLalu[$lm->id][$u->id] ?? 0;
+
+                    foreach ($sesiWigs as $swIdx => $sw) {
+                        $t = (float)($matrixTargets[$lm->id][$u->id][$sw->id] ?? 0);
+                        $r = (float)($matrixRealisasi[$lm->id][$u->id][$sw->id] ?? 0);
+
+                        if (!$isEligibleCarryOver) {
+                            $tPlusCO = $t;
+                            $co = 0;
+                        } else {
+                            if ($swIdx === 0) {
+                                $tPlusCO = round($t + $ulpDefisitBulanLalu, 2);
+                            } else {
+                                if ($ulpTargetBulanan > 0 && $kumReal >= $ulpTargetBulanan) {
+                                    $baseTarget = $t > 0 ? $t : $prevT;
+                                    $floorT = ($isDecimalLm || ($baseTarget != round($baseTarget))) ? ($baseTarget > 0 ? max(0.01, round($baseTarget * 0.10, 2)) : 0) : ($baseTarget > 0 ? max(1, (int)ceil($baseTarget * 0.10)) : 0);
+                                    $tPlusCO = $floorT;
+                                } else {
+                                    $tPlusCO = max($t, round($t + $runningCO, 2));
+                                }
+                            }
+                            $co = round($tPlusCO - $r, 2);
+                        }
+                        if ($t > 0) $prevT = $t;
+                        $runningCO = $co;
+                        $kumReal += $r;
+
+                        $lmUnitData[$u->id][$sw->id] = [
+                            'target' => $t,
+                            'targetPlusCO' => $tPlusCO,
+                            'carryOver' => $co,
+                            'realisasi' => $r,
+                            'kumulatifReal' => $kumReal,
+                        ];
+                    }
+                }
+
+                // 2. UP3
+                foreach ($up3s as $up3) {
+                    $ulpsOfThisUp3 = $allUlps->where('parent_id', $up3->id);
+                    if ($ulpsOfThisUp3->isNotEmpty()) {
+                        $kumUp3Real = 0;
+                        foreach ($sesiWigs as $swIdx => $sw) {
+                            $tSum = 0;
+                            $tPlusCOSum = 0;
+                            $coSum = 0;
+                            $rSum = 0;
+                            $cnt = count($ulpsOfThisUp3);
+
+                            foreach ($ulpsOfThisUp3 as $u) {
+                                $d = $lmUnitData[$u->id][$sw->id] ?? ['target' => 0, 'targetPlusCO' => 0, 'carryOver' => 0, 'realisasi' => 0];
+                                $tSum += $d['target'];
+                                $tPlusCOSum += $d['targetPlusCO'];
+                                $coSum += $d['carryOver'];
+                                $rSum += $d['realisasi'];
+                            }
+
+                            if ($isNonSummable) {
+                                $tSum = $cnt > 0 ? $tSum / $cnt : 0;
+                                $tPlusCOSum = $cnt > 0 ? $tPlusCOSum / $cnt : 0;
+                                $coSum = $cnt > 0 ? $coSum / $cnt : 0;
+                                $rSum = $cnt > 0 ? $rSum / $cnt : 0;
+                            }
+
+                            $kumUp3Real += $rSum;
+                            $lmUnitData[$up3->id][$sw->id] = [
+                                'target' => round($tSum, 2),
+                                'targetPlusCO' => round($tPlusCOSum, 2),
+                                'carryOver' => round($coSum, 2),
+                                'realisasi' => round($rSum, 2),
+                                'kumulatifReal' => round($kumUp3Real, 2),
+                            ];
+                        }
+                    } else {
+                        $runningCO = 0;
+                        $kumReal = 0;
+                        $prevT = 0;
+                        $up3TargetBulanan = $matrixTargetBulanan[$lm->id][$up3->id] ?? 0;
+                        $up3DefisitBulanLalu = $matrixDefisitBulanLalu[$lm->id][$up3->id] ?? 0;
+
+                        foreach ($sesiWigs as $swIdx => $sw) {
+                            $t = (float)($matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0);
+                            $r = (float)($matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0);
+
+                            if (!$isEligibleCarryOver) {
+                                $tPlusCO = $t;
+                                $co = 0;
+                            } else {
+                                if ($swIdx === 0) {
+                                    $tPlusCO = round($t + $up3DefisitBulanLalu, 2);
+                                } else {
+                                    if ($up3TargetBulanan > 0 && $kumReal >= $up3TargetBulanan) {
+                                        $baseTarget = $t > 0 ? $t : $prevT;
+                                        $floorT = ($isDecimalLm || ($baseTarget != round($baseTarget))) ? ($baseTarget > 0 ? max(0.01, round($baseTarget * 0.10, 2)) : 0) : ($baseTarget > 0 ? max(1, (int)ceil($baseTarget * 0.10)) : 0);
+                                        $tPlusCO = $floorT;
+                                    } else {
+                                        $tPlusCO = max($t, round($t + $runningCO, 2));
+                                    }
+                                }
+                                $co = round($tPlusCO - $r, 2);
+                            }
+                            if ($t > 0) $prevT = $t;
+                            $runningCO = $co;
+                            $kumReal += $r;
+
+                            $lmUnitData[$up3->id][$sw->id] = [
+                                'target' => $t,
+                                'targetPlusCO' => $tPlusCO,
+                                'carryOver' => $co,
+                                'realisasi' => $r,
+                                'kumulatifReal' => $kumReal,
+                            ];
+                        }
+                    }
+                }
+
+                // 3. UID
+                $kumUidReal = 0;
+                foreach ($sesiWigs as $swIdx => $sw) {
+                    $tSum = 0;
+                    $tPlusCOSum = 0;
+                    $coSum = 0;
+                    $rSum = 0;
+                    $cnt = count($up3s);
+
+                    foreach ($up3s as $up3) {
+                        $d = $lmUnitData[$up3->id][$sw->id] ?? ['target' => 0, 'targetPlusCO' => 0, 'carryOver' => 0, 'realisasi' => 0];
+                        $tSum += $d['target'];
+                        $tPlusCOSum += $d['targetPlusCO'];
+                        $coSum += $d['carryOver'];
+                        $rSum += $d['realisasi'];
+                    }
+
+                    if ($isNonSummable) {
+                        $tSum = $cnt > 0 ? $tSum / $cnt : 0;
+                        $tPlusCOSum = $cnt > 0 ? $tPlusCOSum / $cnt : 0;
+                        $coSum = $cnt > 0 ? $coSum / $cnt : 0;
+                        $rSum = $cnt > 0 ? $rSum / $cnt : 0;
+                    }
+
+                    $kumUidReal += $rSum;
+                    $lmUnitData[1][$sw->id] = [
+                        'target' => round($tSum, 2),
+                        'targetPlusCO' => round($tPlusCOSum, 2),
+                        'carryOver' => round($coSum, 2),
+                        'realisasi' => round($rSum, 2),
+                        'kumulatifReal' => round($kumUidReal, 2),
+                    ];
+                }
             @endphp
 
             <!-- LEVEL UID JAWA BARAT -->
@@ -133,11 +300,6 @@
             @php
                 $uidTargetBulan = $matrixTargetBulanan[$lm->id][1] ?? 0;
                 $uidDefisitLalu = $matrixDefisitBulanLalu[$lm->id][1] ?? 0;
-                $runningUidCO = 0;
-                $prevUidTPlusCO = 0;
-                $kumulatifUidReal = 0;
-                $totalUidReal = 0;
-                $countUidMingguReal = 0;
             @endphp
             <tr bgcolor="#e0e7ff" style="font-weight: bold;">
                 <td align="left">{{ $lm->wig->judul ?? '-' }}</td>
@@ -149,31 +311,11 @@
                 <td align="right">{{ number_format($uidDefisitLalu, 2) }}</td>
                 @foreach($sesiWigs as $swIdx => $sw)
                     @php
-                        $t = $matrixTargets[$lm->id][1][$sw->id] ?? 0;
-                        $r = $matrixRealisasi[$lm->id][1][$sw->id] ?? 0;
+                        $t = $lmUnitData[1][$sw->id]['target'] ?? 0;
+                        $tPlusCO = $lmUnitData[1][$sw->id]['targetPlusCO'] ?? 0;
+                        $coThisWeek = $lmUnitData[1][$sw->id]['carryOver'] ?? 0;
+                        $r = $lmUnitData[1][$sw->id]['realisasi'] ?? 0;
                         $k = $matrixKomitmen[$lm->id][1][$sw->id]['komitmen'] ?? null;
-                        
-                        if (!$isEligibleCarryOver) {
-                            $tPlusCO = $t;
-                            $coThisWeek = 0;
-                        } else {
-                            if ($swIdx === 0) {
-                                $tPlusCO = $t + $uidDefisitLalu;
-                            } else {
-                                if ($uidTargetBulan > 0 && $kumulatifUidReal >= $uidTargetBulan) {
-                                    $floorT = $t > 0 ? max(1, ceil($t * 0.10)) : 0;
-                                    $tPlusCO = $floorT;
-                                } else {
-                                    $tPlusCO = max($t, $t + $runningUidCO);
-                                }
-                            }
-                            $coThisWeek = $tPlusCO - $r;
-                        }
-                        $prevUidTPlusCO = $tPlusCO;
-                        $runningUidCO = $coThisWeek;
-                        $kumulatifUidReal += $r;
-                        $totalUidReal += $r;
-                        if ($r > 0) $countUidMingguReal++;
                         $pct = $calcCapaian($tPlusCO, $r, $lm->polaritas ?? 'positif');
                     @endphp
                     <td align="right">{{ number_format($t, 2) }}</td>
@@ -181,10 +323,11 @@
                     <td align="right">{{ $k !== null ? number_format((float)$k, 2) : '-' }}</td>
                     <td align="right">{{ number_format($r, 2) }}</td>
                     <td align="center" style="color: {{ $pct !== null ? ($pct >= 100 ? '#15803d' : '#b91c1c') : '#64748b' }}; font-weight: bold;">{{ $pct !== null ? number_format($pct, 2) . '%' : '-' }}</td>
-                    <td align="center" style="color: {{ $runningUidCO < 0 ? '#15803d' : ($runningUidCO > 0 ? '#4338ca' : '#64748b') }}; font-weight: bold;">{{ number_format($runningUidCO, 2) }}</td>
+                    <td align="center" style="color: {{ $coThisWeek < 0 ? '#15803d' : ($coThisWeek > 0 ? '#4338ca' : '#64748b') }}; font-weight: bold;">{{ number_format($coThisWeek, 2) }}</td>
                 @endforeach
                 @php
-                    $finalUidReal = $isPercent ? ($countUidMingguReal > 0 ? $totalUidReal / $countUidMingguReal : 0) : $totalUidReal;
+                    $totalUidReal = $sesiWigs->isNotEmpty() ? ($lmUnitData[1][$sesiWigs->last()->id]['kumulatifReal'] ?? 0) : 0;
+                    $finalUidReal = $isPercent ? (count($sesiWigs) > 0 ? $totalUidReal / count($sesiWigs) : 0) : $totalUidReal;
                     $uidCapaianBulan = $calcCapaian($uidTargetBulan, $finalUidReal, $lm->polaritas ?? 'positif');
                 @endphp
                 <td align="right" style="font-weight: bold;">{{ number_format($finalUidReal, 2) }}</td>
@@ -197,11 +340,6 @@
                 @php
                     $up3TargetBulan = $matrixTargetBulanan[$lm->id][$up3->id] ?? 0;
                     $up3DefisitLalu = $matrixDefisitBulanLalu[$lm->id][$up3->id] ?? 0;
-                    $runningUp3CO = 0;
-                    $prevUp3TPlusCO = 0;
-                    $kumulatifUp3Real = 0;
-                    $totalUp3Real = 0;
-                    $countUp3MingguReal = 0;
                 @endphp
                 <tr bgcolor="#f8fafc">
                     <td align="left">{{ $lm->wig->judul ?? '-' }}</td>
@@ -213,31 +351,11 @@
                     <td align="right" style="font-weight: bold;">{{ number_format($up3DefisitLalu, 2) }}</td>
                     @foreach($sesiWigs as $swIdx => $sw)
                         @php
-                            $t = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
-                            $r = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
+                            $t = $lmUnitData[$up3->id][$sw->id]['target'] ?? 0;
+                            $tPlusCO = $lmUnitData[$up3->id][$sw->id]['targetPlusCO'] ?? 0;
+                            $coThisWeek = $lmUnitData[$up3->id][$sw->id]['carryOver'] ?? 0;
+                            $r = $lmUnitData[$up3->id][$sw->id]['realisasi'] ?? 0;
                             $k = $matrixKomitmen[$lm->id][$up3->id][$sw->id]['komitmen'] ?? null;
-                            
-                            if (!$isEligibleCarryOver) {
-                                $tPlusCO = $t;
-                                $coThisWeek = 0;
-                            } else {
-                                if ($swIdx === 0) {
-                                    $tPlusCO = $t + $up3DefisitLalu;
-                                } else {
-                                    if ($up3TargetBulan > 0 && $kumulatifUp3Real >= $up3TargetBulan) {
-                                        $floorT = $t > 0 ? max(1, ceil($t * 0.10)) : 0;
-                                        $tPlusCO = $floorT;
-                                    } else {
-                                        $tPlusCO = max($t, $t + $runningUp3CO);
-                                    }
-                                }
-                                $coThisWeek = $tPlusCO - $r;
-                            }
-                            $prevUp3TPlusCO = $tPlusCO;
-                            $runningUp3CO = $coThisWeek;
-                            $kumulatifUp3Real += $r;
-                            $totalUp3Real += $r;
-                            if ($r > 0) $countUp3MingguReal++;
                             $pct = $calcCapaian($tPlusCO, $r, $lm->polaritas ?? 'positif');
                         @endphp
                         <td align="right">{{ number_format($t, 2) }}</td>
@@ -245,10 +363,11 @@
                         <td align="right">{{ $k !== null ? number_format((float)$k, 2) : '-' }}</td>
                         <td align="right">{{ number_format($r, 2) }}</td>
                         <td align="center" style="color: {{ $pct !== null ? ($pct >= 100 ? '#15803d' : '#b91c1c') : '#64748b' }}; font-weight: bold;">{{ $pct !== null ? number_format($pct, 2) . '%' : '-' }}</td>
-                        <td align="center" style="color: {{ $runningUp3CO < 0 ? '#15803d' : ($runningUp3CO > 0 ? '#4338ca' : '#64748b') }}; font-weight: bold;">{{ number_format($runningUp3CO, 2) }}</td>
+                        <td align="center" style="color: {{ $coThisWeek < 0 ? '#15803d' : ($coThisWeek > 0 ? '#4338ca' : '#64748b') }}; font-weight: bold;">{{ number_format($coThisWeek, 2) }}</td>
                     @endforeach
                     @php
-                        $finalUp3Real = $isPercent ? ($countUp3MingguReal > 0 ? $totalUp3Real / $countUp3MingguReal : 0) : $totalUp3Real;
+                        $totalUp3Real = $sesiWigs->isNotEmpty() ? ($lmUnitData[$up3->id][$sesiWigs->last()->id]['kumulatifReal'] ?? 0) : 0;
+                        $finalUp3Real = $isPercent ? (count($sesiWigs) > 0 ? $totalUp3Real / count($sesiWigs) : 0) : $totalUp3Real;
                         $up3CapaianBulan = $calcCapaian($up3TargetBulan, $finalUp3Real, $lm->polaritas ?? 'positif');
                     @endphp
                     <td align="right" style="font-weight: bold;">{{ number_format($finalUp3Real, 2) }}</td>
@@ -263,11 +382,6 @@
                     @php
                         $ulpTargetBulan = $matrixTargetBulanan[$lm->id][$ulp->id] ?? 0;
                         $ulpDefisitLalu = $matrixDefisitBulanLalu[$lm->id][$ulp->id] ?? 0;
-                        $runningUlpCO = 0;
-                        $prevUlpTPlusCO = 0;
-                        $kumulatifUlpReal = 0;
-                        $totalUlpReal = 0;
-                        $countUlpMingguReal = 0;
                     @endphp
                     <tr bgcolor="#ffffff">
                         <td align="left" style="color: #64748b;">{{ $lm->wig->judul ?? '-' }}</td>
@@ -279,31 +393,11 @@
                         <td align="right" style="color: #334155;">{{ number_format($ulpDefisitLalu, 2) }}</td>
                         @foreach($sesiWigs as $swIdx => $sw)
                             @php
-                                $t = $matrixTargets[$lm->id][$ulp->id][$sw->id] ?? 0;
-                                $r = $matrixRealisasi[$lm->id][$ulp->id][$sw->id] ?? 0;
+                                $t = $lmUnitData[$ulp->id][$sw->id]['target'] ?? 0;
+                                $tPlusCO = $lmUnitData[$ulp->id][$sw->id]['targetPlusCO'] ?? 0;
+                                $coThisWeek = $lmUnitData[$ulp->id][$sw->id]['carryOver'] ?? 0;
+                                $r = $lmUnitData[$ulp->id][$sw->id]['realisasi'] ?? 0;
                                 $k = $matrixKomitmen[$lm->id][$ulp->id][$sw->id]['komitmen'] ?? null;
-                                
-                                if (!$isEligibleCarryOver) {
-                                    $tPlusCO = $t;
-                                    $coThisWeek = 0;
-                                } else {
-                                    if ($swIdx === 0) {
-                                        $tPlusCO = $t + $ulpDefisitLalu;
-                                    } else {
-                                        if ($ulpTargetBulan > 0 && $kumulatifUlpReal >= $ulpTargetBulan) {
-                                            $floorT = $t > 0 ? max(1, ceil($t * 0.10)) : 0;
-                                            $tPlusCO = $floorT;
-                                        } else {
-                                            $tPlusCO = max($t, $t + $runningUlpCO);
-                                        }
-                                    }
-                                    $coThisWeek = $tPlusCO - $r;
-                                }
-                                $prevUlpTPlusCO = $tPlusCO;
-                                $runningUlpCO = $coThisWeek;
-                                $kumulatifUlpReal += $r;
-                                $totalUlpReal += $r;
-                                if ($r > 0) $countUlpMingguReal++;
                                 $pct = $calcCapaian($tPlusCO, $r, $lm->polaritas ?? 'positif');
                             @endphp
                             <td align="right">{{ number_format($t, 2) }}</td>
@@ -311,10 +405,11 @@
                             <td align="right">{{ $k !== null ? number_format((float)$k, 2) : '-' }}</td>
                             <td align="right">{{ number_format($r, 2) }}</td>
                             <td align="center" style="color: {{ $pct !== null ? ($pct >= 100 ? '#15803d' : '#b91c1c') : '#64748b' }};">{{ $pct !== null ? number_format($pct, 2) . '%' : '-' }}</td>
-                            <td align="center" style="color: {{ $runningUlpCO < 0 ? '#15803d' : ($runningUlpCO > 0 ? '#4338ca' : '#64748b') }};">{{ number_format($runningUlpCO, 2) }}</td>
+                            <td align="center" style="color: {{ $coThisWeek < 0 ? '#15803d' : ($coThisWeek > 0 ? '#4338ca' : '#64748b') }};">{{ number_format($coThisWeek, 2) }}</td>
                         @endforeach
                         @php
-                            $finalUlpReal = $isPercent ? ($countUlpMingguReal > 0 ? $totalUlpReal / $countUlpMingguReal : 0) : $totalUlpReal;
+                            $totalUlpReal = $sesiWigs->isNotEmpty() ? ($lmUnitData[$ulp->id][$sesiWigs->last()->id]['kumulatifReal'] ?? 0) : 0;
+                            $finalUlpReal = $isPercent ? (count($sesiWigs) > 0 ? $totalUlpReal / count($sesiWigs) : 0) : $totalUlpReal;
                             $ulpCapaianBulan = $calcCapaian($ulpTargetBulan, $finalUlpReal, $lm->polaritas ?? 'positif');
                         @endphp
                         <td align="right">{{ number_format($finalUlpReal, 2) }}</td>

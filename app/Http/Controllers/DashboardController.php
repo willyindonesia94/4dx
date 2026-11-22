@@ -936,18 +936,14 @@ class DashboardController extends Controller
                 $ulpsOfUp3 = $allUlps->where('parent_id', $up3->id);
                 if ($ulpsOfUp3->isNotEmpty()) {
                     $sumTCur = 0; $cntTCur = 0;
-                    $sumTPrev = 0; $sumRPrev = 0; $cntTPrev = 0; $cntRPrev = 0;
+                    $sumDefUlp = 0;
                     foreach ($ulpsOfUp3 as $u) {
                         $tCur = $matrixTargetBulanan[$lm->id][$u->id] ?? 0;
                         if ($tCur > 0) { $sumTCur += $tCur; $cntTCur++; }
-                        $tP = $prevTargetUlp[$u->id] ?? 0;
-                        $rP = $prevRealUlp[$u->id] ?? 0;
-                        if ($tP > 0) { $sumTPrev += $tP; $cntTPrev++; }
-                        if ($rP > 0) { $sumRPrev += $rP; $cntRPrev++; }
+                        $sumDefUlp += $matrixDefisitBulanLalu[$lm->id][$u->id] ?? 0;
                     }
-                    $matrixTargetBulanan[$lm->id][$up3->id] = $isNonSummable ? ($cntTCur > 0 ? $sumTCur / $cntTCur : 0) : $sumTCur;
-                    $tPrev = $isNonSummable ? ($cntTPrev > 0 ? $sumTPrev / $cntTPrev : 0) : $sumTPrev;
-                    $rPrev = $isNonSummable ? ($cntRPrev > 0 ? $sumRPrev / $cntRPrev : 0) : $sumRPrev;
+                    $matrixTargetBulanan[$lm->id][$up3->id] = $isNonSummable ? ($cntTCur > 0 ? $sumTCur / $cntTCur : 0) : round($sumTCur, 2);
+                    $matrixDefisitBulanLalu[$lm->id][$up3->id] = ($isEligibleCarryOver && ($matrixTargetBulanan[$lm->id][$up3->id] ?? 0) > 0) ? ($isNonSummable ? ($cntTCur > 0 ? $sumDefUlp / $cntTCur : 0) : round($sumDefUlp, 2)) : 0;
                 } else {
                     if (isset($curMonthlyBdMap[$lm->id][$up3->id]) && $curMonthlyBdMap[$lm->id][$up3->id] > 0) {
                         $matrixTargetBulanan[$lm->id][$up3->id] = $curMonthlyBdMap[$lm->id][$up3->id];
@@ -971,8 +967,8 @@ class DashboardController extends Controller
                         }
                     }
                     $rPrev = $isNonSummable ? ($prevRealMap[$lm->id][$up3->id]['avg'] ?? 0) : ($prevRealMap[$lm->id][$up3->id]['sum'] ?? 0);
+                    $matrixDefisitBulanLalu[$lm->id][$up3->id] = ($isEligibleCarryOver && ($matrixTargetBulanan[$lm->id][$up3->id] ?? 0) > 0) ? max(0, round($tPrev - $rPrev, 2)) : 0;
                 }
-                $matrixDefisitBulanLalu[$lm->id][$up3->id] = $isEligibleCarryOver ? max(0, $tPrev - $rPrev) : 0;
             }
 
             // C. Target Bulanan & Carry Over Bulan Lalu untuk UID (unit 1)
@@ -988,7 +984,7 @@ class DashboardController extends Controller
                     $tVal = $matrixTargetBulanan[$lm->id][$up3->id] ?? 0;
                     if ($tVal > 0) { $sumTUid += $tVal; $cntTUid++; }
                 }
-                $matrixTargetBulanan[$lm->id][1] = $isNonSummable ? ($cntTUid > 0 ? $sumTUid / $cntTUid : 0) : $sumTUid;
+                $matrixTargetBulanan[$lm->id][1] = $isNonSummable ? ($cntTUid > 0 ? $sumTUid / $cntTUid : 0) : round($sumTUid, 2);
             }
 
             $sumDefUid = 0; $cntDefUid = 0;
@@ -997,7 +993,7 @@ class DashboardController extends Controller
                 $sumDefUid += $def;
                 $cntDefUid++;
             }
-            $matrixDefisitBulanLalu[$lm->id][1] = $isEligibleCarryOver ? ($isNonSummable ? ($cntDefUid > 0 ? $sumDefUid / $cntDefUid : 0) : $sumDefUid) : 0;
+            $matrixDefisitBulanLalu[$lm->id][1] = ($isEligibleCarryOver && ($matrixTargetBulanan[$lm->id][1] ?? 0) > 0) ? ($isNonSummable ? ($cntDefUid > 0 ? $sumDefUid / $cntDefUid : 0) : round($sumDefUid, 2)) : 0;
         }
 
         $targetQuery = DB::table('breakdown_lms')
