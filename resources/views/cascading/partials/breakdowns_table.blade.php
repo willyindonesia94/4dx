@@ -33,12 +33,17 @@
 
             $formatLmValue = function($value, $satuan) {
                 if ($value === null || $value === '') return '-';
-                if (trim($satuan) === '%') {
-                    $formatted = number_format((float)$value, 2, ",", ".");
+                $val = round((float)$value, 2);
+                $satuanName = trim($satuan ?? '');
+                if ($satuanName === '%') {
+                    $formatted = number_format($val, 2, ",", ".");
                     $formatted = rtrim(rtrim($formatted, '0'), ',');
                     return $formatted . ' %';
                 }
-                return number_format((float)$value, 2, ",", ".") . ' ' . $satuan;
+                $formatted = number_format($val, 2, ",", ".");
+                $formatted = rtrim(rtrim($formatted, '0'), ',');
+                if ($formatted === '') $formatted = '0';
+                return $formatted . ($satuanName ? ' ' . $satuanName : '');
             };
         @endphp
         @foreach($groupedBreakdowns as $month => $items)

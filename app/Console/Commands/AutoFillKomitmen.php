@@ -56,6 +56,9 @@ class AutoFillKomitmen extends Command
         $breakdowns = BreakdownLm::where('periode_start', '<=', $targetStart)
             ->where('periode_end', '>=', $targetStart)
             ->whereRaw('DATEDIFF(periode_end, periode_start) <= 7')
+            ->whereHas('masterLm', function($q) use ($sesi) {
+                $q->activeInMonth((int)$sesi->bulan);
+            })
             ->get();
 
         $count = 0;

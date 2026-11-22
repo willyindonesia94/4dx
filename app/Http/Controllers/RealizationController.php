@@ -31,8 +31,8 @@ class RealizationController extends Controller
         $skipMatrixFilter = $user && $user->hasAnyRole(['Super Admin', 'Perencanaan UID', 'SRM Perencanaan UID', 'Asman Perencanaan UP3', 'Manager UP3', 'Manager ULP', 'General Manager UID']);
 
         // Base Query for WIGs to display (only approved WIGs and LMs)
-        $displayWigsQuery = \App\Models\MasterWig::where('is_approved', true)->with(['masterLms' => function($q) {
-            $q->where('is_approved', true);
+        $displayWigsQuery = \App\Models\MasterWig::where('is_approved', true)->with(['masterLms' => function($q) use ($bulan) {
+            $q->where('is_approved', true)->activeInMonth((int)$bulan);
         }]);
 
         if ($wigId) {
@@ -124,7 +124,9 @@ class RealizationController extends Controller
         });
 
         // Filter dropdown WIG & LM pada Modal Input agar sesuai Matrix Bidang User
-        $wigsQuery = \App\Models\MasterWig::with('masterLms.satuan');
+        $wigsQuery = \App\Models\MasterWig::with(['masterLms' => function($q) use ($bulan) {
+            $q->where('is_approved', true)->activeInMonth((int)$bulan);
+        }, 'masterLms.satuan']);
         if (!$skipMatrixFilter && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
             $wigsQuery->where(function($q) use ($allowedDivisis) {
@@ -262,6 +264,7 @@ class RealizationController extends Controller
             }
 
             $data = $request->except('bukti_file');
+            $data['angka_realisasi'] = round((float)$request->angka_realisasi, 2);
             $data['user_id'] = $user->id;
             $data['unit_id'] = $unitId;
             $data['tanggal_input'] = $request->filled('tanggal_input') 
@@ -322,6 +325,7 @@ class RealizationController extends Controller
         ]);
 
         $data = $request->all();
+        $data['angka_realisasi'] = round((float)$request->angka_realisasi, 2);
         
         if ($request->hasFile('bukti_file')) {
             $data['bukti_file'] = $request->file('bukti_file')->store('bukti_realisasi', 'public');
@@ -407,7 +411,7 @@ class RealizationController extends Controller
             if ($realisasi) {
                 try {
                     $this->checkEditRule($realisasi);
-                    $realisasi->update(['angka_realisasi' => $request->angka_realisasi]);
+                    $realisasi->update(['angka_realisasi' => round((float)$request->angka_realisasi, 2)]);
                     $updatedCount++;
                 } catch (\Exception $e) {
                     continue;
@@ -599,12 +603,13 @@ class RealizationController extends Controller
         $isUP3 = $user->hasRole('Asman Perencanaan UP3') || $user->hasRole('Asman Bidang UP3');
 
         $k3lWigs = \App\Models\MasterWig::where('divisi', 'LIKE', '%K3L%')->pluck('id');
+        $bulan = (int)request('bulan', date('n'));
 
         if ($isK3L) {
-            $lmsQuery = \App\Models\MasterLm::with('wig')->whereIn('wig_id', $k3lWigs);
+            $lmsQuery = \App\Models\MasterLm::with('wig')->activeInMonth($bulan)->whereIn('wig_id', $k3lWigs);
             $ulpsQuery = \App\Models\MasterUnit::whereIn('type', ['ULP', 'UP2D']);
         } else {
-            $lmsQuery = \App\Models\MasterLm::with('wig')->whereNotIn('wig_id', $k3lWigs);
+            $lmsQuery = \App\Models\MasterLm::with('wig')->activeInMonth($bulan)->whereNotIn('wig_id', $k3lWigs);
             
             if ($isUP3 && $user->unit_id) {
                 // Get UP2D and ULPs specifically under this UP3
@@ -755,12 +760,13 @@ class RealizationController extends Controller
         $isUP3 = $user->hasRole('Asman Perencanaan UP3') || $user->hasRole('Asman Bidang UP3');
 
         $k3lWigs = \App\Models\MasterWig::where('divisi', 'LIKE', '%K3L%')->pluck('id');
+        $bulan = (int)request('bulan', date('n'));
 
         if ($isK3L) {
-            $lmsQuery = \App\Models\MasterLm::with('wig')->whereIn('wig_id', $k3lWigs);
+            $lmsQuery = \App\Models\MasterLm::with('wig')->activeInMonth($bulan)->whereIn('wig_id', $k3lWigs);
             $ulpsQuery = \App\Models\MasterUnit::whereIn('type', ['ULP', 'UP2D']);
         } else {
-            $lmsQuery = \App\Models\MasterLm::with('wig')->whereNotIn('wig_id', $k3lWigs);
+            $lmsQuery = \App\Models\MasterLm::with('wig')->activeInMonth($bulan)->whereNotIn('wig_id', $k3lWigs);
             
             if ($isUP3 && $user->unit_id) {
                 // Get UP2D and ULPs specifically under this UP3

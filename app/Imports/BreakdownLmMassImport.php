@@ -224,6 +224,8 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
                         // maka kalikan 100 agar menjadi skala persentase 0 - 100.
                         if ((int)$lm->satuan_id === 1 && $angka > 0 && $angka <= 1.0) {
                             $angka = round($angka * 100, 2);
+                        } else {
+                            $angka = round((float)$angka, 2);
                         }
 
                         BreakdownLm::updateOrCreate(
@@ -292,7 +294,7 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
                 $uidUnit = \App\Models\MasterUnit::where('type', 'UID')->first();
 
                 foreach ($up3Accumulations as $data) {
-                    $finalTarget = $data['angka_target'];
+                    $finalTarget = round((float)$data['angka_target'], 2);
                     if (in_array((int)$data['satuan_id'], [1, 2, 14]) && $data['count'] > 0) {
                         $finalTarget = round($finalTarget / $data['count'], 2);
                     }
@@ -331,7 +333,7 @@ class BreakdownLmMassImport implements ToCollection, WithCalculatedFormulas
 
                 if ($uidUnit) {
                     foreach ($uidAccumulations as $uidData) {
-                        $finalUidTarget = $uidData['angka_target'];
+                        $finalUidTarget = round((float)$uidData['angka_target'], 2);
                         if (in_array((int)$uidData['satuan_id'], [1, 2, 14]) && $uidData['count'] > 0) {
                             $finalUidTarget = round($finalUidTarget / $uidData['count'], 2);
                         }

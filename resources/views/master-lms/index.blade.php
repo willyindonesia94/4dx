@@ -1,4 +1,11 @@
 <x-app-layout>
+@php
+    $namaBulan = [
+        1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+        5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+        9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+    ];
+@endphp
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Master Lead Measure (LM)') }}
@@ -13,15 +20,32 @@
                   showDeleteModal: false,
                   deleteItemId: null,
                   deleteItemTitle: '',
-                  editData: { id: '', wig_id: '', judul_lm: '', satuan_id: '', polaritas: 'positif' },
+                  editData: { id: '', wig_id: '', judul_lm: '', satuan_id: '', polaritas: 'positif', bulan_mulai: 1, is_active: 1, bulan_nonaktif: {{ date('n') }} },
+                  showToggleModal: false,
+                  toggleLmId: null,
+                  toggleLmTitle: '',
+                  toggleTargetActive: true,
+                  toggleBulan: {{ date('n') }},
                   openEdit(lm) {
-                    this.editData = { ...lm };
+                    this.editData = { 
+                        ...lm,
+                        bulan_mulai: lm.bulan_mulai || 1,
+                        is_active: lm.is_active !== undefined ? (lm.is_active ? 1 : 0) : 1,
+                        bulan_nonaktif: lm.bulan_nonaktif || {{ date('n') }}
+                    };
                     this.editModal = true;
                   },
                   openDeleteConfirm(id, title) {
                     this.deleteItemId = id;
                     this.deleteItemTitle = title;
                     this.showDeleteModal = true;
+                  },
+                  openToggleConfirm(lm, targetState) {
+                    this.toggleLmId = lm.id;
+                    this.toggleLmTitle = lm.judul_lm;
+                    this.toggleTargetActive = targetState;
+                    this.toggleBulan = targetState ? (lm.bulan_mulai || 1) : (lm.bulan_nonaktif || {{ date('n') }});
+                    this.showToggleModal = true;
                   }
             }"
             @open-edit.window="openEdit($event.detail)">
@@ -127,10 +151,11 @@
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead class="bg-slate-50/50">
                                         <tr>
-                                              <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-1/2">Judul LM</th>
-                                              <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Satuan</th>
-                                              <th class="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Polaritas</th>
-                                              <th class="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                                              <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-2/5">Judul LM</th>
+                                              <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Satuan</th>
+                                              <th class="px-3 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Polaritas</th>
+                                              <th class="px-3 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Mulai Muncul</th>
+                                              <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Status & Keaktifan</th>
                                             <th class="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Aksi</th>
                                         </tr>
                                     </thead>
@@ -146,26 +171,46 @@
                                                     <span>{{ $lm->judul_lm }}</span>
                                                 </div>
                                             </td>
-                                              <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                                              <td class="px-4 py-4 whitespace-nowrap text-sm text-slate-600">
                                                   <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
                                                       {{ $lm->satuan->name ?? '-' }}
                                                   </span>
                                               </td>
-                                              <td class="px-6 py-4 whitespace-nowrap text-center">
+                                              <td class="px-3 py-4 whitespace-nowrap text-center">
                                                   <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ ($lm->polaritas ?? 'positif') == 'positif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                                       {{ ucfirst($lm->polaritas ?? 'positif') }}
                                                   </span>
                                               </td>
-                                              <td class="px-6 py-4 whitespace-nowrap text-center">
+                                              <td class="px-3 py-4 whitespace-nowrap text-center text-xs">
+                                                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                      Bulan {{ $namaBulan[$lm->bulan_mulai ?? 1] ?? 'Januari' }}
+                                                  </span>
+                                              </td>
+                                              <td class="px-4 py-4 whitespace-nowrap text-center">
                                                 @if($lm->is_delete_pending)
                                                     <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
                                                         <svg class="w-3 h-3 mr-1 text-red-500 animate-pulse" fill="currentColor" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3"/></svg>
-                                                        Menunggu Persetujuan Hapus
+                                                        Menunggu Hapus
                                                     </span>
-                                                @elseif($lm->is_approved)
-                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Aktif</span>
-                                                @else
+                                                @elseif(!$lm->is_approved)
                                                     <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">Draft</span>
+                                                @else
+                                                    <div class="inline-flex flex-col items-center gap-1.5">
+                                                        <label class="relative inline-flex items-center cursor-pointer" title="{{ $lm->is_active ? 'Klik untuk menonaktifkan' : 'Klik untuk mengaktifkan' }}">
+                                                            <input type="checkbox" class="sr-only peer" {{ $lm->is_active ? 'checked' : '' }}
+                                                                @click.prevent="openToggleConfirm({{ json_encode($lm) }}, {{ $lm->is_active ? 'false' : 'true' }})">
+                                                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                                                        </label>
+                                                        @if($lm->is_active)
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                                Aktif
+                                                            </span>
+                                                        @else
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                                                Nonaktif (Mulai {{ $namaBulan[$lm->bulan_nonaktif ?? 1] ?? 'Nov' }})
+                                                            </span>
+                                                        @endif
+                                                    </div>
                                                 @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium flex justify-center items-center space-x-2">
@@ -273,6 +318,15 @@
                                               <option value="negatif">Negatif (Makin Kecil Makin Baik)</option>
                                           </select>
                                       </div>
+                                      <div>
+                                          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Muncul Mulai Bulan</label>
+                                          <select name="bulan_mulai" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700" required>
+                                              @foreach($namaBulan as $num => $nama)
+                                                  <option value="{{ $num }}" {{ (date('n') == $num) ? 'selected' : '' }}>{{ $nama }}</option>
+                                              @endforeach
+                                          </select>
+                                          <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">LM baru akan muncul di Sesi WIG, Cascading, dan Realisasi mulai dari bulan yang dipilih dan seterusnya (bulan sebelumnya tidak muncul).</p>
+                                      </div>
                                 </div>
                             </div>
                             <div class="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 rounded-b-lg flex-shrink-0">
@@ -338,6 +392,31 @@
                                               <option value="negatif">Negatif (Makin Kecil Makin Baik)</option>
                                           </select>
                                       </div>
+                                      <div>
+                                          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Muncul Mulai Bulan</label>
+                                          <select name="bulan_mulai" x-model="editData.bulan_mulai" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700" required>
+                                              @foreach($namaBulan as $num => $nama)
+                                                  <option value="{{ $num }}">{{ $nama }}</option>
+                                              @endforeach
+                                          </select>
+                                          <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">LM muncul di Sesi WIG, Cascading, dan Realisasi mulai bulan yang dipilih dan seterusnya (bulan sebelumnya tidak muncul).</p>
+                                      </div>
+                                      <div>
+                                          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Status Keaktifan</label>
+                                          <select name="is_active" x-model="editData.is_active" class="block w-full py-2.5 px-4 rounded-md border-slate-200 bg-slate-50/50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-sm text-sm text-slate-700">
+                                              <option :value="1">Aktif</option>
+                                              <option :value="0">Nonaktif</option>
+                                          </select>
+                                      </div>
+                                      <div x-show="editData.is_active == 0" x-cloak>
+                                          <label class="block text-xs font-semibold text-rose-700 uppercase tracking-wider mb-1">Nonaktif Mulai Bulan</label>
+                                          <select name="bulan_nonaktif" x-model="editData.bulan_nonaktif" class="block w-full py-2.5 px-4 rounded-md border-rose-200 bg-rose-50/50 focus:bg-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all duration-200 shadow-sm text-sm text-slate-700">
+                                              @foreach($namaBulan as $num => $nama)
+                                                  <option value="{{ $num }}">{{ $nama }}</option>
+                                              @endforeach
+                                          </select>
+                                          <p class="text-[11px] text-rose-600 mt-1 leading-relaxed">Bulan yang dipilih dan seterusnya tidak akan muncul di Sesi WIG, Cascading, dan Realisasi LM (bulan sebelumnya tetap muncul).</p>
+                                      </div>
                                 </div>
                             </div>
                             <div class="bg-slate-50/80 px-6 py-4 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 rounded-b-lg flex-shrink-0">
@@ -346,6 +425,78 @@
                                 </button>
                                 <button type="submit" class="w-full sm:w-auto inline-flex justify-center items-center rounded-md border border-transparent px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-sm font-semibold text-white shadow-lg shadow-indigo-200 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:-translate-y-0.5">
                                     Simpan Perubahan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toggle Active/Inactive Confirmation Modal -->
+            <div x-show="showToggleModal" class="fixed inset-0 z-[110] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" style="display: none;">
+                <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="showToggleModal = false"></div>
+                    <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+                    
+                    <div class="relative z-10 inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-slate-100">
+                        <form :action="'{{ url('master-lms') }}/' + toggleLmId + '/toggle-active'" method="POST">
+                            @csrf
+                            <input type="hidden" name="is_active" :value="toggleTargetActive ? '1' : '0'">
+                            
+                            <div :class="toggleTargetActive ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'" class="p-6 border-b">
+                                <div class="flex items-center gap-3">
+                                    <div :class="toggleTargetActive ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'" class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-base font-bold text-slate-900" x-text="toggleTargetActive ? 'Aktifkan Kembali Lead Measure' : 'Nonaktifkan Lead Measure'"></h3>
+                                        <p class="text-xs text-slate-600 mt-0.5" x-text="toggleTargetActive ? 'Atur bulan mulai aktif kembali' : 'Atur waktu mulai dinonaktifkan'"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="p-6 space-y-4">
+                                <p class="text-sm text-slate-700">
+                                    Lead Measure:
+                                    <strong class="text-slate-900 font-bold block mt-1 p-2 bg-slate-50 border rounded text-xs" x-text="toggleLmTitle"></strong>
+                                </p>
+
+                                <!-- Saat Menonaktifkan -->
+                                <template x-if="!toggleTargetActive">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Nonaktifkan Mulai Bulan Pilihan:</label>
+                                        <select name="bulan_nonaktif" x-model="toggleBulan" class="block w-full py-2 px-3 rounded-md border-slate-300 text-sm focus:ring-amber-500 focus:border-amber-500 shadow-sm" required>
+                                            @foreach($namaBulan as $num => $nama)
+                                                <option value="{{ $num }}">{{ $nama }}</option>
+                                            @endforeach
+                                        </select>
+                                        <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2.5 mt-2.5 leading-relaxed">
+                                            <strong>Keterangan:</strong> LM ini tidak akan muncul di <strong>Sesi WIG</strong>, <strong>Cascading</strong>, dan <strong>Realisasi LM</strong> mulai bulan yang dipilih dan seterusnya. Periode bulan sebelumnya tetap muncul.
+                                        </p>
+                                    </div>
+                                </template>
+
+                                <!-- Saat Mengaktifkan Kembali -->
+                                <template x-if="toggleTargetActive">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1">Aktif Mulai Bulan Pilihan:</label>
+                                        <select name="bulan_mulai" x-model="toggleBulan" class="block w-full py-2 px-3 rounded-md border-slate-300 text-sm focus:ring-emerald-500 focus:border-emerald-500 shadow-sm" required>
+                                            @foreach($namaBulan as $num => $nama)
+                                                <option value="{{ $num }}">{{ $nama }}</option>
+                                            @endforeach
+                                        </select>
+                                        <p class="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded p-2.5 mt-2.5 leading-relaxed">
+                                            <strong>Keterangan:</strong> LM ini akan kembali muncul di Sesi WIG, Cascading, dan Realisasi LM mulai bulan yang dipilih dan seterusnya.
+                                        </p>
+                                    </div>
+                                </template>
+                            </div>
+                            
+                            <div class="bg-slate-50 px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row sm:justify-end gap-2">
+                                <button @click="showToggleModal = false" type="button" class="px-4 py-2 border border-slate-200 rounded-md text-slate-700 font-semibold hover:bg-slate-100 text-xs">
+                                    Batal
+                                </button>
+                                <button type="submit" :class="toggleTargetActive ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'" class="w-full sm:w-auto px-5 py-2 text-white font-bold rounded-md text-xs shadow-sm transition-colors" x-text="toggleTargetActive ? 'Simpan & Aktifkan' : 'Simpan & Nonaktifkan'">
                                 </button>
                             </div>
                         </form>

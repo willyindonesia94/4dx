@@ -40,6 +40,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('master-wigs', \App\Http\Controllers\MasterWigController::class)->except(['show']);
     
     Route::post('/master-lms/{id}/approve', [\App\Http\Controllers\LeadMeasureController::class, 'approve'])->name('master-lms.approve');
+    Route::post('/master-lms/{id}/toggle-active', [\App\Http\Controllers\LeadMeasureController::class, 'toggleActive'])->name('master-lms.toggle-active');
     Route::post('/master-lms/{id}/request-delete', [\App\Http\Controllers\LeadMeasureController::class, 'requestDelete'])->name('master-lms.request-delete');
     Route::post('/master-lms/{id}/cancel-delete', [\App\Http\Controllers\LeadMeasureController::class, 'cancelDelete'])->name('master-lms.cancel-delete');
     Route::resource('master-lms', \App\Http\Controllers\LeadMeasureController::class)->except(['show']);

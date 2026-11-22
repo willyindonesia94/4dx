@@ -104,6 +104,8 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                 // Normalisasi desimal persen Excel jika satuan LM adalah %
                 if ((int)$lm->satuan_id === 1 && $angkaRealisasi > 0 && $angkaRealisasi <= 1.0) {
                     $angkaRealisasi = round($angkaRealisasi * 100, 2);
+                } else {
+                    $angkaRealisasi = round($angkaRealisasi, 2);
                 }
                 
                 // Format bukti dan keterangan
@@ -115,7 +117,7 @@ class RealisasiLmMassImport implements ToCollection, WithHeadingRow
                     $days = $this->tanggalMulai->diffInDays($this->tanggalSelesai) + 1;
                     if ($days <= 0) $days = 1;
 
-                    $angkaPerHari = $angkaRealisasi / $days;
+                    $angkaPerHari = round($angkaRealisasi / $days, 2);
 
                     for ($i = 0; $i < $days; $i++) {
                         $currentDate = $this->tanggalMulai->copy()->addDays($i)->format('Y-m-d');

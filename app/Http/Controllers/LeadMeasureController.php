@@ -61,16 +61,29 @@ class LeadMeasureController extends Controller
         $request->validate([
             'wig_id' => 'required|exists:master_wigs,id',
             'judul_lm' => 'required|string|max:255',
-            'periode_start' => 'required|date',
-            'periode_end' => 'required|date|after_or_equal:periode_start',
+            'periode_start' => 'nullable|date',
+            'periode_end' => 'nullable|date',
             'satuan_id' => 'required|exists:master_satuans,id',
             'polaritas' => 'required|in:positif,negatif',
+            'bulan_mulai' => 'nullable|integer|min:1|max:12',
+            'is_active' => 'nullable',
+            'bulan_nonaktif' => 'nullable|integer|min:1|max:12',
         ]);
 
         $data = $request->all();
         
         $wig = MasterWig::with('unitPemilik')->findOrFail($data['wig_id']);
         $data['tujuan_unit_role'] = $wig->unitPemilik ? $wig->unitPemilik->name : '';
+
+        $tahun = (int) date('Y');
+        $bulanMulai = $request->filled('bulan_mulai') ? (int)$request->bulan_mulai : 1;
+        $data['bulan_mulai'] = $bulanMulai;
+        $data['periode_start'] = $request->input('periode_start') ?: sprintf('%04d-%02d-01', $tahun, $bulanMulai);
+        $data['periode_end'] = $request->input('periode_end') ?: sprintf('%04d-12-31', $tahun);
+
+        $isActive = $request->has('is_active') ? filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN) : true;
+        $data['is_active'] = $isActive;
+        $data['bulan_nonaktif'] = !$isActive ? ($request->filled('bulan_nonaktif') ? (int)$request->bulan_nonaktif : (int)date('n')) : null;
 
         $data['is_approved'] = true; // Langsung aktif tanpa persetujuan
         $data['is_delete_pending'] = false;
@@ -92,10 +105,13 @@ class LeadMeasureController extends Controller
         $request->validate([
             'wig_id' => 'required|exists:master_wigs,id',
             'judul_lm' => 'required|string|max:255',
-            'periode_start' => 'required|date',
-            'periode_end' => 'required|date|after_or_equal:periode_start',
+            'periode_start' => 'nullable|date',
+            'periode_end' => 'nullable|date',
             'satuan_id' => 'required|exists:master_satuans,id',
             'polaritas' => 'required|in:positif,negatif',
+            'bulan_mulai' => 'nullable|integer|min:1|max:12',
+            'is_active' => 'nullable',
+            'bulan_nonaktif' => 'nullable|integer|min:1|max:12',
         ]);
 
         $data = $request->all();
@@ -103,12 +119,53 @@ class LeadMeasureController extends Controller
         $wig = MasterWig::with('unitPemilik')->findOrFail($data['wig_id']);
         $data['tujuan_unit_role'] = $wig->unitPemilik ? $wig->unitPemilik->name : '';
 
+        $tahun = (int) date('Y');
+        $bulanMulai = $request->filled('bulan_mulai') ? (int)$request->bulan_mulai : ($masterLm->bulan_mulai ?? 1);
+        $data['bulan_mulai'] = $bulanMulai;
+        $data['periode_start'] = $request->input('periode_start') ?: sprintf('%04d-%02d-01', $tahun, $bulanMulai);
+        $data['periode_end'] = $request->input('periode_end') ?: sprintf('%04d-12-31', $tahun);
+
+        $isActive = $request->has('is_active') ? filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN) : (bool)$masterLm->is_active;
+        $data['is_active'] = $isActive;
+        $data['bulan_nonaktif'] = !$isActive ? ($request->filled('bulan_nonaktif') ? (int)$request->bulan_nonaktif : ($masterLm->bulan_nonaktif ?? (int)date('n'))) : null;
+
         $data['angka_target'] = $data['angka_target'] ?? 0;
         $data['is_approved'] = true; // Langsung aktif tanpa persetujuan
         
         $masterLm->update($data);
 
         return redirect()->route('master-lms.index')->with('success', 'Lead Measure berhasil diperbarui langsung tanpa persetujuan.');
+    }
+
+    public function toggleActive(Request $request, $id)
+    {
+        $lm = MasterLm::findOrFail($id);
+
+        $isActive = filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN);
+        $bulanNonaktif = $request->filled('bulan_nonaktif') ? (int)$request->input('bulan_nonaktif') : null;
+        $bulanMulai = $request->filled('bulan_mulai') ? (int)$request->input('bulan_mulai') : ($lm->bulan_mulai ?? 1);
+
+        if (!$isActive && !$bulanNonaktif) {
+            $bulanNonaktif = (int)date('n');
+        }
+
+        $lm->update([
+            'is_active' => $isActive,
+            'bulan_nonaktif' => !$isActive ? $bulanNonaktif : null,
+            'bulan_mulai' => $bulanMulai,
+        ]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'is_active' => $lm->is_active,
+                'bulan_mulai' => $lm->bulan_mulai,
+                'bulan_nonaktif' => $lm->bulan_nonaktif,
+                'message' => 'Status aktif Lead Measure berhasil diperbarui.'
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Status aktif Lead Measure berhasil diperbarui.');
     }
 
     public function requestDelete(Request $request, $id)

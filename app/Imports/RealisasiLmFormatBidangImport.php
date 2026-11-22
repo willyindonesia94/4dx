@@ -163,7 +163,9 @@ class RealisasiLmFormatBidangImport implements ToCollection
                 // Jika satuan sudah % dan nilainya <= 10 (biasanya 0.xx), kemungkinan sudah dalam desimal
                 $satuan = strtolower(trim($lm->satuan ?? ''));
                 if (($satuan === '%' || $satuan === 'persen' || $satuan === 'prosentase') && $angka > 0 && $angka <= 10) {
-                    $angka = $angka * 100;
+                    $angka = round($angka * 100, 2);
+                } else {
+                    $angka = round($angka, 2);
                 }
 
                 // Tanggal: Gunakan tanggal awal minggu dari MasterPeriode jika ada

@@ -1581,7 +1581,7 @@ $formatLmValue = function($value, $satuan) {
                                 <div class="md:col-span-2 flex sm:items-center items-start gap-2 mt-1">
                                     <span class="font-semibold text-slate-500 w-[110px] sm:w-32 shrink-0 mt-1 sm:mt-0">Angka Komitmen</span> 
                                     <span class="mt-1 sm:mt-0">:</span>
-                                    <input type="number" step="any" :disabled="params.readonly" x-model="form.komitmen" class="w-32 p-1.5 border border-slate-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white" placeholder="Target Angka">
+                                    <input type="number" step="0.01" :disabled="params.readonly" x-model="form.komitmen" class="w-32 p-1.5 border border-slate-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white" placeholder="Target Angka">
                                 </div>
                             </div>
                         </div>
