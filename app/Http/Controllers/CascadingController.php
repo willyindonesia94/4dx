@@ -86,12 +86,14 @@ class CascadingController extends Controller
         // MSB UID dengan matrix_group_id = 'ALL' juga skip filter (bisa lihat semua LM)
         $skipMatrixFilter = $skipMatrixFilter || ($isMsb && strtoupper($userMatrixGroup) === 'ALL');
         
-        $tahun = request('tahun', date('Y'));
+        $tahun = (int)request('tahun', date('Y'));
+        $bulan = (int)request('bulan', date('n'));
         $up3IdFilter = request('up3_id');
         
         $wigsQuery = MasterWig::where('is_approved', true)
-            ->with(['masterLms' => function($q) use ($tahun, $isUp3, $user, $up3IdFilter) {
+            ->with(['masterLms' => function($q) use ($tahun, $bulan, $isUp3, $user, $up3IdFilter) {
                 $q->where('is_approved', true)
+                  ->activeInMonth($bulan)
                   ->withCount([
                       'breakdowns as uid_breakdowns_count' => function($query) use ($tahun) {
                           $query->where('tahun', $tahun)->whereHas('unit', function($subq) {
@@ -163,12 +165,17 @@ class CascadingController extends Controller
 
         $formatLmValue = function($value, $satuan) {
             if ($value === null || $value === '') return '-';
-            if (trim($satuan) === '%') {
-                $formatted = number_format((float)$value, 2, ",", ".");
+            $val = round((float)$value, 2);
+            $satuanName = trim($satuan ?? '');
+            if ($satuanName === '%') {
+                $formatted = number_format($val, 2, ",", ".");
                 $formatted = rtrim(rtrim($formatted, '0'), ',');
                 return $formatted . ' %';
             }
-            return number_format((float)$value, 2, ",", ".") . ' ' . $satuan;
+            $formatted = number_format($val, 2, ",", ".");
+            $formatted = rtrim(rtrim($formatted, '0'), ',');
+            if ($formatted === '') $formatted = '0';
+            return $formatted . ($satuanName ? ' ' . $satuanName : '');
         };
 
         $wigs->each(function($wig) use ($allMyUp3Targets, $formatLmValue, $isUp3) {
@@ -215,7 +222,7 @@ class CascadingController extends Controller
         return view('cascading.lm', compact(
             'wigs', 'satuans', 'availableUnits', 
             'canBreakdownToUid', 'canBreakdownToUp3', 'canBreakdownToUlp',
-            'isSuperAdmin', 'isUid', 'isUp3', 'user', 'canApproveLm', 'tahun'
+            'isSuperAdmin', 'isUid', 'isUp3', 'user', 'canApproveLm', 'tahun', 'bulan'
         ));
     }
 
@@ -238,6 +245,7 @@ class CascadingController extends Controller
         $canBreakdownToUlp = $isSuperAdmin || $isAsmanPerencanaanUp3;
 
         $tahun = $request->input('tahun', date('Y'));
+        $bulan = $request->input('bulan');
         $up3IdFilter = $request->input('up3_id');
 
         $lm = \App\Models\MasterLm::with('satuan')->findOrFail($lm_id);
@@ -245,6 +253,10 @@ class CascadingController extends Controller
         $query = \App\Models\BreakdownLm::with('unit')
             ->where('lm_id', $lm_id)
             ->where('tahun', $tahun);
+
+        if ($bulan) {
+            $query->where('bulan', $bulan);
+        }
             
         $query->whereHas('unit', function($q) use ($type, $isUp3, $user, $up3IdFilter) {
             if ($type === 'uid') {
@@ -343,6 +355,7 @@ class CascadingController extends Controller
         $weeks = \App\Models\MasterPeriode::getWeekDates($request->tahun, $request->bulan);
 
         $data = $request->except(['_token', 'bulan', 'tahun', 'target_m1', 'target_m2', 'target_m3', 'target_m4', 'target_m5', 'minggu_label']);
+        $data['angka_target'] = round((float)$request->angka_target, 2);
         $data['bulan'] = $request->bulan;
         $data['tahun'] = $request->tahun;
         $data['periode_start'] = $weeks['target_m1']['start'] ?? $carbonStart->format('Y-m-d');
@@ -373,7 +386,7 @@ class CascadingController extends Controller
                     ], [
                         'bidang' => $request->bidang,
                         'satuan_id' => $request->satuan_id,
-                        'angka_target' => $request->input($key),
+                        'angka_target' => round((float)$request->input($key), 2),
                         'bulan' => $request->bulan,
                         'tahun' => $request->tahun,
                         'is_approved' => $is_approved,
@@ -492,7 +505,7 @@ class CascadingController extends Controller
 
         $breakdown->unit_id = $request->unit_id;
         $breakdown->bidang = $request->bidang;
-        $breakdown->angka_target = $request->angka_target;
+        $breakdown->angka_target = round((float)$request->angka_target, 2);
         $breakdown->satuan_id = $request->satuan_id;
 
         $user = Auth::user();
@@ -967,7 +980,7 @@ class CascadingController extends Controller
             'angka_target' => 'required|numeric'
         ]);
 
-        BreakdownLm::whereIn('id', $ids)->update(['angka_target' => $request->angka_target]);
+        BreakdownLm::whereIn('id', $ids)->update(['angka_target' => round((float)$request->angka_target, 2)]);
         
         $first = BreakdownLm::with('lm')->whereIn('id', $ids)->first();
         $wig_id = $first ? ($first->lm->wig_id ?? null) : null;

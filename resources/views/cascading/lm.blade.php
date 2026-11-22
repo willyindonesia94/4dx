@@ -2,12 +2,17 @@
 @php
     $formatLmValue = function($value, $satuan) {
         if ($value === null || $value === '') return '-';
-        if (trim($satuan) === '%') {
-            $formatted = number_format((float)$value, 2, ",", ".");
+        $val = round((float)$value, 2);
+        $satuanName = trim($satuan ?? '');
+        if ($satuanName === '%') {
+            $formatted = number_format($val, 2, ",", ".");
             $formatted = rtrim(rtrim($formatted, '0'), ',');
             return $formatted . ' %';
         }
-        return number_format((float)$value, 2, ",", ".") . ' ' . $satuan;
+        $formatted = number_format($val, 2, ",", ".");
+        $formatted = rtrim(rtrim($formatted, '0'), ',');
+        if ($formatted === '') $formatted = '0';
+        return $formatted . ($satuanName ? ' ' . $satuanName : '');
     };
 @endphp
     <x-slot name="header">
@@ -154,9 +159,8 @@
             this.editMode = false; this.editBreakdownId = null; this.formLmId = id; this.formLmTitle = title;
             this.formType = type; this.formUp3Target = up3Target; this.formUnitId = ""; this.formBidang = ""; this.formAngkaTarget = null;
             this.formSatuanId = satuanId; this.formSatuanName = satuanName;
-            let d = new Date();
-            this.formBulan = d.getMonth() + 1; 
-            this.formTahun = d.getFullYear();
+            this.formBulan = {{ $bulan ?? (date('n')) }}; 
+            this.formTahun = {{ $tahun ?? (date('Y')) }};
             this.targetM1 = null; this.targetM2 = null; this.targetM3 = null; this.targetM4 = null; this.targetM5 = null; this.isAutoFill = true;
             this.openBreakdownModal = true;
         },
@@ -177,7 +181,38 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                        <p class="text-gray-600">Berikut adalah daftar Lead Measures (LM) yang dikelompokkan berdasarkan Master WIG induknya beserta penjabarannya ke unit operasional.</p>
+                        <div>
+                            <p class="text-gray-600 mb-3">Berikut adalah daftar Lead Measures (LM) yang dikelompokkan berdasarkan Master WIG induknya beserta penjabarannya ke unit operasional.</p>
+                            <!-- Filter Periode (Bulan & Tahun) -->
+                            <form action="{{ route('cascading.lm.index') }}" method="GET" class="flex flex-wrap items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg p-2.5 shadow-sm">
+                                @if(request('status'))
+                                    <input type="hidden" name="status" value="{{ request('status') }}">
+                                @endif
+                                <div class="flex items-center gap-2">
+                                    <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Periode Bulan:</label>
+                                    <select name="bulan" onchange="this.form.submit()" class="text-sm border-slate-300 rounded-md py-1.5 px-3 bg-white focus:ring-indigo-500 focus:border-indigo-500 font-semibold text-slate-700 shadow-sm">
+                                        @php
+                                            $namaBulanCascading = [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'];
+                                        @endphp
+                                        @foreach($namaBulanCascading as $mn => $nm)
+                                            <option value="{{ $mn }}" {{ ($bulan ?? date('n')) == $mn ? 'selected' : '' }}>
+                                                {{ $nm }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <label class="text-xs font-bold text-slate-700 uppercase tracking-wider">Tahun:</label>
+                                    <select name="tahun" onchange="this.form.submit()" class="text-sm border-slate-300 rounded-md py-1.5 px-3 bg-white focus:ring-indigo-500 focus:border-indigo-500 font-semibold text-slate-700 shadow-sm">
+                                        @foreach(range(date('Y')-1, date('Y')+2) as $yr)
+                                            <option value="{{ $yr }}" {{ ($tahun ?? date('Y')) == $yr ? 'selected' : '' }}>
+                                                {{ $yr }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </form>
+                        </div>
                         
                         @if(!$user->hasRole('Asman Bidang UP3') || strtoupper(trim((string)$user->matrix_group_id)) === 'K3L')
                         <!-- Mass Upload Buttons -->
@@ -302,7 +337,7 @@
                                                     if (type === 'up3' && this.htmlUp3 !== '' && !url) return;
                                                     if (type === 'ulp' && this.htmlUlp !== '' && !url) return;
                                                     
-                                                    let targetUrl = url || `/cascading/lm/{{ $lm->id }}/breakdowns/${type}?tahun={{ request('tahun', date('Y')) }}`;
+                                                    let targetUrl = url || `/cascading/lm/{{ $lm->id }}/breakdowns/${type}?tahun={{ $tahun ?? request('tahun', date('Y')) }}&bulan={{ $bulan ?? request('bulan', date('n')) }}`;
                                                     targetUrl += (targetUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
                                                     
                                                     if (type === 'uid') this.loadingUid = true;

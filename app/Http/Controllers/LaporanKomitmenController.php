@@ -56,8 +56,8 @@ class LaporanKomitmenController extends Controller
         // Get all komitmens for this session and WIG
         $komitmens = SesiWigKomitmen::with(['masterLm', 'masterUnit.parent'])
             ->where('sesi_wig_id', $sesi->id)
-            ->whereHas('masterLm', function($q) use ($wigId) {
-                $q->where('wig_id', $wigId);
+            ->whereHas('masterLm', function($q) use ($wigId, $bulan) {
+                $q->where('wig_id', $wigId)->activeInMonth((int)$bulan);
             })
             ->get();
 

@@ -86,7 +86,7 @@ class DashboardController extends Controller
             ->whereYear('tanggal_input', $tahun);
         // Determine non-summable LMs (e.g. percentage, minutes) to average instead of sum
         $nonSummableLmSatuans = [1, 2, 6, 14];
-        $lmsData = \App\Models\MasterLm::select('id', 'satuan_id')->get();
+        $lmsData = \App\Models\MasterLm::activeInMonth((int)$bulan)->select('id', 'satuan_id')->get();
         $isNonSummable = [];
         foreach ($lmsData as $lmData) {
             $isNonSummable[$lmData->id] = in_array($lmData->satuan_id, $nonSummableLmSatuans);
@@ -212,8 +212,8 @@ class DashboardController extends Controller
         }
 
         // ── WIG Progresses ─────────────────────────────────────────────────────
-        $wigQuery = MasterWig::where('is_approved', 1)->with(['satuan', 'masterLms' => function ($q) {
-            $q->where('is_approved', 1)->with('satuan');
+        $wigQuery = MasterWig::where('is_approved', 1)->with(['satuan', 'masterLms' => function ($q) use ($bulan) {
+            $q->where('is_approved', 1)->activeInMonth((int)$bulan)->with('satuan');
         }]);
         if ($selectedDivisi) $wigQuery->whereJsonContains('divisi', $selectedDivisi);
         $wigs = $wigQuery->get()->each(function($wig) {
@@ -652,7 +652,7 @@ class DashboardController extends Controller
         $rtBdMap = [];
         $rtRealMap = [];
         $dynamicMapData = [];
-        $lms = \App\Models\MasterLm::with('satuan')->get()->sortBy(function($lm) {
+        $lms = \App\Models\MasterLm::with('satuan')->activeInMonth((int)$bulan)->get()->sortBy(function($lm) {
             preg_match('/LM-?(\d+)/i', $lm->judul_lm, $m);
             return (int)($m[1] ?? 999);
         })->values();

@@ -80,8 +80,8 @@ class SesiWigKomitmenController extends Controller
             ],
             [
                 'pic_lm' => $request->pic_lm,
-                'komitmen' => $request->komitmen,
-                'carry_over' => $request->carry_over,
+                'komitmen' => ($request->komitmen !== null && $request->komitmen !== '') ? round((float)$request->komitmen, 2) : null,
+                'carry_over' => ($request->carry_over !== null && $request->carry_over !== '') ? round((float)$request->carry_over, 2) : null,
                 'hambatans' => $request->hambatans,
                 'aksi_konkrits' => $request->aksi_konkrits,
             ]

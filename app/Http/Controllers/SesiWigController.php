@@ -139,7 +139,7 @@ class SesiWigController extends Controller
                 }
             });
         }
-        $wigs = $wigsQuery->get();
+        $wigs = $wigsQuery->with(['masterLms' => fn($q) => $q->activeInMonth((int)$sesi_wig->bulan)])->get();
 
         $calcCapaian = function($target, $realisasi, $polaritas) {
             $target = (float)$target;
@@ -160,7 +160,7 @@ class SesiWigController extends Controller
             return round(($realisasi / $target) * 100, 2);
         };
 
-        $lmsQuery = MasterLm::with('wig', 'satuan');
+        $lmsQuery = MasterLm::with('wig', 'satuan')->activeInMonth((int)$sesi_wig->bulan);
         if (!$isSuperAdmin && $userMatrixGroup !== '' && strtoupper($userMatrixGroup) !== 'ALL') {
             $allowedDivisis = \App\Models\MasterBidang::getRelatedDivisions($userMatrixGroup);
             $lmsQuery->whereHas('wig', function($q) use ($allowedDivisis) {
@@ -1037,8 +1037,8 @@ class SesiWigController extends Controller
                 'unit_id' => $request->unit_id,
             ],
             [
-                'komitmen' => $request->komitmen !== '' ? $request->komitmen : null,
-                'carry_over' => $request->carry_over !== '' ? $request->carry_over : null,
+                'komitmen' => ($request->komitmen !== null && $request->komitmen !== '') ? round((float)$request->komitmen, 2) : null,
+                'carry_over' => ($request->carry_over !== null && $request->carry_over !== '') ? round((float)$request->carry_over, 2) : null,
             ]
         );
 
