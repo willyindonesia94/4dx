@@ -779,18 +779,14 @@ class SesiWigController extends Controller
                 $ulpsOfUp3 = $allUlps->where('parent_id', $up3->id);
                 if ($ulpsOfUp3->isNotEmpty()) {
                     $sumTCur = 0; $cntTCur = 0;
-                    $sumTPrev = 0; $sumRPrev = 0; $cntTPrev = 0; $cntRPrev = 0;
+                    $sumDefUlp = 0;
                     foreach ($ulpsOfUp3 as $u) {
                         $tCur = $matrixTargetBulanan[$lm->id][$u->id] ?? 0;
                         if ($tCur > 0) { $sumTCur += $tCur; $cntTCur++; }
-                        $tP = $prevTargetUlp[$u->id] ?? 0;
-                        $rP = $prevRealUlp[$u->id] ?? 0;
-                        if ($tP > 0) { $sumTPrev += $tP; $cntTPrev++; }
-                        if ($rP > 0) { $sumRPrev += $rP; $cntRPrev++; }
+                        $sumDefUlp += $matrixDefisitBulanLalu[$lm->id][$u->id] ?? 0;
                     }
-                    $matrixTargetBulanan[$lm->id][$up3->id] = $isNonSummable ? ($cntTCur > 0 ? $sumTCur / $cntTCur : 0) : $sumTCur;
-                    $tPrev = $isNonSummable ? ($cntTPrev > 0 ? $sumTPrev / $cntTPrev : 0) : $sumTPrev;
-                    $rPrev = $isNonSummable ? ($cntRPrev > 0 ? $sumRPrev / $cntRPrev : 0) : $sumRPrev;
+                    $matrixTargetBulanan[$lm->id][$up3->id] = $isNonSummable ? ($cntTCur > 0 ? $sumTCur / $cntTCur : 0) : round($sumTCur, 2);
+                    $matrixDefisitBulanLalu[$lm->id][$up3->id] = ($isEligibleCarryOver && ($matrixTargetBulanan[$lm->id][$up3->id] ?? 0) > 0) ? ($isNonSummable ? ($cntTCur > 0 ? $sumDefUlp / $cntTCur : 0) : round($sumDefUlp, 2)) : 0;
                 } else {
                     if (isset($curMonthlyBdMap[$lm->id][$up3->id]) && $curMonthlyBdMap[$lm->id][$up3->id] > 0) {
                         $matrixTargetBulanan[$lm->id][$up3->id] = $curMonthlyBdMap[$lm->id][$up3->id];
@@ -814,8 +810,8 @@ class SesiWigController extends Controller
                         }
                     }
                     $rPrev = $isNonSummable ? ($prevRealMap[$lm->id][$up3->id]['avg'] ?? 0) : ($prevRealMap[$lm->id][$up3->id]['sum'] ?? 0);
+                    $matrixDefisitBulanLalu[$lm->id][$up3->id] = ($isEligibleCarryOver && ($matrixTargetBulanan[$lm->id][$up3->id] ?? 0) > 0) ? max(0, round($tPrev - $rPrev, 2)) : 0;
                 }
-                $matrixDefisitBulanLalu[$lm->id][$up3->id] = ($isEligibleCarryOver && ($matrixTargetBulanan[$lm->id][$up3->id] ?? 0) > 0) ? max(0, round($tPrev - $rPrev, 2)) : 0;
             }
 
             // C. Target Bulanan Bulan Berjalan & Defisit Bulan Lalu untuk UID (unit 1)
@@ -855,6 +851,63 @@ class SesiWigController extends Controller
             $isPercent = (($lm->satuan_id ?? null) == 1) || (trim($lm->satuan->name ?? '') === '%');
             $isPolaritasNegatif = strtolower(trim($lm->polaritas ?? 'positif')) === 'negatif' || ($lm->polaritas === '3');
             $isEligibleCarryOver = !$isPercent && !$isPolaritasNegatif;
+            $isNonSummable = in_array($lm->satuan_id, $nonSummableSatuans ?? [1, 2, 6, 14]);
+            $isDecimalLm = in_array((int)($lm->satuan_id ?? 0), [7, 8, 13]) 
+                || str_contains(strtolower($lm->satuan->name ?? ''), 'mva') 
+                || str_contains(strtolower($lm->satuan->name ?? ''), 'kwh') 
+                || str_contains(strtolower($lm->satuan->name ?? ''), 'gwh')
+                || str_contains(strtolower($lm->judul_lm ?? ''), 'daya tersambung')
+                || str_contains(strtolower($lm->judul_lm ?? ''), 'smart p2tl')
+                || str_contains(strtolower($lm->judul_lm ?? ''), 'mva')
+                || str_contains(strtolower($lm->judul_lm ?? ''), 'kwh');
+
+            $ulpTargetPlusCOMaps = [];
+            $ulpRealMaps = [];
+
+            // 1. Hitung ULP terlebih dahulu
+            foreach ($allUlps as $ulp) {
+                $runningCarryOver = 0;
+                $kumulatifRealisasi = 0;
+                $prevT = 0;
+                $targetBulananUnit = $matrixTargetBulanan[$lm->id][$ulp->id] ?? 0;
+                $defisitBulanLaluUnit = $matrixDefisitBulanLalu[$lm->id][$ulp->id] ?? 0;
+
+                foreach($sesi_wigs_month as $swIdx => $sw) {
+                    $t = (float)($matrixTargets[$lm->id][$ulp->id][$sw->id] ?? 0);
+                    $r = (float)($matrixRealisasi[$lm->id][$ulp->id][$sw->id] ?? 0);
+                    
+                    if (!$isEligibleCarryOver) {
+                        $targetPlusCarryOver = $t;
+                        $runningCarryOver = 0;
+                    } else {
+                        if ($swIdx === 0) {
+                            $targetPlusCarryOver = round($t + $defisitBulanLaluUnit, 2);
+                        } else {
+                            if ($targetBulananUnit > 0 && $kumulatifRealisasi >= $targetBulananUnit) {
+                                $baseTarget = $t > 0 ? $t : $prevT;
+                                $floorTarget = ($isDecimalLm || ($baseTarget != round($baseTarget))) ? ($baseTarget > 0 ? max(0.01, round($baseTarget * 0.10, 2)) : 0) : ($baseTarget > 0 ? max(1, (int)ceil($baseTarget * 0.10)) : 0);
+                                $targetPlusCarryOver = $floorTarget;
+                            } else {
+                                $targetPlusCarryOver = max($t, round($t + $runningCarryOver, 2));
+                            }
+                        }
+                        $runningCarryOver = round($targetPlusCarryOver - $r, 2);
+                    }
+                    if ($t > 0) $prevT = $t;
+                    $kumulatifRealisasi += $r;
+                    $ulpTargetPlusCOMaps[$ulp->id][$sw->id] = $targetPlusCarryOver;
+                    $ulpRealMaps[$ulp->id][$sw->id] = $r;
+
+                    if ($sw->id == $sid) {
+                        $pct = $calcCapaian($targetPlusCarryOver, $r, $lm->polaritas ?? 'positif');
+                        if ($pct !== null) {
+                            $lmMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => $pct];
+                        }
+                    }
+                }
+            }
+
+            // 2. Hitung UP3 (Rollup dari ULP jika memiliki anak, atau hitung langsung jika mandiri/UP2D)
             $wigOfLm = $wigs->where('id', $lm->wig_id)->first();
             $hasUp2dTargets = $up2dUnit && \App\Models\BreakdownLm::where('lm_id', $lm->id)->where('unit_id', $up2dUnit->id)->exists();
             $isWig4 = $hasUp2dTargets
@@ -862,90 +915,65 @@ class SesiWigController extends Controller
             $lmUp3s = ($isWig4 && $up2dUnit && !$up3s->contains('id', $up2dUnit->id) && ($isSuperAdmin || !in_array($unitType ?? '', ['UP3', 'ULP']))) ? $up3s->concat([$up2dUnit]) : $up3s;
 
             foreach ($lmUp3s as $up3) {
-                $runningCarryOver = 0;
-                $prevTargetPlusCarryOver = 0;
-                $targetPlusCarryOver = 0;
-                $realisasi = 0;
-                $kumulatifRealisasi = 0;
-                $targetBulananUnit = $matrixTargetBulanan[$lm->id][$up3->id] ?? 0;
-                $defisitBulanLaluUnit = $matrixDefisitBulanLalu[$lm->id][$up3->id] ?? 0;
-
-                foreach($sesi_wigs_month as $swIdx => $sw) {
-                    $t = $matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0;
-                    $r = $matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0;
-                    
-                    if (!$isEligibleCarryOver) {
-                        $targetPlusCarryOver = $t;
-                        $runningCarryOver = 0;
+                $ulpsOfThisUp3 = $allUlps->where('parent_id', $up3->id);
+                if ($ulpsOfThisUp3->isNotEmpty()) {
+                    $targetPlusCarryOver = 0;
+                    $realisasi = 0;
+                    $cnt = count($ulpsOfThisUp3);
+                    foreach ($ulpsOfThisUp3 as $u) {
+                        $targetPlusCarryOver += $ulpTargetPlusCOMaps[$u->id][$sid] ?? 0;
+                        $realisasi += $ulpRealMaps[$u->id][$sid] ?? 0;
+                    }
+                    if ($isNonSummable && $cnt > 0) {
+                        $targetPlusCarryOver = round($targetPlusCarryOver / $cnt, 2);
+                        $realisasi = round($realisasi / $cnt, 2);
                     } else {
-                        if ($swIdx === 0) {
-                            $targetPlusCarryOver = $t + $defisitBulanLaluUnit;
+                        $targetPlusCarryOver = round($targetPlusCarryOver, 2);
+                        $realisasi = round($realisasi, 2);
+                    }
+                } else {
+                    $runningCarryOver = 0;
+                    $kumulatifRealisasi = 0;
+                    $prevT = 0;
+                    $targetBulananUnit = $matrixTargetBulanan[$lm->id][$up3->id] ?? 0;
+                    $defisitBulanLaluUnit = $matrixDefisitBulanLalu[$lm->id][$up3->id] ?? 0;
+                    $targetPlusCarryOver = 0;
+                    $realisasi = 0;
+
+                    foreach($sesi_wigs_month as $swIdx => $sw) {
+                        $t = (float)($matrixTargets[$lm->id][$up3->id][$sw->id] ?? 0);
+                        $r = (float)($matrixRealisasi[$lm->id][$up3->id][$sw->id] ?? 0);
+                        
+                        if (!$isEligibleCarryOver) {
+                            $targetPlusCarryOver = $t;
+                            $runningCarryOver = 0;
                         } else {
-                            if ($targetBulananUnit > 0 && $kumulatifRealisasi >= $targetBulananUnit) {
-                                $floorTarget = $t > 0 ? max(1, ceil($t * 0.10)) : 0;
-                                $targetPlusCarryOver = $floorTarget;
+                            if ($swIdx === 0) {
+                                $targetPlusCarryOver = round($t + $defisitBulanLaluUnit, 2);
                             } else {
-                                $targetPlusCarryOver = max($t, $t + $runningCarryOver);
+                                if ($targetBulananUnit > 0 && $kumulatifRealisasi >= $targetBulananUnit) {
+                                    $baseTarget = $t > 0 ? $t : $prevT;
+                                    $floorTarget = ($isDecimalLm || ($baseTarget != round($baseTarget))) ? ($baseTarget > 0 ? max(0.01, round($baseTarget * 0.10, 2)) : 0) : ($baseTarget > 0 ? max(1, (int)ceil($baseTarget * 0.10)) : 0);
+                                    $targetPlusCarryOver = $floorTarget;
+                                } else {
+                                    $targetPlusCarryOver = max($t, round($t + $runningCarryOver, 2));
+                                }
                             }
+                            $runningCarryOver = round($targetPlusCarryOver - $r, 2);
                         }
-                        $runningCarryOver = $targetPlusCarryOver - $r;
-                    }
-                    $prevTargetPlusCarryOver = $targetPlusCarryOver;
-                    $kumulatifRealisasi += $r;
+                        if ($t > 0) $prevT = $t;
+                        $kumulatifRealisasi += $r;
 
-                    if ($sw->id == $sid) {
-                        $realisasi = $r;
-                        break;
-                    }
-                }
-                
-                $pct = $calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif');
-                if ($pct !== null) {
-                    $lmMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => $pct];
-                }
-            }
-
-            foreach ($allUlps as $ulp) {
-                $runningCarryOver = 0;
-                $prevTargetPlusCarryOver = 0;
-                $targetPlusCarryOver = 0;
-                $realisasi = 0;
-                $kumulatifRealisasi = 0;
-                $targetBulananUnit = $matrixTargetBulanan[$lm->id][$ulp->id] ?? 0;
-                $defisitBulanLaluUnit = $matrixDefisitBulanLalu[$lm->id][$ulp->id] ?? 0;
-
-                foreach($sesi_wigs_month as $swIdx => $sw) {
-                    $t = $matrixTargets[$lm->id][$ulp->id][$sw->id] ?? 0;
-                    $r = $matrixRealisasi[$lm->id][$ulp->id][$sw->id] ?? 0;
-                    
-                    if (!$isEligibleCarryOver) {
-                        $targetPlusCarryOver = $t;
-                        $runningCarryOver = 0;
-                    } else {
-                        if ($swIdx === 0) {
-                            $targetPlusCarryOver = $t + $defisitBulanLaluUnit;
-                        } else {
-                            if ($targetBulananUnit > 0 && $kumulatifRealisasi >= $targetBulananUnit) {
-                                $floorTarget = $t > 0 ? max(1, ceil($t * 0.10)) : 0;
-                                $targetPlusCarryOver = $floorTarget;
-                            } else {
-                                $targetPlusCarryOver = max($t, $t + $runningCarryOver);
-                            }
+                        if ($sw->id == $sid) {
+                            $realisasi = $r;
+                            break;
                         }
-                        $runningCarryOver = $targetPlusCarryOver - $r;
-                    }
-                    $prevTargetPlusCarryOver = $targetPlusCarryOver;
-                    $kumulatifRealisasi += $r;
-
-                    if ($sw->id == $sid) {
-                        $realisasi = $r;
-                        break;
                     }
                 }
 
                 $pct = $calcCapaian($targetPlusCarryOver, $realisasi, $lm->polaritas ?? 'positif');
                 if ($pct !== null) {
-                    $lmMenangKalah[$lm->id]['ulp'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $ulp->name, 'score' => $pct];
+                    $lmMenangKalah[$lm->id]['up3'][$pct >= 100 ? 'menang' : 'kalah'][] = ['name' => $up3->name, 'score' => $pct];
                 }
             }
         }
