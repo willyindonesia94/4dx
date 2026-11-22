@@ -1045,18 +1045,16 @@ $formatLmValue = function($value, $satuan) {
                                                     <td class="px-2 py-2 border border-gray-300 text-center bg-slate-50">{!! $up3TrendIcon !!}</td>
                                                     @endforeach
                                                     @php
-                                                         = ->isNotEmpty() ? ([->id][->last()->id]['kumulatifReal'] ?? 0) : 0;
-                                                         =  ? (count() > 0 ?  / count() : 0) : ;
+                                                        $totalUp3RealBulan = $sesi_wigs_matrix->isNotEmpty() ? ($lmUnitData[$up3->id][$sesi_wigs_matrix->last()->id]['kumulatifReal'] ?? 0) : 0;
+                                                        $finalUp3RealBulan = $isPercent ? (count($sesi_wigs_matrix) > 0 ? $totalUp3RealBulan / count($sesi_wigs_matrix) : 0) : $totalUp3RealBulan;
                                                         $hasUp3TargetBulan = (round($up3TargetBulanan, 2) > 0);
-                                                         = ->isNotEmpty() ? ([->id][->last()->id]['kumulatifReal'] ?? 0) : 0;
-                                                         =  ? (count() > 0 ?  / count() : 0) : ;
+                                                        $up3CapaianBulan = $calcCapaian($up3TargetBulanan, $finalUp3RealBulan, $lm->polaritas ?? 'positif');
                                                         $up3BgCapaianBulan = '';
                                                         if ($up3CapaianBulan !== null) {
                                                             $up3BgCapaianBulan = $up3CapaianBulan >= 100 ? 'bg-green-500 text-white font-bold' : 'bg-red-500 text-white font-bold';
                                                         }
                                                     @endphp
-                                                         = ->isNotEmpty() ? ([->id][->last()->id]['kumulatifReal'] ?? 0) : 0;
-                                                         =  ? (count() > 0 ?  / count() : 0) : ;
+                                                    <td class="px-2 py-2 border border-gray-300 text-right font-black text-indigo-900 bg-slate-100 whitespace-nowrap">{{ $formatLmValue($finalUp3RealBulan, $lm->satuan->name ?? '') }}</td>
                                                     <td class="px-2 py-2 border border-gray-300 text-right {{ $up3CapaianBulan !== null ? 'font-black ' . $up3BgCapaianBulan : 'text-center text-gray-400 font-bold' }} whitespace-nowrap">{{ $up3CapaianBulan !== null ? $up3CapaianBulan . '%' : '-' }}</td>
                                                 </tr>
                                                 @foreach($ulps as $u)
